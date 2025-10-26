@@ -1,17 +1,10 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +18,79 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Companies table - stores the 20 companies from the uploaded list
+ */
+export const companies = mysqlTable("companies", {
+  id: int("id").autoincrement().primaryKey(),
+  isin: varchar("isin", { length: 12 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  sector: varchar("sector", { length: 255 }),
+  geography: varchar("geography", { length: 255 }),
+  tangibleAssets: varchar("tangibleAssets", { length: 50 }),
+  enterpriseValue: varchar("enterpriseValue", { length: 50 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = typeof companies.$inferInsert;
+
+/**
+ * Assets table - stores asset location data from the Asset Discovery API
+ */
+export const assets = mysqlTable("assets", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  assetName: varchar("assetName", { length: 500 }).notNull(),
+  address: text("address"),
+  latitude: varchar("latitude", { length: 50 }),
+  longitude: varchar("longitude", { length: 50 }),
+  city: varchar("city", { length: 255 }),
+  stateProvince: varchar("stateProvince", { length: 255 }),
+  country: varchar("country", { length: 255 }),
+  assetType: varchar("assetType", { length: 255 }),
+  assetSubtype: varchar("assetSubtype", { length: 255 }),
+  estimatedValueUsd: varchar("estimatedValueUsd", { length: 50 }),
+  ownershipShare: varchar("ownershipShare", { length: 50 }),
+  dataSources: text("dataSources"),
+  confidenceLevel: varchar("confidenceLevel", { length: 50 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Asset = typeof assets.$inferSelect;
+export type InsertAsset = typeof assets.$inferInsert;
+
+/**
+ * Geographic risk assessments - stores results from Geographic Risks API
+ */
+export const geographicRisks = mysqlTable("geographicRisks", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("assetId").notNull(),
+  latitude: varchar("latitude", { length: 50 }).notNull(),
+  longitude: varchar("longitude", { length: 50 }).notNull(),
+  assetValue: varchar("assetValue", { length: 50 }).notNull(),
+  riskData: json("riskData").notNull(), // Store the full API response
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GeographicRisk = typeof geographicRisks.$inferSelect;
+export type InsertGeographicRisk = typeof geographicRisks.$inferInsert;
+
+/**
+ * Risk management assessments - stores results from Risk Management API
+ */
+export const riskManagementScores = mysqlTable("riskManagementScores", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  overallScore: int("overallScore"),
+  assessmentData: json("assessmentData").notNull(), // Store the full assessment JSON
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RiskManagementScore = typeof riskManagementScores.$inferSelect;
+export type InsertRiskManagementScore = typeof riskManagementScores.$inferInsert;
+

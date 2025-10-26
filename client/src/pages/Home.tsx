@@ -1,29 +1,177 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { APP_TITLE } from "@/const";
+import { trpc } from "@/lib/trpc";
+import { Loader2, Search, TrendingDown } from "lucide-react";
+import { useState } from "react";
+import { useLocation } from "wouter";
 
-/**
- * All content in this page are only for example, delete if unneeded
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
 export default function Home() {
-  // The userAuth hooks provides authentication state
-  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
+  const [, setLocation] = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+  const { data: companies, isLoading, error } = trpc.companies.list.useQuery();
 
-  // Use APP_LOGO (as image src) and APP_TITLE if needed
+  // Seed companies on first load if needed
+  const seedMutation = trpc.companies.seedCompanies.useMutation({
+    onSuccess: () => {
+      window.location.reload();
+    },
+  });
+
+  const filteredCompanies = companies?.filter(
+    (company) =>
+      company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      company.isin.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      company.geography?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading companies...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error</CardTitle>
+            <CardDescription>Failed to load companies</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">{error.message}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!companies || companies.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Companies Found</CardTitle>
+            <CardDescription>The database is empty. Would you like to load the initial company data?</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => seedMutation.mutate()} 
+              disabled={seedMutation.isPending}
+              className="w-full"
+            >
+              {seedMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading Companies...
+                </>
+              ) : (
+                "Load 20 Companies"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        <Loader2 className="animate-spin" />
-        Example Page
-        <Button variant="default">Example Button</Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center gap-3">
+            <TrendingDown className="h-8 w-8 text-indigo-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{APP_TITLE}</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Assess physical climate risks across company portfolios
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Search Bar */}
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search by company name, ISIN, or geography..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-12 text-base"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Company Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCompanies?.map((company) => (
+            <Card
+              key={company.id}
+              className="hover:shadow-lg transition-shadow cursor-pointer group"
+              onClick={() => setLocation(`/company/${company.isin}`)}
+            >
+              <CardHeader>
+                <CardTitle className="text-lg group-hover:text-indigo-600 transition-colors">
+                  {company.name}
+                </CardTitle>
+                <CardDescription className="space-y-1">
+                  <div className="text-xs font-mono">{company.isin}</div>
+                  <div className="text-xs">{company.geography}</div>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Sector:</span>
+                    <span className="font-medium text-right">{company.sector?.split(',')[0]}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Assets:</span>
+                    <span className="font-medium">
+                      ${parseFloat(company.tangibleAssets || '0').toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">EV:</span>
+                    <span className="font-medium">
+                      ${parseFloat(company.enterpriseValue || '0').toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <Button className="w-full mt-4" variant="outline">
+                  View Risk Analysis
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredCompanies?.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-gray-600">No companies match your search criteria.</p>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
 }
+

@@ -1,11 +1,25 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { 
+  InsertUser, 
+  users, 
+  companies, 
+  Company, 
+  InsertCompany,
+  assets,
+  Asset,
+  InsertAsset,
+  geographicRisks,
+  GeographicRisk,
+  InsertGeographicRisk,
+  riskManagementScores,
+  RiskManagementScore,
+  InsertRiskManagementScore
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -89,4 +103,103 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ========== Company Queries ==========
+
+export async function getAllCompanies(): Promise<Company[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(companies);
+}
+
+export async function getCompanyByIsin(isin: string): Promise<Company | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(companies).where(eq(companies.isin, isin)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function insertCompany(company: InsertCompany): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(companies).values(company);
+}
+
+export async function bulkInsertCompanies(companyList: InsertCompany[]): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  for (const company of companyList) {
+    await db.insert(companies).values(company).onDuplicateKeyUpdate({
+      set: {
+        name: company.name,
+        sector: company.sector,
+        geography: company.geography,
+        tangibleAssets: company.tangibleAssets,
+        enterpriseValue: company.enterpriseValue,
+      }
+    });
+  }
+}
+
+// ========== Asset Queries ==========
+
+export async function getAssetsByCompanyId(companyId: number): Promise<Asset[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(assets).where(eq(assets.companyId, companyId));
+}
+
+export async function insertAsset(asset: InsertAsset): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(assets).values(asset);
+}
+
+export async function bulkInsertAssets(assetList: InsertAsset[]): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  if (assetList.length === 0) return;
+  
+  await db.insert(assets).values(assetList);
+}
+
+// ========== Geographic Risk Queries ==========
+
+export async function getGeographicRiskByAssetId(assetId: number): Promise<GeographicRisk | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(geographicRisks).where(eq(geographicRisks.assetId, assetId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function insertGeographicRisk(risk: InsertGeographicRisk): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(geographicRisks).values(risk);
+}
+
+// ========== Risk Management Queries ==========
+
+export async function getRiskManagementByCompanyId(companyId: number): Promise<RiskManagementScore | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(riskManagementScores).where(eq(riskManagementScores.companyId, companyId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function insertRiskManagement(score: InsertRiskManagementScore): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(riskManagementScores).values(score);
+}
+

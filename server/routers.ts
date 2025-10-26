@@ -2,6 +2,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import * as db from "./db";
+import * as externalApis from "./services/externalApis";
 
 export const appRouter = router({
   system: systemRouter,
@@ -17,12 +20,267 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  companies: router({
+    /**
+     * Get all companies
+     */
+    list: publicProcedure.query(async () => {
+      const companies = await db.getAllCompanies();
+      return companies;
+    }),
+
+    /**
+     * Get a single company by ISIN
+     */
+    getByIsin: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .query(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        return company;
+      }),
+
+    /**
+     * Get company with all related data (assets, risks, management scores)
+     */
+    getFullDetails: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .query(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        if (!company) {
+          throw new Error(`Company not found: ${input.isin}`);
+        }
+
+        const assets = await db.getAssetsByCompanyId(company.id);
+        const riskManagement = await db.getRiskManagementByCompanyId(company.id);
+
+        // Fetch geographic risks for each asset
+        const assetsWithRisks = await Promise.all(
+          assets.map(async (asset) => {
+            const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
+            return {
+              ...asset,
+              geographicRisk: geoRisk,
+            };
+          })
+        );
+
+        return {
+          company,
+          assets: assetsWithRisks,
+          riskManagement,
+        };
+      }),
+
+    /**
+     * Calculate direct exposure for a company
+     * This aggregates expected losses from all assets
+     */
+    calculateDirectExposure: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .query(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        if (!company) {
+          throw new Error(`Company not found: ${input.isin}`);
+        }
+
+        const assets = await db.getAssetsByCompanyId(company.id);
+        
+        let totalExpectedLoss = 0;
+        const riskBreakdown: Record<string, number> = {};
+
+        for (const asset of assets) {
+          const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
+          if (geoRisk && geoRisk.riskData) {
+            const risks = (geoRisk.riskData as any).risks || {};
+            
+            for (const [riskType, riskData] of Object.entries(risks)) {
+              const expectedLoss = (riskData as any).expected_annual_loss || 0;
+              totalExpectedLoss += expectedLoss;
+              
+              if (!riskBreakdown[riskType]) {
+                riskBreakdown[riskType] = 0;
+              }
+              riskBreakdown[riskType] += expectedLoss;
+            }
+          }
+        }
+
+        return {
+          totalExpectedLoss,
+          riskBreakdown,
+          assetCount: assets.length,
+        };
+      }),
+
+    /**
+     * Calculate overall expected losses
+     * Formula: (direct exposure + indirect exposure) x (100% - risk management score)
+     * Note: indirect exposure is currently set to 0 as per user requirements
+     */
+    calculateOverallLoss: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .query(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        if (!company) {
+          throw new Error(`Company not found: ${input.isin}`);
+        }
+
+        // Get direct exposure
+        const assets = await db.getAssetsByCompanyId(company.id);
+        let directExposure = 0;
+
+        for (const asset of assets) {
+          const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
+          if (geoRisk && geoRisk.riskData) {
+            const risks = (geoRisk.riskData as any).risks || {};
+            
+            for (const riskData of Object.values(risks)) {
+              directExposure += (riskData as any).expected_annual_loss || 0;
+            }
+          }
+        }
+
+        // Get risk management score (0-100)
+        const riskManagement = await db.getRiskManagementByCompanyId(company.id);
+        const managementScore = riskManagement?.overallScore || 0;
+        const managementFactor = (100 - managementScore) / 100;
+
+        // Indirect exposure is 0 for now
+        const indirectExposure = 0;
+
+        // Calculate overall expected loss
+        const overallExpectedLoss = (directExposure + indirectExposure) * managementFactor;
+
+        return {
+          directExposure,
+          indirectExposure,
+          managementScore,
+          managementFactor,
+          overallExpectedLoss,
+          tangibleAssets: company.tangibleAssets,
+          enterpriseValue: company.enterpriseValue,
+        };
+      }),
+
+    /**
+     * Seed companies from the uploaded Excel file
+     */
+    seedCompanies: publicProcedure.mutation(async () => {
+      const fs = await import('fs/promises');
+      const companiesData = JSON.parse(
+        await fs.readFile('/home/ubuntu/companies_seed.json', 'utf-8')
+      );
+      
+      await db.bulkInsertCompanies(companiesData);
+      
+      return { success: true, count: companiesData.length };
+    }),
+  }),
+
+  assets: router({
+    /**
+     * Get assets for a company
+     */
+    getByCompany: publicProcedure
+      .input(z.object({ companyId: z.number() }))
+      .query(async ({ input }) => {
+        const assets = await db.getAssetsByCompanyId(input.companyId);
+        return assets;
+      }),
+
+    /**
+     * Fetch and store assets from external API
+     */
+    fetchAndStore: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .mutation(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        if (!company) {
+          throw new Error(`Company not found: ${input.isin}`);
+        }
+
+        // Fetch assets from external API
+        const assetData = await externalApis.fetchCompanyAssets(input.isin);
+        
+        // Transform and insert into database
+        const assetsToInsert = assetData.map(asset => ({
+          companyId: company.id,
+          assetName: asset.asset_name,
+          address: asset.address,
+          latitude: asset.latitude?.toString() || null,
+          longitude: asset.longitude?.toString() || null,
+          city: asset.city,
+          stateProvince: asset.state_province,
+          country: asset.country,
+          assetType: asset.asset_type,
+          assetSubtype: asset.asset_subtype,
+          estimatedValueUsd: asset.estimated_value_usd.toString(),
+          ownershipShare: asset.ownership_share,
+          dataSources: asset.data_sources,
+          confidenceLevel: asset.confidence_level,
+        }));
+
+        await db.bulkInsertAssets(assetsToInsert);
+
+        return { success: true, count: assetsToInsert.length };
+      }),
+  }),
+
+  risks: router({
+    /**
+     * Fetch and store geographic risk for an asset
+     */
+    fetchGeographicRisk: publicProcedure
+      .input(z.object({
+        assetId: z.number(),
+        latitude: z.number(),
+        longitude: z.number(),
+        assetValue: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const riskData = await externalApis.fetchGeographicRisk(
+          input.latitude,
+          input.longitude,
+          input.assetValue
+        );
+
+        await db.insertGeographicRisk({
+          assetId: input.assetId,
+          latitude: input.latitude.toString(),
+          longitude: input.longitude.toString(),
+          assetValue: input.assetValue.toString(),
+          riskData: riskData as any,
+        });
+
+        return { success: true };
+      }),
+
+    /**
+     * Fetch and store risk management assessment
+     */
+    fetchRiskManagement: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .mutation(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        if (!company) {
+          throw new Error(`Company not found: ${input.isin}`);
+        }
+
+        const managementData = await externalApis.fetchRiskManagement(
+          company.name,
+          input.isin
+        );
+
+        await db.insertRiskManagement({
+          companyId: company.id,
+          overallScore: managementData.overall_score,
+          assessmentData: managementData as any,
+        });
+
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
+
