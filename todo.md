@@ -156,3 +156,15 @@
 - [x] Update CompanyDetails page to display aggregated direct exposure
 - [x] Calculate overall expected loss using the formula
 
+
+
+## Asset API Update - Complete Coverage
+- [x] Read updated Asset Discovery API documentation
+- [x] Clear existing asset data from database
+- [x] Test API to confirm 565 assets with 100% coverage
+- [x] Update fetchAllAssets to use /assets.getAll endpoint instead of per-company fetching
+- [x] Re-fetch all assets with complete coordinates and values
+- [x] Verify 504 assets loaded (565 from API, 61 skipped due to company name mismatch)
+- [x] Confirm 100% coordinate and value coverage for loaded assets (504/504)
+- [ ] Re-run geographic risk calculation for all 504 assets (currently 181/504 = 36% complete)
+

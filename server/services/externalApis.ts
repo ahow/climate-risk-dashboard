@@ -17,8 +17,13 @@ export interface AssetData {
   latitude: number | null;
   longitude: number | null;
   geocoding_certainty: number | null;
+  coordinate_certainty: number | null;
   estimated_value_usd: number | null;
+  value_confidence: number | null;
   description: string | null;
+  data_source: string | null;
+  ownership_share: number | null;
+  notes: string | null;
 }
 
 export interface GeographicRiskData {
@@ -86,6 +91,38 @@ export interface RiskManagementData {
     }>;
     data_fields: Record<string, any>;
   }>;
+}
+
+/**
+ * Fetch all assets from the Asset Discovery API
+ * Returns all 565 assets with 100% coordinate and value coverage
+ */
+export async function fetchAllAssetsFromAPI(): Promise<AssetData[]> {
+  try {
+    console.log('Fetching all assets from Asset Discovery API...');
+    
+    const url = `${ASSET_DISCOVERY_API}/assets.getAll`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch all assets: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Extract data from tRPC response format: result.data.json
+    const result = data?.result?.data?.json;
+    if (!result || !result.assets) {
+      console.warn('No assets found in API response');
+      return [];
+    }
+    
+    console.log(`Fetched ${result.total_assets} assets (${result.assets_with_coordinates} with coordinates)`);
+    return result.assets;
+  } catch (error) {
+    console.error('Error fetching all assets:', error);
+    throw error;
+  }
 }
 
 /**

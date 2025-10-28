@@ -171,53 +171,97 @@ export const appRouter = router({
       
       await db.bulkInsertCompanies(companiesData);
       
-      return { success: true, count: companiesData.length };
+      return {
+        success: true,
+        count: companiesData.length,
+      };
     }),
 
     /**
-     * Fetch assets for all companies from Asset Discovery API
+     * Fetch all assets from Asset Discovery API (565 assets with 100% coverage)
      */
     fetchAllAssets: publicProcedure.mutation(async () => {
-      const companies = await db.getAllCompanies();
-      let totalAssetsFetched = 0;
-      const errors: string[] = [];
-
-      for (const company of companies) {
-        try {
-          const assetData = await externalApis.fetchCompanyAssets(company.name);
-          
-          if (assetData.length > 0) {
-            const assetsToInsert = assetData.map(asset => ({
-              companyId: company.id,
-              assetName: asset.asset_name,
-              address: asset.location,
-              latitude: asset.latitude?.toString() || null,
-              longitude: asset.longitude?.toString() || null,
-              city: asset.city,
-              stateProvince: null,
-              country: asset.country,
-              assetType: asset.asset_type,
-              assetSubtype: null,
-              estimatedValueUsd: asset.estimated_value_usd?.toString() || null,
-              ownershipShare: null,
-              dataSources: asset.description || 'Asset Discovery API',
-              confidenceLevel: asset.geocoding_certainty?.toString() || null,
-            }));
-
-            await db.bulkInsertAssets(assetsToInsert);
-            totalAssetsFetched += assetsToInsert.length;
-          }
-        } catch (error) {
-          errors.push(`${company.name}: ${error}`);
+      try {
+        // Fetch all assets at once from the API
+        const allAssets = await externalApis.fetchAllAssetsFromAPI();
+        
+        if (allAssets.length === 0) {
+          return {
+            success: false,
+            totalAssetsFetched: 0,
+            message: 'No assets returned from API',
+          };
         }
-      }
 
-      return { 
-        success: true, 
-        totalAssetsFetched, 
-        companiesProcessed: companies.length,
-        errors 
-      };
+        // Get all companies to map assets to company IDs
+        const companies = await db.getAllCompanies();
+        const companyMap = new Map(companies.map(c => [c.name, c.id]));
+
+        let totalAssetsFetched = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+
+        // Group assets by company and insert
+        const assetsByCompany = new Map<number, any[]>();
+        
+        for (const asset of allAssets) {
+          const companyId = companyMap.get(asset.company_name);
+          
+          if (!companyId) {
+            skipped++;
+            continue; // Skip assets for companies not in our database
+          }
+
+          if (!assetsByCompany.has(companyId)) {
+            assetsByCompany.set(companyId, []);
+          }
+
+          assetsByCompany.get(companyId)!.push({
+            companyId,
+            assetName: asset.asset_name,
+            address: asset.location,
+            latitude: asset.latitude?.toString() || null,
+            longitude: asset.longitude?.toString() || null,
+            city: asset.city,
+            stateProvince: null,
+            country: asset.country,
+            assetType: asset.asset_type,
+            assetSubtype: null,
+            estimatedValueUsd: asset.estimated_value_usd?.toString() || null,
+            ownershipShare: null,
+            dataSources: asset.data_source || 'Asset Discovery API',
+            confidenceLevel: asset.coordinate_certainty?.toString() || null,
+          });
+        }
+
+        // Bulk insert assets for each company
+        for (const [companyId, assets] of Array.from(assetsByCompany.entries())) {
+          try {
+            await db.bulkInsertAssets(assets);
+            totalAssetsFetched += assets.length;
+          } catch (error) {
+            const errorMsg = `Failed to insert assets for company ID ${companyId}: ${error}`;
+            console.error(errorMsg);
+            errors.push(errorMsg);
+          }
+        }
+
+        return {
+          success: true,
+          totalAssetsFetched,
+          totalAssetsFromAPI: allAssets.length,
+          skipped,
+          companiesProcessed: assetsByCompany.size,
+          errors,
+        };
+      } catch (error) {
+        console.error('Error in fetchAllAssets:', error);
+        return {
+          success: false,
+          totalAssetsFetched: 0,
+          message: `Failed to fetch assets: ${error}`,
+        };
+      }
     }),
 
     /**
