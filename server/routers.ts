@@ -132,11 +132,9 @@ export const appRouter = router({
         for (const asset of assets) {
           const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
           if (geoRisk && geoRisk.riskData) {
-            const risks = (geoRisk.riskData as any).risks || {};
-            
-            for (const riskData of Object.values(risks)) {
-              directExposure += (riskData as any).expected_annual_loss || 0;
-            }
+            // Use the total expected_annual_loss from the root level
+            const riskData = geoRisk.riskData as any;
+            directExposure += riskData.expected_annual_loss || 0;
           }
         }
 
@@ -355,6 +353,82 @@ export const appRouter = router({
 
         return { success: true };
       }),
+
+    /**
+     * Calculate geographic risks for all assets with coordinates
+     */
+    calculateAllGeographicRisks: publicProcedure.mutation(async () => {
+      const companies = await db.getAllCompanies();
+      let risksCalculated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      console.log(`[Geographic Risks] Starting calculation for ${companies.length} companies`);
+
+      for (const company of companies) {
+        try {
+          const assets = await db.getAssetsByCompanyId(company.id);
+          console.log(`[Geographic Risks] Processing ${company.name}: ${assets.length} assets`);
+          
+          for (const asset of assets) {
+            // Only calculate for assets with coordinates and value
+            if (asset.latitude && asset.longitude && asset.estimatedValueUsd) {
+              try {
+                // Check if risk already calculated for this asset
+                const existingRisk = await db.getGeographicRiskByAssetId(asset.id);
+                if (existingRisk) {
+                  skipped++;
+                  continue;
+                }
+
+                const lat = parseFloat(asset.latitude);
+                const lon = parseFloat(asset.longitude);
+                const value = parseFloat(asset.estimatedValueUsd);
+                
+                if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
+                  console.log(`[Geographic Risks] Calculating for asset ${asset.id}: ${asset.assetName} at (${lat}, ${lon})`);
+                  
+                  const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
+                  
+                  await db.insertGeographicRisk({
+                    assetId: asset.id,
+                    latitude: lat.toString(),
+                    longitude: lon.toString(),
+                    assetValue: value.toString(),
+                    riskData: riskData as any,
+                  });
+                  
+                  risksCalculated++;
+                  console.log(`[Geographic Risks] ✓ Calculated (${risksCalculated} total)`);
+                  
+                  // Add a small delay to avoid overwhelming the API
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              } catch (error) {
+                const errorMsg = `Asset ${asset.assetName} (ID: ${asset.id}): ${error}`;
+                console.error(`[Geographic Risks] ✗ ${errorMsg}`);
+                errors.push(errorMsg);
+                // Continue processing other assets even if one fails
+              }
+            }
+          }
+        } catch (error) {
+          const errorMsg = `Company ${company.name}: ${error}`;
+          console.error(`[Geographic Risks] ✗ ${errorMsg}`);
+          errors.push(errorMsg);
+          // Continue processing other companies even if one fails
+        }
+      }
+
+      console.log(`[Geographic Risks] Completed: ${risksCalculated} calculated, ${skipped} skipped, ${errors.length} errors`);
+
+      return {
+        success: true,
+        risksCalculated,
+        skipped,
+        errors
+      };
+    }),
   }),
 });
 

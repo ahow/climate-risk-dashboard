@@ -22,6 +22,7 @@ export default function Home() {
 
   const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation();
   const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
+  const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation();
 
   const filteredCompanies = companies?.filter(
     (company) =>
@@ -152,6 +153,28 @@ export default function Home() {
               {fetchRiskMgmtMutation.isSuccess && (
                 <div className="text-sm text-green-600 flex items-center">
                   ✓ Risk assessments loaded: {fetchRiskMgmtMutation.data.assessmentsFetched} companies
+                </div>
+              )}
+              <Button
+                onClick={() => calculateRisksMutation.mutate()}
+                disabled={calculateRisksMutation.isPending}
+                variant="secondary"
+              >
+                {calculateRisksMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Calculating Risks...
+                  </>
+                ) : (
+                  "Calculate Geographic Risks"
+                )}
+              </Button>
+              {calculateRisksMutation.isSuccess && (
+                <div className="text-sm text-green-600 flex items-center">
+                  ✓ Geographic risks: {calculateRisksMutation.data.risksCalculated} calculated, {calculateRisksMutation.data.skipped} skipped
+                  {calculateRisksMutation.data.errors && calculateRisksMutation.data.errors.length > 0 && (
+                    <span className="text-red-600 ml-2">({calculateRisksMutation.data.errors.length} errors)</span>
+                  )}
                 </div>
               )}
             </CardContent>

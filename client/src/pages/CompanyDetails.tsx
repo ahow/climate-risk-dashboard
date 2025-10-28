@@ -219,10 +219,8 @@ export default function CompanyDetails() {
                         {assets.map((asset) => {
                           const riskData = asset.geographicRisk?.riskData as any;
                           let totalLoss = 0;
-                          if (riskData?.risks) {
-                            Object.values(riskData.risks).forEach((risk: any) => {
-                              totalLoss += risk.expected_annual_loss || 0;
-                            });
+                          if (riskData?.expected_annual_loss) {
+                            totalLoss = riskData.expected_annual_loss;
                           }
 
                           return (

@@ -111,3 +111,48 @@
 - [x] Test if current integration still works with updated API (confirmed working)
 - [ ] Verify asset data quality and geocoding coverage improvements
 
+
+
+## Asset Values Update
+- [x] Test updated Asset Discovery API to verify estimated_value_usd is now populated
+- [x] Clear existing asset data from database
+- [x] Re-fetch all assets with new estimated values
+- [x] Verify asset values display correctly in dashboard
+- [ ] Test geographic risk calculation with real asset values
+
+
+
+## Geographic Risk Calculation Implementation
+- [x] Implement Geographic Risks API integration for individual assets
+- [x] Create procedure to calculate expected losses for each asset based on coordinates and value
+- [x] Store geographic risk data in geographicRisks table
+- [x] Update CompanyDetails page to display calculated expected losses by risk type
+- [x] Add batch procedure to calculate risks for all assets with coordinates
+- [x] Display total expected losses and present value in asset summary
+- [x] Update Geographic Risks API URL to http://167.71.187.110
+- [x] Fix API endpoint (remove /api/ prefix)
+- [x] Update GeographicRiskData interface to match actual API response
+- [x] Add Calculate Geographic Risks button to Home page
+
+
+
+## Geographic Risks API URL Update
+- [x] Update Geographic Risks API URL to http://167.71.187.110
+- [x] Test the new API endpoint
+- [x] Update externalApis.ts with the new URL
+
+
+
+## Geographic Risk Calculation Improvements
+- [x] Add logic to skip assets that already have geographic risk data
+- [x] Improve error handling so one failed asset doesn't stop entire batch
+- [x] Add progress tracking/logging for batch calculations
+- [ ] Investigate why calculation stopped after 5 assets (will check logs after next run)
+
+
+
+## Direct Exposure Aggregation Fix
+- [x] Fix direct exposure calculation to sum expected annual losses from all assets
+- [x] Update CompanyDetails page to display aggregated direct exposure
+- [x] Calculate overall expected loss using the formula
+

@@ -4,7 +4,7 @@
  */
 
 const ASSET_DISCOVERY_API = "https://3000-ibweqg4u19d6b2l6kv5ro-ee585d51.manusvm.computer/api/trpc";
-const GEOGRAPHIC_RISKS_API = "https://5000-ie5oom8cn8x48wkgrn5wb-14f4b140.manusvm.computer";
+const GEOGRAPHIC_RISKS_API = "http://167.71.187.110";
 const RISK_MANAGEMENT_API = "https://8000-iwnb9mmlojeywebr41d8n-96f6004a.manusvm.computer";
 
 export interface AssetData {
@@ -22,16 +22,35 @@ export interface AssetData {
 }
 
 export interface GeographicRiskData {
-  latitude: number;
-  longitude: number;
   asset_value: number;
-  risks: {
-    [key: string]: {
-      expected_annual_loss: number;
-      risk_level: string;
-      [key: string]: any;
-    };
+  expected_annual_loss: number;
+  expected_annual_loss_pct: number;
+  present_value_30yr: number;
+  present_value_30yr_pct: number;
+  location: {
+    latitude: number;
+    longitude: number;
   };
+  parameters: {
+    building_type: string;
+    climate_escalation: number;
+    discount_rate: number;
+    time_horizon: number;
+  };
+  risk_breakdown: {
+    hurricane: RiskDetail;
+    flood: RiskDetail;
+    drought: RiskDetail;
+    heat_stress: RiskDetail;
+    extreme_precipitation: RiskDetail;
+  };
+}
+
+export interface RiskDetail {
+  annual_loss: number;
+  annual_loss_pct: number;
+  confidence: string;
+  details: string;
 }
 
 export interface RiskManagementData {
@@ -117,7 +136,7 @@ export async function fetchGeographicRisk(
   assetValue: number
 ): Promise<GeographicRiskData> {
   try {
-    const response = await fetch(`${GEOGRAPHIC_RISKS_API}/api/assess`, {
+    const response = await fetch(`${GEOGRAPHIC_RISKS_API}/assess`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
