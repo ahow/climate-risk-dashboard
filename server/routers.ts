@@ -237,7 +237,7 @@ export const appRouter = router({
           if (managementData.measures && managementData.measures.length > 0) {
             await db.insertRiskManagement({
               companyId: company.id,
-              overallScore: managementData.overall_score,
+              overallScore: managementData.summary?.score_percentage || 0,
               assessmentData: managementData as any,
             });
             assessmentsFetched++;
@@ -349,7 +349,7 @@ export const appRouter = router({
 
         await db.insertRiskManagement({
           companyId: company.id,
-          overallScore: managementData.overall_score,
+          overallScore: managementData.summary?.score_percentage || 0,
           assessmentData: managementData as any,
         });
 

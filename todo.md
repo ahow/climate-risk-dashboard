@@ -85,6 +85,29 @@
 
 ## Known Issues
 - [ ] Asset values are null in Asset Discovery API - need default values or alternative source
-- [ ] Risk Management API has different ISINs than our company list (0 matches)
+- [x] Risk Management API has different ISINs than our company list (resolved - was API hibernation)
 - [ ] Geographic risk assessment requires asset values to calculate losses
+- [x] Fixed duplicate rows in riskManagementScores table
+- [x] Fixed overallScore extraction from API response (now using summary.score_percentage)
+
+
+
+## Bug Investigation
+- [x] Investigate ISIN mismatch between company list and Risk Management API (was API hibernation, not mismatch)
+- [x] Compare ISINs from both sources
+- [x] Fix any data mapping issues
+
+
+
+## Bug Fixes
+- [x] Fix evidence.map error in CompanyDetails.tsx - evidence field is not an array
+- [x] Fix overall score extraction from Risk Management API (use summary.score_percentage)
+- [x] Update RiskManagementData interface to match actual API response structure
+
+
+
+## Asset Discovery API Update
+- [x] Review updated Asset Discovery API documentation (improved company coverage)
+- [x] Test if current integration still works with updated API (confirmed working)
+- [ ] Verify asset data quality and geocoding coverage improvements
 

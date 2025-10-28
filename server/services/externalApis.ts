@@ -35,10 +35,23 @@ export interface GeographicRiskData {
 }
 
 export interface RiskManagementData {
-  company_name: string;
-  isin: string;
-  assessment_date: string;
-  overall_score: number;
+  summary: {
+    company_name: string;
+    isin: string;
+    assessment_date: string;
+    score_percentage: number;
+    total_score: number;
+    max_possible_score: number;
+    average_score: number;
+    total_measures: number;
+    measures_with_evidence: number;
+    evidence_coverage: number;
+    total_quotes: number;
+    high_confidence_count: number;
+    medium_confidence_count: number;
+    low_confidence_count: number;
+  };
+  category_breakdown: any[];
   measures: Array<{
     measure_id: string;
     measure_name: string;
@@ -140,11 +153,24 @@ export async function fetchRiskManagement(isin: string): Promise<RiskManagementD
       if (response.status === 404) {
         console.warn(`No risk management assessment found for ISIN: ${isin}`);
         return {
-          company_name: '',
-          isin: isin,
-          assessment_date: new Date().toISOString(),
-          overall_score: 0,
+          summary: {
+            company_name: '',
+            isin: isin,
+            assessment_date: new Date().toISOString(),
+            score_percentage: 0,
+            total_score: 0,
+            max_possible_score: 0,
+            average_score: 0,
+            total_measures: 0,
+            measures_with_evidence: 0,
+            evidence_coverage: 0,
+            total_quotes: 0,
+            high_confidence_count: 0,
+            medium_confidence_count: 0,
+            low_confidence_count: 0,
+          },
           measures: [],
+          category_breakdown: [],
         };
       }
       throw new Error(`Failed to fetch risk management: ${response.statusText}`);
