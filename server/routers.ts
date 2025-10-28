@@ -175,6 +175,85 @@ export const appRouter = router({
       
       return { success: true, count: companiesData.length };
     }),
+
+    /**
+     * Fetch assets for all companies from Asset Discovery API
+     */
+    fetchAllAssets: publicProcedure.mutation(async () => {
+      const companies = await db.getAllCompanies();
+      let totalAssetsFetched = 0;
+      const errors: string[] = [];
+
+      for (const company of companies) {
+        try {
+          const assetData = await externalApis.fetchCompanyAssets(company.name);
+          
+          if (assetData.length > 0) {
+            const assetsToInsert = assetData.map(asset => ({
+              companyId: company.id,
+              assetName: asset.asset_name,
+              address: asset.location,
+              latitude: asset.latitude?.toString() || null,
+              longitude: asset.longitude?.toString() || null,
+              city: asset.city,
+              stateProvince: null,
+              country: asset.country,
+              assetType: asset.asset_type,
+              assetSubtype: null,
+              estimatedValueUsd: asset.estimated_value_usd?.toString() || null,
+              ownershipShare: null,
+              dataSources: asset.description || 'Asset Discovery API',
+              confidenceLevel: asset.geocoding_certainty?.toString() || null,
+            }));
+
+            await db.bulkInsertAssets(assetsToInsert);
+            totalAssetsFetched += assetsToInsert.length;
+          }
+        } catch (error) {
+          errors.push(`${company.name}: ${error}`);
+        }
+      }
+
+      return { 
+        success: true, 
+        totalAssetsFetched, 
+        companiesProcessed: companies.length,
+        errors 
+      };
+    }),
+
+    /**
+     * Fetch risk management assessments for all companies
+     */
+    fetchAllRiskManagement: publicProcedure.mutation(async () => {
+      const companies = await db.getAllCompanies();
+      let assessmentsFetched = 0;
+      const errors: string[] = [];
+
+      for (const company of companies) {
+        try {
+          const managementData = await externalApis.fetchRiskManagement(company.isin);
+          
+          if (managementData.measures && managementData.measures.length > 0) {
+            await db.insertRiskManagement({
+              companyId: company.id,
+              overallScore: managementData.overall_score,
+              assessmentData: managementData as any,
+            });
+            assessmentsFetched++;
+          }
+        } catch (error) {
+          errors.push(`${company.name}: ${error}`);
+        }
+      }
+
+      return { 
+        success: true, 
+        assessmentsFetched, 
+        companiesProcessed: companies.length,
+        errors 
+      };
+    }),
   }),
 
   assets: router({
@@ -199,25 +278,25 @@ export const appRouter = router({
           throw new Error(`Company not found: ${input.isin}`);
         }
 
-        // Fetch assets from external API
-        const assetData = await externalApis.fetchCompanyAssets(input.isin);
+        // Fetch assets from external API using company name
+        const assetData = await externalApis.fetchCompanyAssets(company.name);
         
         // Transform and insert into database
         const assetsToInsert = assetData.map(asset => ({
           companyId: company.id,
           assetName: asset.asset_name,
-          address: asset.address,
+          address: asset.location,
           latitude: asset.latitude?.toString() || null,
           longitude: asset.longitude?.toString() || null,
           city: asset.city,
-          stateProvince: asset.state_province,
+          stateProvince: null, // Not provided by Asset Discovery API
           country: asset.country,
           assetType: asset.asset_type,
-          assetSubtype: asset.asset_subtype,
-          estimatedValueUsd: asset.estimated_value_usd.toString(),
-          ownershipShare: asset.ownership_share,
-          dataSources: asset.data_sources,
-          confidenceLevel: asset.confidence_level,
+          assetSubtype: null, // Not provided by Asset Discovery API
+          estimatedValueUsd: asset.estimated_value_usd?.toString() || null,
+          ownershipShare: null, // Not provided by Asset Discovery API
+          dataSources: asset.description || 'Asset Discovery API',
+          confidenceLevel: asset.geocoding_certainty?.toString() || null,
         }));
 
         await db.bulkInsertAssets(assetsToInsert);
@@ -266,10 +345,7 @@ export const appRouter = router({
           throw new Error(`Company not found: ${input.isin}`);
         }
 
-        const managementData = await externalApis.fetchRiskManagement(
-          company.name,
-          input.isin
-        );
+        const managementData = await externalApis.fetchRiskManagement(input.isin);
 
         await db.insertRiskManagement({
           companyId: company.id,

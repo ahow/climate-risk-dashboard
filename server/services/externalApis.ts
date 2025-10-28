@@ -3,24 +3,22 @@
  * Handles communication with Asset Discovery, Geographic Risks, and Risk Management APIs
  */
 
-const ASSET_DISCOVERY_API = "https://manus.space"; // Placeholder - will be updated with actual endpoint
+const ASSET_DISCOVERY_API = "https://3000-ibweqg4u19d6b2l6kv5ro-ee585d51.manusvm.computer/api/trpc";
 const GEOGRAPHIC_RISKS_API = "https://5000-ie5oom8cn8x48wkgrn5wb-14f4b140.manusvm.computer";
-const RISK_MANAGEMENT_API = "https://manus.space"; // Placeholder - will be updated with actual endpoint
+const RISK_MANAGEMENT_API = "https://8000-iwnb9mmlojeywebr41d8n-96f6004a.manusvm.computer";
 
 export interface AssetData {
   asset_name: string;
-  address: string;
+  company_name: string;
+  asset_type: string | null;
+  location: string;
+  city: string | null;
+  country: string | null;
   latitude: number | null;
   longitude: number | null;
-  city: string | null;
-  state_province: string | null;
-  country: string;
-  asset_type: string;
-  asset_subtype: string;
-  estimated_value_usd: number;
-  ownership_share: string;
-  data_sources: string;
-  confidence_level: string;
+  geocoding_certainty: number | null;
+  estimated_value_usd: number | null;
+  description: string | null;
 }
 
 export interface GeographicRiskData {
@@ -38,6 +36,7 @@ export interface GeographicRiskData {
 
 export interface RiskManagementData {
   company_name: string;
+  isin: string;
   assessment_date: string;
   overall_score: number;
   measures: Array<{
@@ -59,22 +58,39 @@ export interface RiskManagementData {
 
 /**
  * Fetch assets for a company from the Asset Discovery API
+ * Note: This API uses tRPC protocol with URL-encoded JSON input
  */
-export async function fetchCompanyAssets(isin: string): Promise<AssetData[]> {
+export async function fetchCompanyAssets(companyName: string): Promise<AssetData[]> {
   try {
-    // For now, return mock data structure
-    // TODO: Replace with actual API call once endpoint is confirmed
-    console.log(`Fetching assets for company: ${isin}`);
+    console.log(`Fetching assets for company: ${companyName}`);
     
-    // const response = await fetch(`${ASSET_DISCOVERY_API}/api/companies/${isin}/assets`);
-    // if (!response.ok) {
-    //   throw new Error(`Failed to fetch assets: ${response.statusText}`);
-    // }
-    // return await response.json();
+    // Prepare tRPC input format
+    const inputData = {
+      json: {
+        company_name: companyName
+      }
+    };
     
-    return [];
+    const encodedInput = encodeURIComponent(JSON.stringify(inputData));
+    const url = `${ASSET_DISCOVERY_API}/assets.getByCompany?input=${encodedInput}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch assets: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Extract data from tRPC response format: result.data.json
+    const result = data?.result?.data?.json;
+    if (!result || !result.assets) {
+      console.warn(`No assets found for company: ${companyName}`);
+      return [];
+    }
+    
+    return result.assets;
   } catch (error) {
-    console.error(`Error fetching assets for ${isin}:`, error);
+    console.error(`Error fetching assets for ${companyName}:`, error);
     throw error;
   }
 }
@@ -112,28 +128,31 @@ export async function fetchGeographicRisk(
 }
 
 /**
- * Fetch risk management assessment for a company
+ * Fetch risk management assessment for a company by ISIN
  */
-export async function fetchRiskManagement(companyName: string, isin: string): Promise<RiskManagementData> {
+export async function fetchRiskManagement(isin: string): Promise<RiskManagementData> {
   try {
-    // For now, return mock data structure
-    // TODO: Replace with actual API call once endpoint is confirmed
-    console.log(`Fetching risk management for company: ${companyName} (${isin})`);
+    console.log(`Fetching risk management for ISIN: ${isin}`);
     
-    // const response = await fetch(`${RISK_MANAGEMENT_API}/api/assessment/${isin}`);
-    // if (!response.ok) {
-    //   throw new Error(`Failed to fetch risk management: ${response.statusText}`);
-    // }
-    // return await response.json();
+    const response = await fetch(`${RISK_MANAGEMENT_API}/assessment/${isin}`);
+    if (!response.ok) {
+      // If 404, the company may not be in the assessed list
+      if (response.status === 404) {
+        console.warn(`No risk management assessment found for ISIN: ${isin}`);
+        return {
+          company_name: '',
+          isin: isin,
+          assessment_date: new Date().toISOString(),
+          overall_score: 0,
+          measures: [],
+        };
+      }
+      throw new Error(`Failed to fetch risk management: ${response.statusText}`);
+    }
     
-    return {
-      company_name: companyName,
-      assessment_date: new Date().toISOString(),
-      overall_score: 0,
-      measures: [],
-    };
+    return await response.json();
   } catch (error) {
-    console.error(`Error fetching risk management for ${companyName}:`, error);
+    console.error(`Error fetching risk management for ${isin}:`, error);
     throw error;
   }
 }
@@ -145,8 +164,7 @@ export async function batchFetchGeographicRisks(
   assets: Array<{ latitude: number; longitude: number; assetValue: number }>
 ): Promise<GeographicRiskData[]> {
   try {
-    // Check if batch endpoint is available
-    // For now, we'll make individual requests
+    // Make individual requests (can be optimized with batch endpoint if available)
     const promises = assets.map(asset =>
       fetchGeographicRisk(asset.latitude, asset.longitude, asset.assetValue)
     );
@@ -154,6 +172,31 @@ export async function batchFetchGeographicRisks(
     return await Promise.all(promises);
   } catch (error) {
     console.error('Error in batch fetch geographic risks:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all companies from Asset Discovery API
+ */
+export async function fetchAllCompanies(): Promise<Array<{
+  company_name: string;
+  total_assets: number;
+  assets_with_coordinates: number;
+  geocoding_percentage: string;
+}>> {
+  try {
+    const response = await fetch(`${ASSET_DISCOVERY_API}/assets.getCompanies`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch companies: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const result = data?.result?.data?.json;
+    
+    return result?.companies || [];
+  } catch (error) {
+    console.error('Error fetching all companies:', error);
     throw error;
   }
 }

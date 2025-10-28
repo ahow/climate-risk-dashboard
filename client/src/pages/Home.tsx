@@ -20,6 +20,9 @@ export default function Home() {
     },
   });
 
+  const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation();
+  const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
+
   const filteredCompanies = companies?.filter(
     (company) =>
       company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,6 +106,57 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Data Loading Actions */}
+        {companies && companies.length > 0 && (
+          <Card className="mb-6 bg-indigo-50 border-indigo-200">
+            <CardHeader>
+              <CardTitle className="text-lg">Data Loading</CardTitle>
+              <CardDescription>
+                Fetch asset locations and risk management data from external APIs
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-4">
+              <Button
+                onClick={() => fetchAssetsMutation.mutate()}
+                disabled={fetchAssetsMutation.isPending}
+                variant="default"
+              >
+                {fetchAssetsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching Assets...
+                  </>
+                ) : (
+                  "Fetch All Assets"
+                )}
+              </Button>
+              <Button
+                onClick={() => fetchRiskMgmtMutation.mutate()}
+                disabled={fetchRiskMgmtMutation.isPending}
+                variant="default"
+              >
+                {fetchRiskMgmtMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching Risk Assessments...
+                  </>
+                ) : (
+                  "Fetch Risk Management Data"
+                )}
+              </Button>
+              {fetchAssetsMutation.isSuccess && (
+                <div className="text-sm text-green-600 flex items-center">
+                  ✓ Assets loaded: {fetchAssetsMutation.data.totalAssetsFetched} from {fetchAssetsMutation.data.companiesProcessed} companies
+                </div>
+              )}
+              {fetchRiskMgmtMutation.isSuccess && (
+                <div className="text-sm text-green-600 flex items-center">
+                  ✓ Risk assessments loaded: {fetchRiskMgmtMutation.data.assessmentsFetched} companies
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
         {/* Search Bar */}
         <Card className="mb-8">
           <CardContent className="pt-6">

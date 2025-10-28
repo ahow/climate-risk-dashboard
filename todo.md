@@ -46,14 +46,45 @@
 - [x] Calculate and display final expected loss
 
 ## Data Loading & Caching
-- [ ] Implement loading states for API calls
-- [ ] Add error handling for failed API requests
-- [ ] Implement caching strategy for API responses
+- [x] Implement loading states for API calls
+- [x] Add error handling for failed API requests
+- [x] Implement caching strategy for API responses
 
 ## UI/UX Polish
-- [ ] Design responsive layout
-- [ ] Add loading skeletons
-- [ ] Implement expandable/collapsible sections
+- [x] Design responsive layout
+- [x] Add loading skeletons
+- [x] Implement expandable/collapsible sections
 - [ ] Add data visualization (charts/graphs)
-- [ ] Style tables and data displays
+- [x] Style tables and data displays
+
+## API Configuration (Next Steps)
+- [x] Configure Asset Discovery API endpoint URL
+- [x] Configure Risk Management API endpoint URL
+- [x] Implement batch data loading for all companies
+- [ ] Test asset data fetching for companies
+- [ ] Test risk management assessment fetching
+
+
+
+## Pending Configuration
+- [x] Configure Risk Management API URL
+- [x] Update externalApis.ts with both API URLs
+- [ ] Test Risk Management API integration
+- [ ] Test Asset Discovery API integration
+
+
+
+## API Configuration (In Progress)
+- [x] Update Asset Discovery API URL and implement tRPC-style requests
+- [x] Update Risk Management API URL
+- [x] Update data mapping to match actual API response formats
+- [x] Add batch fetch procedures for assets and risk management
+- [x] Add UI buttons to trigger data loading
+- [x] Test asset fetching for all companies (504 assets loaded successfully)
+- [x] Test risk management assessment fetching (0 companies - ISIN mismatch)
+
+## Known Issues
+- [ ] Asset values are null in Asset Discovery API - need default values or alternative source
+- [ ] Risk Management API has different ISINs than our company list (0 matches)
+- [ ] Geographic risk assessment requires asset values to calculate losses
 
