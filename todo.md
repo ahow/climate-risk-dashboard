@@ -166,7 +166,7 @@
 - [x] Re-fetch all assets with complete coordinates and values
 - [x] Verify 504 assets loaded (565 from API, 61 skipped due to company name mismatch)
 - [x] Confirm 100% coordinate and value coverage for loaded assets (504/504)
-- [ ] Re-run geographic risk calculation for all 504 assets (currently 181/504 = 36% complete)
+- [x] Re-run geographic risk calculation for all 504 assets (503/504 = 99.8% complete, 1 error)
 
 
 
@@ -183,4 +183,12 @@
 - [x] Clear existing risk management data
 - [x] Re-fetch risk management data for all 20 companies
 - [x] Verify 19/20 companies now have risk management scores (BNP PARIBAS missing - API went to sleep during fetch)
+
+
+
+## Re-fetch Risk Management Data (API Now Awake)
+- [x] Clear existing risk management data
+- [x] Re-fetch all 20 companies with API awake
+- [x] Verified 19/20 companies have scores (BNP PARIBAS excluded - API hibernation issue)
+- [x] Decision: Proceed with 19 companies (95% coverage) for now
 
