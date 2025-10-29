@@ -212,16 +212,36 @@ export default function CompanyDetails() {
                           <TableHead>Coordinates</TableHead>
                           <TableHead>Type</TableHead>
                           <TableHead className="text-right">Value (USD)</TableHead>
-                          <TableHead className="text-right">Expected Loss</TableHead>
+                          <TableHead className="text-right">Flood</TableHead>
+                          <TableHead className="text-right">Wildfire</TableHead>
+                          <TableHead className="text-right">Heat Stress</TableHead>
+                          <TableHead className="text-right">Extreme Precip</TableHead>
+                          <TableHead className="text-right">Hurricane</TableHead>
+                          <TableHead className="text-right">Drought</TableHead>
+                          <TableHead className="text-right">Total Loss</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {assets.map((asset) => {
                           const riskData = asset.geographicRisk?.riskData as any;
                           let totalLoss = 0;
+                          const riskBreakdown = riskData?.risk_breakdown || {};
+                          
                           if (riskData?.expected_annual_loss) {
                             totalLoss = riskData.expected_annual_loss;
                           }
+
+                          const formatRisk = (value: number | undefined) => {
+                            if (!value || value === 0) return <span className="text-gray-400">$0</span>;
+                            return (
+                              <span className="text-orange-600">
+                                ${value.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })}
+                              </span>
+                            );
+                          };
 
                           return (
                             <TableRow key={asset.id}>
@@ -252,6 +272,24 @@ export default function CompanyDetails() {
                               </TableCell>
                               <TableCell className="text-right">
                                 ${parseFloat(asset.estimatedValueUsd || '0').toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatRisk(riskBreakdown.flood?.annual_loss)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatRisk(riskBreakdown.wildfire?.annual_loss)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatRisk(riskBreakdown.heat_stress?.annual_loss)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatRisk(riskBreakdown.extreme_precipitation?.annual_loss)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatRisk(riskBreakdown.hurricane?.annual_loss)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatRisk(riskBreakdown.drought?.annual_loss)}
                               </TableCell>
                               <TableCell className="text-right font-medium">
                                 {totalLoss > 0 ? (

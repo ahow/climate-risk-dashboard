@@ -192,3 +192,10 @@
 - [x] Verified 19/20 companies have scores (BNP PARIBAS excluded - API hibernation issue)
 - [x] Decision: Proceed with 19 companies (95% coverage) for now
 
+
+
+## UI Enhancements - User Requested
+- [x] Add risk breakdown by category (flood, wildfire, etc.) to Direct Exposure asset table
+- [x] Add verbatim quote and source to each measure in Risk Management Assessment (already implemented)
+- [x] Add expected loss as percentage of EV to company summary cards on main page
+

@@ -231,6 +231,14 @@ export default function Home() {
                       ${parseFloat(company.enterpriseValue || '0').toLocaleString()}
                     </span>
                   </div>
+                  <div className="flex justify-between pt-2 mt-2 border-t">
+                    <span className="text-gray-600">Expected Loss:</span>
+                    <span className="font-semibold text-red-600">
+                      {(company as any).lossPercentageOfEV !== undefined 
+                        ? `${(company as any).lossPercentageOfEV.toFixed(2)}% of EV`
+                        : 'N/A'}
+                    </span>
+                  </div>
                 </div>
                 <Button className="w-full mt-4" variant="outline">
                   View Risk Analysis
