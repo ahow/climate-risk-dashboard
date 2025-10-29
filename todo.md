@@ -199,3 +199,9 @@
 - [x] Add verbatim quote and source to each measure in Risk Management Assessment (already implemented)
 - [x] Add expected loss as percentage of EV to company summary cards on main page
 
+
+
+## Bug Fix - Evidence Display
+- [x] Investigate why verbatim quotes and sources are not displaying in Risk Management Assessment
+- [x] Fix evidence display to show quotes and sources for each measure
+

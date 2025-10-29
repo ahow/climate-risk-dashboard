@@ -368,48 +368,40 @@ export default function CompanyDetails() {
                             <p className="text-sm text-gray-600">{measure.rationale}</p>
                           </div>
                           
-                          {measure.evidence && (
+                          {measure.evidence && Array.isArray(measure.evidence) && measure.evidence.length > 0 && (
                             <div>
                               <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                 <FileText className="h-4 w-4" />
                                 Evidence:
                               </div>
                               <div className="space-y-3">
-                                {(() => {
-                                  const evidenceQuotes = typeof measure.evidence === 'string' 
-                                    ? measure.evidence.split(' | ') 
-                                    : [];
-                                  const sourceUrls = measure.source_urls?.split(',') || [];
-                                  const sourceTitles = measure.source_titles?.split(',') || [];
-                                  const sourcePages = measure.source_pages?.split(',') || [];
-                                  
-                                  return evidenceQuotes.map((quote: string, evIndex: number) => (
-                                    <div key={evIndex} className="bg-gray-50 p-3 rounded-lg text-sm">
-                                      <div className="italic text-gray-700 mb-2">
-                                        "{quote.substring(0, 300)}
-                                        {quote.length > 300 ? "..." : ""}"
-                                      </div>
-                                      <div className="text-xs text-gray-600">
-                                        <div>Source: {sourceTitles[evIndex] || 'N/A'}</div>
-                                        {sourcePages[evIndex] && (
-                                          <div>Page: {sourcePages[evIndex]}</div>
-                                        )}
-                                        {sourceUrls[evIndex] && sourceUrls[evIndex] !== "N/A" && (
-                                          <div className="mt-1">
-                                            <a
-                                              href={sourceUrls[evIndex]}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-indigo-600 hover:underline"
-                                            >
-                                              View Document
-                                            </a>
-                                          </div>
-                                        )}
-                                      </div>
+                                {measure.evidence.map((ev: any, evIndex: number) => (
+                                  <div key={evIndex} className="bg-gray-50 p-3 rounded-lg text-sm">
+                                    <div className="italic text-gray-700 mb-2">
+                                      "{ev.verbatim_quote && ev.verbatim_quote.length > 300 
+                                        ? ev.verbatim_quote.substring(0, 300) + "..." 
+                                        : ev.verbatim_quote}"
                                     </div>
-                                  ));
-                                })()}
+                                    <div className="text-xs text-gray-600">
+                                      <div>Source: {ev.source_doc_title || 'N/A'}</div>
+                                      {ev.source_page && ev.source_page !== 'N/A' && (
+                                        <div>Page: {ev.source_page}</div>
+                                      )}
+                                      {ev.source_url && ev.source_url !== "N/A" && (
+                                        <div className="mt-1">
+                                          <a
+                                            href={ev.source_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-indigo-600 hover:underline"
+                                          >
+                                            View Document
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           )}
