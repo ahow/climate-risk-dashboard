@@ -168,3 +168,19 @@
 - [x] Confirm 100% coordinate and value coverage for loaded assets (504/504)
 - [ ] Re-run geographic risk calculation for all 504 assets (currently 181/504 = 36% complete)
 
+
+
+## Risk Management API - Check for All 20 Companies
+- [ ] Wake up Risk Management API (currently hibernated)
+- [ ] Test /companies endpoint to verify all 20 companies are available
+- [ ] Re-fetch risk management data if API now has all 20 companies
+- [ ] Update dashboard to show risk management scores for all companies
+
+
+
+## Risk Management API - All 20 Companies Available
+- [x] Confirm Risk Management API is awake with all 20 companies
+- [x] Clear existing risk management data
+- [x] Re-fetch risk management data for all 20 companies
+- [x] Verify 19/20 companies now have risk management scores (BNP PARIBAS missing - API went to sleep during fetch)
+
