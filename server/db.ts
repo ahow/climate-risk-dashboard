@@ -203,3 +203,30 @@ export async function insertRiskManagement(score: InsertRiskManagementScore): Pr
   await db.insert(riskManagementScores).values(score);
 }
 
+
+
+// ========== Additional Helper Functions ==========
+
+export async function getCompanyById(id: number): Promise<Company | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAssetById(id: number): Promise<Asset | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(assets).where(eq(assets.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function deleteGeographicRiskByAssetId(assetId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.delete(geographicRisks).where(eq(geographicRisks.assetId, assetId));
+}
+

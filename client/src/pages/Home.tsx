@@ -23,6 +23,72 @@ export default function Home() {
   const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation();
   const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
   const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation();
+  const calibrateMutation = trpc.risks.recalculateWithCalibration.useMutation();
+
+  // CSV Export
+  const exportMutation = trpc.export.generateCSV.useQuery(undefined, {
+    enabled: false, // Don't fetch automatically
+  });
+
+  const handleExportCSV = async () => {
+    try {
+      // Fetch the data
+      const data = await exportMutation.refetch();
+      if (!data.data) return;
+
+      const csvRows = [
+        // Header
+        [
+          'ISIN',
+          'Name',
+          'EV',
+          'Direct Exposure',
+          'Indirect Exposure',
+          'Gross Expected Loss',
+          'Flood Loss',
+          'Wildfire Loss',
+          'Heat Stress Loss',
+          'Extreme Precip Loss',
+          'Hurricane Loss',
+          'Drought Loss',
+          'Risk Management Score',
+          'Net Expected Loss',
+          'Expected Loss % of EV'
+        ].join(',')
+      ];
+
+      // Data rows
+      data.data.forEach(row => {
+        csvRows.push([
+          row.isin,
+          `"${row.name}"`,
+          row.ev.toFixed(2),
+          row.directExposure.toFixed(2),
+          row.indirectExposure.toFixed(2),
+          row.grossExpectedLoss.toFixed(2),
+          row.floodLoss.toFixed(2),
+          row.wildfireLoss.toFixed(2),
+          row.heatStressLoss.toFixed(2),
+          row.extremePrecipLoss.toFixed(2),
+          row.hurricaneLoss.toFixed(2),
+          row.droughtLoss.toFixed(2),
+          row.riskManagementScore.toFixed(1),
+          row.netExpectedLoss.toFixed(2),
+          row.lossPercentOfEV.toFixed(4)
+        ].join(','));
+      });
+
+      // Create and download CSV
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `climate-risk-analysis-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+    }
+  };
 
   const filteredCompanies = companies?.filter(
     (company) =>
@@ -177,6 +243,50 @@ export default function Home() {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Asset Value Calibration & Export */}
+        {companies && companies.length > 0 && (
+          <Card className="mb-6 bg-green-50 border-green-200">
+            <CardHeader>
+              <CardTitle className="text-lg">Asset Value Calibration & Export</CardTitle>
+              <CardDescription>
+                Recalculate risks using proportionate allocation based on reported tangible assets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-4">
+              <Button
+                onClick={() => calibrateMutation.mutate()}
+                disabled={calibrateMutation.isPending}
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {calibrateMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Calibrating... (this takes ~10 min)
+                  </>
+                ) : (
+                  "Recalculate with Calibrated Values"
+                )}
+              </Button>
+              {calibrateMutation.isSuccess && (
+                <div className="text-sm text-green-600 flex items-center">
+                  ✓ Calibrated: {calibrateMutation.data.risksRecalculated} assets recalculated, {calibrateMutation.data.skipped} skipped
+                  {calibrateMutation.data.errors && calibrateMutation.data.errors.length > 0 && (
+                    <span className="text-red-600 ml-2">({calibrateMutation.data.errors.length} errors)</span>
+                  )}
+                </div>
+              )}
+              <Button
+                onClick={handleExportCSV}
+                variant="outline"
+                className="ml-auto"
+              >
+                Download CSV Report
+              </Button>
             </CardContent>
           </Card>
         )}

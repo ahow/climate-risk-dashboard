@@ -205,3 +205,31 @@
 - [x] Investigate why verbatim quotes and sources are not displaying in Risk Management Assessment
 - [x] Fix evidence display to show quotes and sources for each measure
 
+
+
+## Asset Value Calibration
+- [x] Implement proportionate allocation: calculate each asset as % of total estimated values
+- [x] Multiply percentage by reported tangible assets value from companies.xlsx
+- [x] Update geographic risk calculation to use calibrated values
+- [x] Update all displays to show calibrated values instead of raw estimates
+- [x] Recalculate all geographic risks with calibrated values
+
+## CSV Export Functionality
+- [x] Add CSV export button to dashboard
+- [x] Include fields: ISIN, Name, EV, Direct Exposure, Indirect Exposure, Gross Expected Loss
+- [x] Include risk category breakdown: Flood, Wildfire, Heat Stress, Extreme Precip, Hurricane, Drought
+- [x] Include Risk Management Score
+- [x] Include Net Expected Loss (gross × (100% - management score))
+- [x] Include Expected Loss as % of EV
+
+## ABB "Not assessed" Investigation
+- [x] Check why some ABB assets show "Not assessed" for geographic risks
+- [x] Verify if assets have coordinates
+- [x] Check if geographic risk calculation failed or was skipped
+- [x] Document root cause (invalid placeholder coordinates)
+
+## Risk Management Rationale Display
+- [x] Verify rationale is displaying correctly
+- [x] Check if user is seeing different view than screenshots
+- [x] Ensure all measures show rationale text
+

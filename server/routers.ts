@@ -511,6 +511,255 @@ export const appRouter = router({
         errors
       };
     }),
+
+    /**
+     * Recalculate geographic risks using calibrated asset values
+     * This implements proportionate allocation based on reported tangible assets
+     */
+    recalculateWithCalibration: publicProcedure.mutation(async () => {
+      const companies = await db.getAllCompanies();
+      let risksRecalculated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      console.log(`[Calibration] Starting recalculation for ${companies.length} companies`);
+
+      for (const company of companies) {
+        try {
+          console.log(`[Calibration] Processing ${company.name}...`);
+          
+          const assets = await db.getAssetsByCompanyId(company.id);
+          
+          // Calculate total estimated value for all assets
+          let totalEstimatedValue = 0;
+          const assetValues: Array<{ asset: typeof assets[0]; estimatedValue: number }> = [];
+          
+          for (const asset of assets) {
+            const estimatedValue = parseFloat(asset.estimatedValueUsd || '0');
+            if (estimatedValue > 0) {
+              totalEstimatedValue += estimatedValue;
+              assetValues.push({ asset, estimatedValue });
+            }
+          }
+
+          // Get reported tangible assets value
+          const reportedTangibleAssets = parseFloat(company.tangibleAssets || '0');
+          
+          if (totalEstimatedValue === 0 || reportedTangibleAssets === 0) {
+            console.warn(`[Calibration] Cannot calibrate ${company.name}: totalEstimated=${totalEstimatedValue}, reported=${reportedTangibleAssets}`);
+            continue;
+          }
+
+          // Recalculate geographic risks using calibrated values
+          for (const { asset, estimatedValue } of assetValues) {
+            try {
+              // Only recalculate if asset has valid coordinates
+              if (asset.latitude && asset.longitude) {
+                const lat = parseFloat(asset.latitude);
+                const lon = parseFloat(asset.longitude);
+                
+                if (!isNaN(lat) && !isNaN(lon)) {
+                  // Calculate calibrated value
+                  const percentageOfTotal = estimatedValue / totalEstimatedValue;
+                  const calibratedValue = percentageOfTotal * reportedTangibleAssets;
+                  
+                  console.log(`[Calibration] ${asset.assetName}: $${estimatedValue.toFixed(0)} → $${calibratedValue.toFixed(0)} (${(percentageOfTotal * 100).toFixed(1)}%)`);
+                  
+                  // Delete existing risk data
+                  await db.deleteGeographicRiskByAssetId(asset.id);
+                  
+                  // Fetch new risk data with calibrated value
+                  const riskData = await externalApis.fetchGeographicRisk(
+                    lat,
+                    lon,
+                    calibratedValue
+                  );
+                  
+                  // Store new risk data
+                  await db.insertGeographicRisk({
+                    assetId: asset.id,
+                    latitude: lat.toString(),
+                    longitude: lon.toString(),
+                    assetValue: calibratedValue.toString(),
+                    riskData: riskData as any,
+                  });
+                  
+                  risksRecalculated++;
+                  console.log(`[Calibration] ✓ Recalculated (${risksRecalculated} total)`);
+                  
+                  // Add delay to avoid overwhelming the API
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                } else {
+                  skipped++;
+                }
+              } else {
+                skipped++;
+              }
+            } catch (error) {
+              const errorMsg = `Asset ${asset.assetName} (ID: ${asset.id}): ${error}`;
+              console.error(`[Calibration] ✗ ${errorMsg}`);
+              errors.push(errorMsg);
+            }
+          }
+        } catch (error) {
+          const errorMsg = `Company ${company.name}: ${error}`;
+          console.error(`[Calibration] ✗ ${errorMsg}`);
+          errors.push(errorMsg);
+        }
+      }
+
+      console.log(`[Calibration] Completed: ${risksRecalculated} recalculated, ${skipped} skipped, ${errors.length} errors`);
+
+      return {
+        success: true,
+        risksRecalculated,
+        skipped,
+        errors,
+      };
+    }),
+
+    /**
+     * Get calibrated asset values for a company
+     */
+    getCalibratedValues: publicProcedure
+      .input(z.object({ isin: z.string() }))
+      .query(async ({ input }) => {
+        const company = await db.getCompanyByIsin(input.isin);
+        if (!company) {
+          throw new Error(`Company not found: ${input.isin}`);
+        }
+
+        const assets = await db.getAssetsByCompanyId(company.id);
+        
+        // Calculate total estimated value
+        let totalEstimatedValue = 0;
+        const assetValues: Array<{ id: number; name: string; estimatedValue: number }> = [];
+        
+        for (const asset of assets) {
+          const estimatedValue = parseFloat(asset.estimatedValueUsd || '0');
+          if (estimatedValue > 0) {
+            totalEstimatedValue += estimatedValue;
+            assetValues.push({ 
+              id: asset.id, 
+              name: asset.assetName, 
+              estimatedValue 
+            });
+          }
+        }
+
+        const reportedTangibleAssets = parseFloat(company.tangibleAssets || '0');
+        
+        const calibratedAssets = assetValues.map(({ id, name, estimatedValue }) => {
+          const percentageOfTotal = totalEstimatedValue > 0 ? estimatedValue / totalEstimatedValue : 0;
+          const calibratedValue = percentageOfTotal * reportedTangibleAssets;
+          
+          return {
+            assetId: id,
+            assetName: name,
+            estimatedValue,
+            percentageOfTotal,
+            calibratedValue,
+          };
+        });
+
+        return {
+          companyName: company.name,
+          totalEstimatedValue,
+          reportedTangibleAssets,
+          calibratedAssets,
+        };
+      }),
+  }),
+
+  export: router({
+    /**
+     * Generate CSV export data with complete company-level details
+     */
+    generateCSV: publicProcedure.query(async () => {
+      const companies = await db.getAllCompanies();
+      const csvData: Array<{
+        isin: string;
+        name: string;
+        ev: number;
+        directExposure: number;
+        indirectExposure: number;
+        grossExpectedLoss: number;
+        floodLoss: number;
+        wildfireLoss: number;
+        heatStressLoss: number;
+        extremePrecipLoss: number;
+        hurricaneLoss: number;
+        droughtLoss: number;
+        riskManagementScore: number;
+        netExpectedLoss: number;
+        lossPercentOfEV: number;
+      }> = [];
+
+      for (const company of companies) {
+        // Get assets and calculate direct exposure
+        const assets = await db.getAssetsByCompanyId(company.id);
+        let directExposure = 0;
+        const riskBreakdown: Record<string, number> = {
+          flood: 0,
+          wildfire: 0,
+          heat_stress: 0,
+          extreme_precip: 0,
+          hurricane: 0,
+          drought: 0,
+        };
+
+        for (const asset of assets) {
+          const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
+          if (geoRisk && geoRisk.riskData) {
+            const riskData = geoRisk.riskData as any;
+            const risks = riskData.risks || {};
+            
+            for (const [riskType, riskInfo] of Object.entries(risks)) {
+              const expectedLoss = (riskInfo as any).expected_annual_loss || 0;
+              directExposure += expectedLoss;
+              
+              if (riskBreakdown[riskType] !== undefined) {
+                riskBreakdown[riskType] += expectedLoss;
+              }
+            }
+          }
+        }
+
+        // Get risk management score
+        const riskManagement = await db.getRiskManagementByCompanyId(company.id);
+        const managementScore = riskManagement?.overallScore || 0;
+        const managementFactor = (100 - managementScore) / 100;
+
+        // Calculate net expected loss
+        const indirectExposure = 0; // Currently not calculated
+        const grossExpectedLoss = directExposure + indirectExposure;
+        const netExpectedLoss = grossExpectedLoss * managementFactor;
+
+        // Calculate as percentage of EV
+        const ev = parseFloat(company.enterpriseValue || '0');
+        const lossPercentOfEV = ev > 0 ? (netExpectedLoss / ev) * 100 : 0;
+
+        csvData.push({
+          isin: company.isin,
+          name: company.name,
+          ev,
+          directExposure,
+          indirectExposure,
+          grossExpectedLoss,
+          floodLoss: riskBreakdown.flood,
+          wildfireLoss: riskBreakdown.wildfire,
+          heatStressLoss: riskBreakdown.heat_stress,
+          extremePrecipLoss: riskBreakdown.extreme_precip,
+          hurricaneLoss: riskBreakdown.hurricane,
+          droughtLoss: riskBreakdown.drought,
+          riskManagementScore: managementScore,
+          netExpectedLoss,
+          lossPercentOfEV,
+        });
+      }
+
+      return csvData;
+    }),
   }),
 });
 
