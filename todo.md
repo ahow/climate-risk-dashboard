@@ -233,3 +233,37 @@
 - [x] Check if user is seeing different view than screenshots
 - [x] Ensure all measures show rationale text
 
+
+
+## Data Refresh - Updated Asset Discovery API
+- [x] Clear existing assets from database
+- [x] Clear existing geographic risks from database
+- [x] Fetch updated asset data from Asset Discovery API (641 assets from 20 companies)
+- [x] Verify expanded asset count and comprehensive coordinates
+- [ ] Calculate geographic risks for all new assets (IN PROGRESS: 208/641 complete - 32%, ~5 hours remaining)
+- [ ] Verify dashboard displays updated data correctly
+
+
+
+## Technical Documentation
+- [x] Create 1-2 page document explaining how dashboard information is generated
+- [x] Cover data flow from APIs to dashboard display
+- [x] Explain calculation methodologies
+
+
+
+## CSV File Upload Feature
+- [x] Examine uploaded CSV file format
+- [x] Create database schema for uploaded files
+- [x] Implement backend file upload endpoint with S3 storage
+- [x] Create UI for file upload
+- [x] Display list of uploaded files with permanent URLs
+- [x] Test file upload functionality
+
+## Heroku Deployment
+- [ ] Create Procfile and deployment configuration
+- [ ] Set up database configuration for Heroku
+- [ ] Deploy application to Heroku using API key
+- [ ] Configure environment variables on Heroku
+- [ ] Verify deployment and test functionality
+

@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import * as externalApis from "./services/externalApis";
@@ -760,6 +760,68 @@ export const appRouter = router({
 
       return csvData;
     }),
+  }),
+
+  files: router({
+    /**
+     * Upload a file to S3 and store metadata in database
+     */
+    upload: protectedProcedure
+      .input(z.object({
+        filename: z.string(),
+        fileType: z.string(),
+        fileSize: z.number(),
+        base64Data: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { storagePut } = await import("./storage");
+        
+        // Generate unique file key
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(7);
+        const fileKey = `uploads/${ctx.user.id}/${timestamp}-${randomSuffix}-${input.filename}`;
+        
+        // Convert base64 to buffer
+        const buffer = Buffer.from(input.base64Data, 'base64');
+        
+        // Upload to S3
+        const { url } = await storagePut(fileKey, buffer, input.fileType);
+        
+        // Store metadata in database
+        await db.createUploadedFile({
+          filename: input.filename,
+          originalFilename: input.filename,
+          fileType: input.fileType,
+          fileSize: input.fileSize,
+          s3Key: fileKey,
+          s3Url: url,
+          uploadedBy: ctx.user.id,
+          description: input.description,
+        });
+        
+        return {
+          success: true,
+          url,
+          fileKey,
+        };
+      }),
+
+    /**
+     * Get all uploaded files
+     */
+    list: publicProcedure.query(async () => {
+      return await db.getAllUploadedFiles();
+    }),
+
+    /**
+     * Get a specific uploaded file by ID
+     */
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getUploadedFileById(input.id);
+      }),
   }),
 });
 

@@ -19,6 +19,25 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Uploaded files table for storing CSV and other files with permanent S3 URLs
+ */
+export const uploadedFiles = mysqlTable("uploadedFiles", {
+  id: int("id").autoincrement().primaryKey(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
+  fileType: varchar("fileType", { length: 100 }).notNull(),
+  fileSize: int("fileSize").notNull(),
+  s3Key: varchar("s3Key", { length: 512 }).notNull(),
+  s3Url: varchar("s3Url", { length: 1024 }).notNull(),
+  uploadedBy: int("uploadedBy").references(() => users.id),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  description: text("description"),
+});
+
+export type UploadedFile = typeof uploadedFiles.$inferSelect;
+export type InsertUploadedFile = typeof uploadedFiles.$inferInsert;
+
+/**
  * Companies table - stores the 20 companies from the uploaded list
  */
 export const companies = mysqlTable("companies", {

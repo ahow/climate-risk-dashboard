@@ -280,13 +280,20 @@ export default function Home() {
                   )}
                 </div>
               )}
-              <Button
-                onClick={handleExportCSV}
-                variant="outline"
-                className="ml-auto"
-              >
-                Download CSV Report
-              </Button>
+              <div className="ml-auto flex gap-2">
+                <Button
+                  onClick={handleExportCSV}
+                  variant="outline"
+                >
+                  Download CSV Report
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/upload'}
+                  variant="outline"
+                >
+                  Upload Files
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -1,8 +1,10 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
+  InsertUploadedFile, 
   InsertUser, 
-  users, 
+  uploadedFiles, 
+  users,
   companies, 
   Company, 
   InsertCompany,
@@ -228,5 +230,33 @@ export async function deleteGeographicRiskByAssetId(assetId: number): Promise<vo
   if (!db) return;
   
   await db.delete(geographicRisks).where(eq(geographicRisks.assetId, assetId));
+}
+
+
+
+
+// Uploaded Files
+export async function createUploadedFile(file: InsertUploadedFile) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(uploadedFiles).values(file);
+  return result;
+}
+
+export async function getAllUploadedFiles() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(uploadedFiles).orderBy(desc(uploadedFiles.uploadedAt));
+  return result;
+}
+
+export async function getUploadedFileById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
