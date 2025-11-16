@@ -241,7 +241,9 @@ export async function createUploadedFile(file: InsertUploadedFile) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(uploadedFiles).values(file);
-  return result;
+  // Get the inserted file ID
+  const insertId = (result as any).insertId;
+  return { id: insertId };
 }
 
 export async function getAllUploadedFiles() {

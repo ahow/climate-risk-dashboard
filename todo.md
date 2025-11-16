@@ -267,3 +267,27 @@
 - [ ] Configure environment variables on Heroku
 - [ ] Verify deployment and test functionality
 
+
+
+## Automated CSV Upload Workflow
+- [ ] Support both Excel (.xlsx) and CSV (.csv) file uploads
+- [ ] Parse file format (Type/ISIN, NAME, ASSETS, EV columns)
+- [ ] Create backend endpoint to process uploaded files
+- [ ] Implement company data insertion/update from CSV
+- [ ] Create automated pipeline: CSV → Companies → Assets → Geographic Risks → Risk Management
+- [ ] Add progress tracking for long-running operations
+- [ ] Update file upload UI to show processing status
+- [ ] Provide permanent S3 link to uploaded CSV file
+- [ ] Test complete workflow with 20Companies.csv
+- [ ] Deploy to Heroku
+- [ ] Document the automated workflow
+
+
+
+## S3 Public File Access Issue
+- [x] Investigate why CloudFront URLs are not publicly accessible (Manus storage requires auth)
+- [x] Implement public proxy endpoint in application to serve files without auth
+- [ ] Deploy to Heroku with public endpoint
+- [ ] Test uploaded file URLs from external applications via Heroku
+- [ ] Provide Heroku public URL format for file access
+

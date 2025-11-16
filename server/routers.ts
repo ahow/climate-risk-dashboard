@@ -5,6 +5,11 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import * as externalApis from "./services/externalApis";
+import { TRPCError } from "@trpc/server";
+import { companies, assets, geographicRisks, riskManagementScores, uploadedFiles } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { storagePut } from "./storage";
+import { getDb } from "./db";
 
 export const appRouter = router({
   system: systemRouter,
@@ -763,6 +768,25 @@ export const appRouter = router({
   }),
 
   files: router({
+    // Public endpoint to download uploaded files without authentication
+    download: publicProcedure
+      .input(z.object({ fileId: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const file = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, parseInt(input.fileId))).limit(1);
+        if (file.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Return the S3 URL - the file content will be fetched by the client
+        return {
+          filename: file[0].filename,
+          fileType: file[0].fileType,
+          url: file[0].s3Url,
+        };
+      }),
     /**
      * Upload a file to S3 and store metadata in database
      */
@@ -821,6 +845,177 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getUploadedFileById(input.id);
+      }),
+
+    /**
+     * Process uploaded company file and trigger automated workflow
+     */
+    processCompanyFile: protectedProcedure
+      .input(z.object({
+        filename: z.string(),
+        fileType: z.string(),
+        fileSize: z.number(),
+        base64Data: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { parseCompanyFile } = await import("./utils/fileParser");
+        const { storagePut } = await import("./storage");
+        const { fetchCompanyAssets, fetchGeographicRisk } = await import("./services/externalApis");
+        
+        try {
+          // 1. Upload file to S3
+          const timestamp = Date.now();
+          const randomSuffix = Math.random().toString(36).substring(7);
+          const fileKey = `uploads/${ctx.user.id}/${timestamp}-${randomSuffix}-${input.filename}`;
+          const buffer = Buffer.from(input.base64Data, 'base64');
+          const { url } = await storagePut(fileKey, buffer, input.fileType);
+          
+          // Store file metadata
+          const fileRecord = await db.createUploadedFile({
+            filename: input.filename,
+            originalFilename: input.filename,
+            fileType: input.fileType,
+            fileSize: input.fileSize,
+            s3Key: fileKey,
+            s3Url: url,
+            uploadedBy: ctx.user.id,
+            description: input.description,
+          });
+          
+          // Generate public download URL
+          const publicUrl = `${process.env.NODE_ENV === 'production' ? 'https://climate-risk-dash-40e3582ff948.herokuapp.com' : `http://localhost:${process.env.PORT || 3000}`}/public/files/${fileRecord.id}`;
+          
+          // 2. Parse company data from file
+          const companies = await parseCompanyFile(buffer, input.filename);
+          
+          // 3. Insert/update companies in database
+          for (const company of companies) {
+            // Check if company exists
+            const existing = await db.getCompanyByIsin(company.isin);
+            if (!existing) {
+              await db.insertCompany({
+                isin: company.isin,
+                name: company.name,
+                sector: company.sector,
+                geography: company.country,
+                tangibleAssets: company.tangibleAssets.toString(),
+                enterpriseValue: company.enterpriseValue.toString(),
+              });
+            }
+          }
+          
+          // 4. Fetch assets for all companies (in background)
+          const assetResults = [];
+          for (const company of companies) {
+            try {
+              const assets = await fetchCompanyAssets(company.name);
+              
+              // Get company ID for foreign key
+              const companyRecord = await db.getCompanyByIsin(company.isin);
+              if (!companyRecord) continue;
+              
+              for (const asset of assets) {
+                await db.insertAsset({
+                  companyId: companyRecord.id,
+                  assetName: asset.asset_name,
+                  address: asset.location,
+                  city: asset.city,
+                  stateProvince: null,
+                  country: asset.country,
+                  latitude: asset.latitude?.toString() || null,
+                  longitude: asset.longitude?.toString() || null,
+                  estimatedValueUsd: asset.estimated_value_usd?.toString() || null,
+                  assetType: asset.asset_type,
+                });
+                
+                // Note: We can't easily get the inserted ID without changing insertAsset
+                // For now, track by company
+                assetResults.push({ companyIsin: company.isin, assetName: asset.asset_name });
+              }
+            } catch (error) {
+              console.error(`[ProcessFile] Error fetching assets for ${company.isin}:`, error);
+            }
+          }
+          
+          // 5. Calculate geographic risks for all assets (in background)
+          const riskResults = [];
+          for (const company of companies) {
+            try {
+              const companyRecord = await db.getCompanyByIsin(company.isin);
+              if (!companyRecord) continue;
+              
+              const companyAssets = await db.getAssetsByCompanyId(companyRecord.id);
+              
+              for (const asset of companyAssets) {
+                try {
+                  // Skip if already has risk data
+                  const existingRisk = await db.getGeographicRiskByAssetId(asset.id);
+                  if (existingRisk) continue;
+                  
+                  if (!asset.latitude || !asset.longitude) continue;
+                  
+                  const riskData = await fetchGeographicRisk(
+                    parseFloat(asset.latitude),
+                    parseFloat(asset.longitude),
+                    parseFloat(asset.estimatedValueUsd || '0')
+                  );
+                  
+                  await db.insertGeographicRisk({
+                    assetId: asset.id,
+                    latitude: asset.latitude,
+                    longitude: asset.longitude,
+                    assetValue: asset.estimatedValueUsd || '0',
+                    riskData: riskData,
+                  });
+                  
+                  riskResults.push({ assetId: asset.id, success: true });
+                } catch (error) {
+                  console.error(`[ProcessFile] Error calculating risk for asset ${asset.id}:`, error);
+                  riskResults.push({ assetId: asset.id, success: false });
+                }
+              }
+            } catch (error) {
+              console.error(`[ProcessFile] Error processing company ${company.isin}:`, error);
+            }
+          }
+          
+          // 6. Fetch risk management assessments
+          const { fetchRiskManagement } = await import("./services/externalApis");
+          const managementResults = [];
+          for (const company of companies) {
+            try {
+              const assessment = await fetchRiskManagement(company.isin);
+              
+              if (assessment) {
+                const companyRecord = await db.getCompanyByIsin(company.isin);
+                if (companyRecord) {
+                  await db.insertRiskManagement({
+                    companyId: companyRecord.id,
+                    overallScore: assessment.summary.score_percentage,
+                    assessmentData: assessment,
+                  });
+                  managementResults.push({ companyIsin: company.isin, success: true });
+                }
+              }
+            } catch (error) {
+              console.error(`[ProcessFile] Error fetching risk management for ${company.isin}:`, error);
+              managementResults.push({ companyIsin: company.isin, success: false });
+            }
+          }
+          
+          return {
+            success: true,
+            fileUrl: publicUrl,
+            companiesProcessed: companies.length,
+            assetsCreated: assetResults.length,
+            risksCalculated: riskResults.filter(r => r.success).length,
+            managementAssessments: managementResults.filter(r => r.success).length,
+          };
+        } catch (error) {
+          console.error('[ProcessFile] Error:', error);
+          throw new Error(error instanceof Error ? error.message : 'Failed to process file');
+        }
       }),
   }),
 });

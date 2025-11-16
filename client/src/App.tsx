@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import CompanyFileUpload from "./pages/CompanyFileUpload";
 import CompanyDetails from "./pages/CompanyDetails";
 import FileUpload from "./pages/FileUpload";
 
@@ -12,6 +13,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/upload-companies"} component={CompanyFileUpload} />
       <Route path={"/company/:isin"} component={CompanyDetails} />
       <Route path={"/upload"} component={FileUpload} />
       <Route path={"/404"} component={NotFound} />
