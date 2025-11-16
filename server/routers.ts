@@ -790,7 +790,7 @@ export const appRouter = router({
     /**
      * Upload a file to S3 and store metadata in database
      */
-    upload: protectedProcedure
+    upload: publicProcedure
       .input(z.object({
         filename: z.string(),
         fileType: z.string(),
@@ -804,7 +804,7 @@ export const appRouter = router({
         // Generate unique file key
         const timestamp = Date.now();
         const randomSuffix = Math.random().toString(36).substring(7);
-        const fileKey = `uploads/${ctx.user.id}/${timestamp}-${randomSuffix}-${input.filename}`;
+        const fileKey = `uploads/public/${timestamp}-${randomSuffix}-${input.filename}`;
         
         // Convert base64 to buffer
         const buffer = Buffer.from(input.base64Data, 'base64');
@@ -820,7 +820,7 @@ export const appRouter = router({
           fileSize: input.fileSize,
           s3Key: fileKey,
           s3Url: url,
-          uploadedBy: ctx.user.id,
+          uploadedBy: ctx.user?.id || null,
           description: input.description,
         });
         
@@ -850,7 +850,7 @@ export const appRouter = router({
     /**
      * Process uploaded company file and trigger automated workflow
      */
-    processCompanyFile: protectedProcedure
+    processCompanyFile: publicProcedure
       .input(z.object({
         filename: z.string(),
         fileType: z.string(),
@@ -867,7 +867,7 @@ export const appRouter = router({
           // 1. Upload file to S3
           const timestamp = Date.now();
           const randomSuffix = Math.random().toString(36).substring(7);
-          const fileKey = `uploads/${ctx.user.id}/${timestamp}-${randomSuffix}-${input.filename}`;
+          const fileKey = `uploads/public/${timestamp}-${randomSuffix}-${input.filename}`;
           const buffer = Buffer.from(input.base64Data, 'base64');
           const { url } = await storagePut(fileKey, buffer, input.fileType);
           
@@ -879,7 +879,7 @@ export const appRouter = router({
             fileSize: input.fileSize,
             s3Key: fileKey,
             s3Url: url,
-            uploadedBy: ctx.user.id,
+            uploadedBy: ctx.user?.id || null,
             description: input.description,
           });
           
