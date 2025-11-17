@@ -15,7 +15,74 @@ migrateRouter.get("/schema", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Create uploadedFiles table
+    // Create all necessary tables
+    
+    // 1. Create companies table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS companies (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        isin varchar(12) NOT NULL UNIQUE,
+        name varchar(255) NOT NULL,
+        sector varchar(255),
+        geography varchar(255),
+        tangibleAssets varchar(50),
+        enterpriseValue varchar(50),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 2. Create assets table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS assets (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        companyId int NOT NULL,
+        assetName varchar(255),
+        address text,
+        latitude decimal(10, 8),
+        longitude decimal(11, 8),
+        city varchar(255),
+        stateProvince varchar(255),
+        country varchar(255),
+        assetType varchar(255),
+        assetSubtype varchar(255),
+        estimatedValueUsd varchar(50),
+        ownershipShare varchar(50),
+        dataSources text,
+        confidenceLevel varchar(50),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (companyId) REFERENCES companies(id)
+      )
+    `);
+    
+    // 3. Create geographicRisks table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS geographicRisks (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        assetId int NOT NULL,
+        expectedAnnualLoss decimal(15, 2),
+        presentValue decimal(15, 2),
+        riskData json,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (assetId) REFERENCES assets(id)
+      )
+    `);
+    
+    // 4. Create riskManagementScores table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS riskManagementScores (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        companyId int NOT NULL,
+        overallScore int,
+        assessmentData json NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 5. Create uploadedFiles table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS uploadedFiles (
         id int AUTO_INCREMENT PRIMARY KEY,
