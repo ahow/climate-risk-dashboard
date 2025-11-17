@@ -365,3 +365,14 @@
 - [ ] Verify supply chain risk calculations are working correctly
 - [ ] Deploy to Heroku and verify all calculations
 
+
+
+
+## Deployment Error - Missing dist/index.js
+- [x] Investigate why production build cannot find /usr/src/app/dist/index.js (project uses tsx, not compiled JS)
+- [x] Check package.json build scripts and output paths
+- [x] Check Dockerfile or deployment configuration (Procfile uses pnpm start)
+- [x] Fix build process - reverted to use tsx for production instead of compiling
+- [ ] Deploy to production and verify successful startup
+- [ ] Note: If Manus platform doesn't support tsx, may need to contact support or use different deployment method
+
