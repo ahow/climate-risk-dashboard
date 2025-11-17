@@ -110,6 +110,44 @@ export default function Home() {
   }
 
   if (error) {
+    // If error is about empty companies table, show the seed button
+    if (error.message.includes('Failed query') || error.message.includes('companies')) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+          <Card className="max-w-md">
+            <CardHeader>
+              <CardTitle>No Companies Found</CardTitle>
+              <CardDescription>
+                The database is empty. Load company data from your uploaded Excel file.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => seedMutation.mutate()} 
+                disabled={seedMutation.isPending}
+                className="w-full"
+              >
+                {seedMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading Companies from Excel...
+                  </>
+                ) : (
+                  "Load 20 Companies from Uploaded File"
+                )}
+              </Button>
+              {seedMutation.isError && (
+                <p className="text-sm text-red-600 mt-2">
+                  Error: {seedMutation.error.message}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
+    // For other errors, show the error message
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <Card className="max-w-md">
