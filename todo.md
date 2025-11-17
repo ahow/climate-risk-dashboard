@@ -380,12 +380,28 @@
 
 
 ## Migrate to Heroku Supply Chain Risk API
-- [ ] Update supplyChainApi.ts to use new Heroku endpoint (https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com)
-- [ ] Add API key authentication (zhSJ0IiDc1lb2qyOHK1rOkN20c4cXGRlNGSB4vhrNYM)
-- [ ] Update API call from tRPC GET to REST GET /api/assess
-- [ ] Update response parsing to match new API format (climate_details.expected_annual_loss_pct, top_suppliers)
-- [ ] Test API integration locally
-- [ ] Verify supply chain risk calculations work correctly
-- [ ] Save checkpoint and deploy to production
-- [ ] Provide dashboard URL to user
+- [x] Update supplyChainApi.ts to use new Heroku endpoint (https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com)
+- [x] Add API key authentication (zhSJ0IiDc1lb2qyOHK1rOkN20c4cXGRlNGSB4vhrNYM)
+- [x] Update API call from tRPC GET to REST GET /api/assess
+- [x] Update response parsing to match new API format (climate_details.expected_annual_loss_pct, top_suppliers)
+- [x] Test API integration locally (running, waiting for completion)
+- [ ] Re-load companies from ShortCompanyListACWI.xlsx with SUPPLIERCOSTS column
+- [ ] Verify supply chain risk calculations populate correctly with supplier costs
+- [ ] Deploy to production
+- [x] Provide dashboard URL to user
+
+
+
+
+## Final Implementation - Complete Three Next Steps
+- [ ] Add database procedure to clear all companies and related data
+- [ ] Re-load companies from ShortCompanyListACWI.xlsx (with SUPPLIERCOSTS column)
+- [ ] Verify SUPPLIERCOSTS data is populated correctly in database
+- [ ] Add error handling in supplyChainApi.ts for 404 Not Found (unsupported countries/sectors)
+- [ ] Update fetchSupplyChainRisks to skip companies with unsupported country/sector codes
+- [ ] Display "Data unavailable" message for companies outside API coverage
+- [ ] Test complete workflow: Load Companies → Fetch Assets → Fetch Supply Chain Risks → Calculate Geographic Risks → Fetch Management Data
+- [ ] Verify supply chain risk calculations show correct values (not $0)
+- [ ] Deploy to permanent production URL via Publish button
+- [ ] Provide final production URL to user
 

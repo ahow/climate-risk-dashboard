@@ -98,12 +98,44 @@ export async function fetchSupplyChainRisk(
     });
 
     if (!res.ok) {
+      // 404 means country/sector not supported by API (outside 67 countries, 34 sectors coverage)
+      if (res.status === 404) {
+        console.log(`[fetchSupplyChainRisk] Country/sector not supported: ${countryCode}/${sectorCode}`);
+        return null; // Return null for unsupported combinations
+      }
       throw new Error(`Supply Chain API error: ${res.status} ${res.statusText}`);
     }
 
     return res.json();
   });
 
+  // Handle unsupported country/sector combinations
+  if (!response) {
+    // Return a default assessment with zero risk for unsupported combinations
+    return {
+      country: countryCode,
+      country_name: companyGeography || countryCode,
+      sector: sectorCode,
+      sector_name: companySector || sectorCode,
+      climate_details: {
+        country: countryCode,
+        expected_annual_loss: 0,
+        expected_annual_loss_pct: 0,
+        present_value_30y: 0,
+        hazards: {
+          drought: 0,
+          flood: 0,
+          heat_stress: 0,
+          hurricane: 0,
+          extreme_precipitation: 0,
+        },
+      },
+      top_suppliers: [],
+      total_suppliers: 0,
+      io_coverage: 0,
+    } as any;
+  }
+  
   // Parse REST API response
   const assessment = response as SupplyChainRiskAssessment;
   

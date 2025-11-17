@@ -222,7 +222,22 @@ export default function Home() {
                 Fetch asset locations and risk management data from external APIs
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex gap-4">
+            <CardContent className="flex gap-4 flex-wrap">
+              <Button
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+                variant="outline"
+                className="border-2 border-purple-500 text-purple-700 hover:bg-purple-50"
+              >
+                {seedMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading Companies...
+                  </>
+                ) : (
+                  "Load Companies from Uploaded File"
+                )}
+              </Button>
               <Button
                 onClick={() => fetchAssetsMutation.mutate()}
                 disabled={fetchAssetsMutation.isPending}

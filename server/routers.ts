@@ -309,6 +309,21 @@ export const appRouter = router({
     seedCompanies: publicProcedure.mutation(async () => {
       try {
         console.log('[seedCompanies] Starting...');
+        
+        // Clear all existing company data before re-seeding
+        console.log('[seedCompanies] Clearing existing company data...');
+        const database = await getDb();
+        if (database) {
+          // Delete in correct order due to foreign key constraints
+          await database.delete(geographicRisks);
+          await database.delete(assets);
+          await database.delete(riskManagementScores);
+          const supplyChainRisks = (await import('../drizzle/schema')).supplyChainRisks;
+          await database.delete(supplyChainRisks);
+          await database.delete(companies);
+          console.log('[seedCompanies] Cleared all existing data');
+        }
+        
         const files = await db.getAllUploadedFiles();
         console.log(`[seedCompanies] Found ${files?.length || 0} uploaded files`);
         
