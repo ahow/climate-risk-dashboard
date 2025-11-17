@@ -205,18 +205,56 @@ export const appRouter = router({
 
     /**
      * Seed companies from the uploaded Excel file
+     * Fetches the most recent uploaded Excel file from S3 and processes it
      */
     seedCompanies: publicProcedure.mutation(async () => {
-      const fs = await import('fs/promises');
-      const companiesData = JSON.parse(
-        await fs.readFile('/home/ubuntu/companies_seed.json', 'utf-8')
+      const files = await db.getAllUploadedFiles();
+      if (!files || files.length === 0) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No files uploaded yet' });
+      }
+      
+      // Get the most recent Excel file
+      const excelFile = files.find(f => 
+        f.fileType.includes('spreadsheet') || 
+        f.filename.endsWith('.xlsx') || 
+        f.filename.endsWith('.xls')
       );
+      
+      if (!excelFile) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No Excel file found in uploads' });
+      }
+      
+      // Fetch file from S3
+      const response = await fetch(excelFile.s3Url);
+      if (!response.ok) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch file from S3' });
+      }
+      
+      const buffer = Buffer.from(await response.arrayBuffer());
+      
+      // Parse Excel file
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+      
+      // Transform data to match companies schema
+      const companiesData = data.map((row: any) => ({
+        isin: row.ISIN || row.isin,
+        name: row.Name || row.name || row['Company Name'],
+        sector: row.Sector || row.sector,
+        geography: row.Geography || row.geography || row.Country,
+        tangibleAssets: String(row['Tangible Assets'] || row.tangibleAssets || row['Tangible Assets (M)'] || '0'),
+        enterpriseValue: String(row['Enterprise Value'] || row.enterpriseValue || row['Enterprise Value (M)'] || '0'),
+      }));
       
       await db.bulkInsertCompanies(companiesData);
       
       return {
         success: true,
         count: companiesData.length,
+        filename: excelFile.filename,
       };
     }),
 
