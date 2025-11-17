@@ -223,13 +223,8 @@ export default function CompanyDetails() {
                       </TableHeader>
                       <TableBody>
                         {assets.map((asset) => {
-                          const riskData = asset.geographicRisk?.riskData as any;
-                          let totalLoss = 0;
-                          const riskBreakdown = riskData?.risk_breakdown || {};
-                          
-                          if (riskData?.expected_annual_loss) {
-                            totalLoss = riskData.expected_annual_loss;
-                          }
+                          const riskBreakdown = asset.hazardBreakdown || {};
+                          const totalLoss = asset.expectedAnnualLoss || 0;
 
                           const formatRisk = (value: number | undefined) => {
                             if (!value || value === 0) return <span className="text-gray-400">$0</span>;
@@ -245,12 +240,11 @@ export default function CompanyDetails() {
 
                           return (
                             <TableRow key={asset.id}>
-                              <TableCell className="font-medium">{asset.assetName}</TableCell>
+                              <TableCell className="font-medium">{asset.name}</TableCell>
                               <TableCell>
                                 <div className="text-sm">
                                   {asset.city && <div>{asset.city}</div>}
-                                  {asset.stateProvince && <div>{asset.stateProvince}</div>}
-                                  <div>{asset.country}</div>
+                                  {asset.country && <div>{asset.country}</div>}
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -264,14 +258,14 @@ export default function CompanyDetails() {
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm">
-                                  <div>{asset.assetType}</div>
-                                  {asset.assetSubtype && (
-                                    <div className="text-xs text-gray-500">{asset.assetSubtype}</div>
+                                  <div>{asset.city || 'N/A'}</div>
+                                  {asset.country && (
+                                    <div className="text-xs text-gray-500">{asset.country}</div>
                                   )}
                                 </div>
                               </TableCell>
                               <TableCell className="text-right">
-                                ${parseFloat(asset.estimatedValueUsd || '0').toLocaleString()}
+                                ${parseFloat(asset.estimatedValue || '0').toLocaleString()}
                               </TableCell>
                               <TableCell className="text-right text-sm">
                                 {formatRisk(riskBreakdown.flood?.annual_loss)}

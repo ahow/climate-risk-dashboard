@@ -350,12 +350,13 @@
 - [x] Update file parser to handle SUPPLIERCOSTS column from spreadsheet
 - [x] Create OECD mapping utilities (country codes, sector codes, PV calculation, management adjustment)
 - [x] Add supply chain risk database helper functions
-- [ ] Add tRPC procedure: fetchSupplyChainRisks (call API for each company)
-- [ ] Implement Total Risk calculation logic (Asset Risk + Supply Chain Risk annual losses)
-- [ ] Update Management Score calculation (convert to percentage of maximum points)
-- [ ] Implement Net Expected Loss calculation with management adjustment
-- [ ] Calculate Present Value for both asset and supply chain risks
-- [ ] Update companies.list to return all new calculated fields
+- [x] Add tRPC procedure: fetchSupplyChainRisks (call API for each company)
+- [x] Implement Total Risk calculation logic (Asset Risk + Supply Chain Risk annual losses)
+- [x] Update Management Score calculation (convert to percentage of maximum points)
+- [x] Implement Net Expected Loss calculation with management adjustment
+- [x] Calculate Present Value for both asset and supply chain risks
+- [x] Update companies.list to return all new calculated fields
+- [x] Update getFullDetails to return: (i) assets with losses, (ii) top 5 supply chain contributors, (iii) management measures
 - [ ] Redesign Home page UI to show new analysis structure
 - [ ] Create detailed company view with: (i) asset list, (ii) top 5 supply chain contributors, (iii) management measures
 - [ ] Clear old database and re-seed with new ShortCompanyListACWI.xlsx

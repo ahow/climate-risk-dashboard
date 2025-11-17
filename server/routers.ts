@@ -27,7 +27,8 @@ export const appRouter = router({
 
   companies: router({
     /**
-     * Get all companies with overall expected loss
+     * Get all companies with new analysis structure:
+     * Asset Risk + Supply Chain Risk → Total Risk → Management Score → Net Expected Loss
      */
     list: publicProcedure.query(async () => {
       try {
@@ -35,55 +36,99 @@ export const appRouter = router({
         const companies = await db.getAllCompanies();
         console.log(`[companies.list] Found ${companies.length} companies`);
         
-        // Calculate overall expected loss for each company
-        const companiesWithLoss = await Promise.all(
+        const { getManagementAdjustmentFactor, calculatePresentValue } = await import('./utils/oecdMappings');
+        
+        // Calculate comprehensive risk metrics for each company
+        const companiesWithRisk = await Promise.all(
           companies.map(async (company) => {
             try {
-              // Get direct exposure
+              // 1. ASSET RISK: Calculate from geographic risks
               const assets = await db.getAssetsByCompanyId(company.id);
-              let directExposure = 0;
+              let assetRiskAnnual = 0;
+              let assetRiskPV = 0;
 
               for (const asset of assets) {
                 const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
                 if (geoRisk && geoRisk.riskData) {
                   const riskData = geoRisk.riskData as any;
-                  directExposure += riskData.expected_annual_loss || 0;
+                  assetRiskAnnual += riskData.expected_annual_loss || 0;
+                  assetRiskPV += riskData.present_value_30yr || 0;
                 }
               }
 
-              // Get risk management score
-              const riskManagement = await db.getRiskManagementByCompanyId(company.id);
-              const managementScore = riskManagement?.overallScore || 0;
-              const managementFactor = (100 - managementScore) / 100;
+              // 2. SUPPLY CHAIN RISK: Get from supply chain risk table
+              const supplyChainRisk = await db.getSupplyChainRiskByCompanyId(company.id);
+              const supplyChainRiskAnnual = parseFloat(supplyChainRisk?.expectedAnnualLoss || '0');
+              const supplyChainRiskPV = parseFloat(supplyChainRisk?.presentValue || '0');
 
-              // Calculate overall expected loss
-              const overallExpectedLoss = directExposure * managementFactor;
+              // 3. TOTAL RISK: Sum of asset risk and supply chain risk
+              const totalRiskAnnual = assetRiskAnnual + supplyChainRiskAnnual;
+              const totalRiskPV = assetRiskPV + supplyChainRiskPV;
+
+              // 4. MANAGEMENT SCORE: Convert to percentage (0-100%)
+              const riskManagement = await db.getRiskManagementByCompanyId(company.id);
+              const managementScoreRaw = riskManagement?.overallScore || 0;
+              // Assuming max score is 100 points, convert to percentage
+              const managementScorePct = managementScoreRaw; // Already 0-100
+
+              // 5. NET EXPECTED LOSS: Apply management adjustment
+              // 100% score → 30% of total risk, 0% score → 100% of total risk
+              const adjustmentFactor = getManagementAdjustmentFactor(managementScorePct);
+              const netExpectedLossAnnual = totalRiskAnnual * adjustmentFactor;
+              const netExpectedLossPV = totalRiskPV * adjustmentFactor;
               
               // Calculate as percentage of EV
               const enterpriseValue = parseFloat(company.enterpriseValue || '0');
-              const lossPercentageOfEV = enterpriseValue > 0 
-                ? (overallExpectedLoss / enterpriseValue) * 100 
+              const netLossPercentageOfEV = enterpriseValue > 0 
+                ? (netExpectedLossPV / enterpriseValue) * 100 
                 : 0;
 
               return {
                 ...company,
-                overallExpectedLoss,
-                lossPercentageOfEV,
+                // Asset Risk
+                assetRiskAnnual,
+                assetRiskPV,
+                assetCount: assets.length,
+                // Supply Chain Risk
+                supplyChainRiskAnnual,
+                supplyChainRiskPV,
+                supplyChainRiskPct: parseFloat(supplyChainRisk?.expectedAnnualLossPct || '0'),
+                // Total Risk
+                totalRiskAnnual,
+                totalRiskPV,
+                // Management
+                managementScorePct,
+                adjustmentFactor,
+                // Net Expected Loss (PRIMARY METRIC)
+                netExpectedLossAnnual,
+                netExpectedLossPV,
+                netLossPercentageOfEV,
               };
             } catch (error) {
               console.error(`[companies.list] Error processing company ${company.name}:`, error);
-              // Return company with zero loss if calculation fails
+              // Return company with zero risk if calculation fails
               return {
                 ...company,
-                overallExpectedLoss: 0,
-                lossPercentageOfEV: 0,
+                assetRiskAnnual: 0,
+                assetRiskPV: 0,
+                assetCount: 0,
+                supplyChainRiskAnnual: 0,
+                supplyChainRiskPV: 0,
+                supplyChainRiskPct: 0,
+                totalRiskAnnual: 0,
+                totalRiskPV: 0,
+                managementScorePct: 0,
+                adjustmentFactor: 1.0,
+                netExpectedLossAnnual: 0,
+                netExpectedLossPV: 0,
+                netLossPercentageOfEV: 0,
               };
             }
           })
         );
         
-        console.log(`[companies.list] Returning ${companiesWithLoss.length} companies with loss data`);
-        return companiesWithLoss;
+        console.log(`[companies.list] Returning ${companiesWithRisk.length} companies with risk data`);
+        return companiesWithRisk;
       } catch (error) {
         console.error('[companies.list] Fatal error:', error);
         throw error;
@@ -101,7 +146,10 @@ export const appRouter = router({
       }),
 
     /**
-     * Get company with all related data (assets, risks, management scores)
+     * Get company with all related data:
+     * (i) assets with losses
+     * (ii) top 5 supply chain contributors
+     * (iii) management measures with scores, rationale, quotes, sources
      */
     getFullDetails: publicProcedure
       .input(z.object({ isin: z.string() }))
@@ -111,23 +159,56 @@ export const appRouter = router({
           throw new Error(`Company not found: ${input.isin}`);
         }
 
+        // (i) Assets with their expected losses
         const assets = await db.getAssetsByCompanyId(company.id);
-        const riskManagement = await db.getRiskManagementByCompanyId(company.id);
-
-        // Fetch geographic risks for each asset
         const assetsWithRisks = await Promise.all(
           assets.map(async (asset) => {
             const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
+            const riskData = geoRisk?.riskData as any;
+            
             return {
-              ...asset,
-              geographicRisk: geoRisk,
+              id: asset.id,
+              name: asset.assetName,
+              latitude: asset.latitude,
+              longitude: asset.longitude,
+              city: asset.city,
+              country: asset.country,
+              estimatedValue: asset.estimatedValueUsd,
+              expectedAnnualLoss: riskData?.expected_annual_loss || 0,
+              presentValue30yr: riskData?.present_value_30yr || 0,
+              hazardBreakdown: riskData?.hazard_breakdown || {},
             };
           })
         );
 
+        // (ii) Top 5 supply chain contributors (country-sector)
+        const supplyChainRisk = await db.getSupplyChainRiskByCompanyId(company.id);
+        const topSuppliers = (supplyChainRisk?.topSuppliers as any[]) || [];
+        const top5Suppliers = topSuppliers.slice(0, 5).map(supplier => ({
+          country: supplier.country_name,
+          sector: supplier.sector_name,
+          ioCoefficient: supplier.io_coefficient,
+          climateRisk: supplier.direct_risk?.climate || 0,
+          riskContribution: supplier.risk_contribution?.climate || 0,
+        }));
+
+        // (iii) Management performance measures
+        const riskManagement = await db.getRiskManagementByCompanyId(company.id);
+        const assessmentData = riskManagement?.assessmentData as any;
+        const measures = assessmentData?.measures || [];
+        const managementMeasures = measures.map((measure: any) => ({
+          measure: measure.measure || measure.category,
+          score: measure.score || 0,
+          rationale: measure.rationale || measure.explanation || '',
+          verbatimQuote: measure.verbatim_quote || measure.quote || '',
+          source: measure.source || measure.document || '',
+        }));
+
         return {
           company,
           assets: assetsWithRisks,
+          topSupplyChainContributors: top5Suppliers,
+          managementMeasures,
           riskManagement,
         };
       }),
@@ -410,6 +491,62 @@ export const appRouter = router({
         assessmentsFetched, 
         companiesProcessed: companies.length,
         errors 
+      };
+    }),
+
+    /**
+     * Fetch supply chain risks for all companies from Supply Chain Risk API
+     */
+    fetchSupplyChainRisks: publicProcedure.mutation(async () => {
+      const companies = await db.getAllCompanies();
+      const { fetchSupplyChainRisk, calculateSupplyChainLoss } = await import('./services/supplyChainApi');
+      
+      let risksFetched = 0;
+      const errors: string[] = [];
+
+      for (const company of companies) {
+        try {
+          console.log(`[fetchSupplyChainRisks] Processing ${company.name}...`);
+          
+          // Fetch supply chain risk assessment from API
+          const assessment = await fetchSupplyChainRisk(company.geography, company.sector);
+          
+          // Calculate expected losses
+          const supplierCosts = parseFloat(company.supplierCosts || '0');
+          const expectedAnnualLossPct = assessment.climate_risk_detailed.expected_annual_loss_pct;
+          const { annualLoss, presentValue } = calculateSupplyChainLoss(supplierCosts, expectedAnnualLossPct);
+          
+          // Extract top 5 suppliers
+          const topSuppliers = assessment.top_suppliers.slice(0, 5);
+          
+          // Delete existing supply chain risk data for this company
+          await db.deleteSupplyChainRiskByCompanyId(company.id);
+          
+          // Insert new supply chain risk data
+          await db.insertSupplyChainRisk({
+            companyId: company.id,
+            countryCode: assessment.country,
+            sectorCode: assessment.sector,
+            expectedAnnualLossPct: expectedAnnualLossPct.toString(),
+            expectedAnnualLoss: annualLoss.toString(),
+            presentValue: presentValue.toString(),
+            topSuppliers: topSuppliers,
+            assessmentData: assessment,
+          });
+          
+          console.log(`[fetchSupplyChainRisks] ${company.name}: Annual Loss = $${annualLoss.toFixed(2)} (${expectedAnnualLossPct}%)`);
+          risksFetched++;
+        } catch (error) {
+          console.error(`[fetchSupplyChainRisks] Error for ${company.name}:`, error);
+          errors.push(`${company.name}: ${error}`);
+        }
+      }
+
+      return {
+        success: true,
+        risksFetched,
+        companiesProcessed: companies.length,
+        errors,
       };
     }),
   }),
