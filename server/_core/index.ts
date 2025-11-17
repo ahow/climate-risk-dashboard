@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { publicFilesRouter } from "../routes/publicFiles";
+import { migrateRouter } from "../routes/migrate";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Public file download endpoint
   app.use("/public", publicFilesRouter);
+  // Database migration endpoint
+  app.use("/migrate", migrateRouter);
   // tRPC API
   app.use(
     "/api/trpc",
