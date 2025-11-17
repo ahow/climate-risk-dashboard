@@ -315,11 +315,14 @@
 
 
 ## File Management UI and Retry Logic Implementation
-- [ ] Implement automatic retry logic for Risk Management API calls (handle hibernation)
-- [ ] Add exponential backoff for failed API requests
-- [ ] Create file management UI component showing uploaded files
-- [ ] Display public URLs, upload dates, and processing status
-- [ ] Re-upload 20Companies(2).xlsx through Heroku to populate companies table
-- [ ] Verify automated pipeline processes all data (assets → geographic risks → risk management)
-- [ ] Test public file URL accessibility from external applications
+- [x] Implement automatic retry logic for Risk Management API calls (handle hibernation)
+- [x] Add exponential backoff for failed API requests
+- [x] Create file management UI component showing uploaded files
+- [x] Display public URLs, upload dates, and processing status
+- [x] Re-upload 20Companies(2).xlsx through Heroku to populate companies table
+- [x] Fix Excel column mapping (Type → ISIN, NAME, LEVEL2 SECTOR NAME, etc.)
+- [x] Add error handling to companies.list query to handle missing related data
+- [x] Successfully loaded 20 companies into Heroku database
+- [x] Verified dashboard displays all 20 companies correctly
+- [x] Test public file URL accessibility (File 1 & 2 both accessible)
 

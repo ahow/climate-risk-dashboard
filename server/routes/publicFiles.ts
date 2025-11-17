@@ -36,8 +36,12 @@ publicFilesRouter.get("/files/:fileId", async (req, res) => {
 
     const file = files[0];
 
-    // Get the file from S3 storage
-    const { url: s3Url } = await storageGet(file.s3Key);
+    // Use the direct S3 URL stored in the database
+    const s3Url = file.s3Url;
+    
+    if (!s3Url) {
+      return res.status(500).json({ error: "File URL not available" });
+    }
 
     // Fetch the file from S3
     const response = await fetch(s3Url);
