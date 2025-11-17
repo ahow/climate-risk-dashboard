@@ -102,7 +102,7 @@ async function s3Put(
     Key: key,
     Body: buffer,
     ContentType: contentType,
-    ACL: 'public-read', // Make files publicly accessible
+    // Note: Public access is controlled by bucket policy, not ACL
   });
 
   await config.client.send(command);
