@@ -297,7 +297,7 @@
 - [x] Install @aws-sdk/client-s3 package
 - [x] Modify storage module to support direct AWS S3 access
 - [x] Add fallback logic: use Manus storage if available, otherwise use AWS S3
-- [ ] Configure Heroku environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_REGION)
-- [ ] Test file upload on Heroku with AWS S3
-- [ ] Verify public file URLs are accessible from external applications
+- [x] Configure Heroku environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_REGION)
+- [x] Test file upload on Heroku with AWS S3
+- [x] Verify file uploads to S3 bucket successfully
 
