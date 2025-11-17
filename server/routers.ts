@@ -513,7 +513,7 @@ export const appRouter = router({
           
           // Calculate expected losses
           const supplierCosts = parseFloat(company.supplierCosts || '0');
-          const expectedAnnualLossPct = assessment.climate_risk_detailed.expected_annual_loss_pct;
+          const expectedAnnualLossPct = assessment.climate_details.expected_annual_loss_pct;
           const { annualLoss, presentValue } = calculateSupplyChainLoss(supplierCosts, expectedAnnualLossPct);
           
           // Extract top 5 suppliers

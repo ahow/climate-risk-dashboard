@@ -1,12 +1,13 @@
 /**
  * Supply Chain Risk API Integration
- * Base URL: https://supplyrisk-bb4n56uc.manus.space/api/trpc
+ * Base URL: https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com
  */
 
 import { getOECDCountryCode, getOECDSectorCode } from "../utils/oecdMappings";
 import { retryAsync } from "../utils/retry";
 
-const SUPPLY_CHAIN_API_BASE = "https://supplyrisk-bb4n56uc.manus.space/api/trpc";
+const SUPPLY_CHAIN_API_BASE = "https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com";
+const SUPPLY_CHAIN_API_KEY = "zhSJ0IiDc1lb2qyOHK1rOkN20c4cXGRlNGSB4vhrNYM";
 
 export interface SupplyChainRiskAssessment {
   country: string;
@@ -34,19 +35,18 @@ export interface SupplyChainRiskAssessment {
     water_stress: number;
     nature_loss: number;
   };
-  climate_risk_detailed: {
-    index_score: number;
-    index_level: string;
+  climate_details: {
+    country: string;
     expected_annual_loss: number;
     expected_annual_loss_pct: number;
-    present_value_30yr: number;
-    present_value_30yr_pct: number;
-    hazard_breakdown: Record<string, {
-      loss: number;
-      loss_pct: number;
-      confidence: string;
-    }>;
-    api_available: boolean;
+    present_value_30y: number;
+    hazards: {
+      drought: number;
+      flood: number;
+      heat_stress: number;
+      hurricane: number;
+      extreme_precipitation: number;
+    };
   };
   top_suppliers: Array<{
     country: string;
@@ -85,19 +85,14 @@ export async function fetchSupplyChainRisk(
 
   console.log(`[fetchSupplyChainRisk] Mapping: ${companyGeography} → ${countryCode}, ${companySector} → ${sectorCode}`);
 
-  // tRPC queries use GET with URL-encoded input parameter
-  const input = JSON.stringify({
-    json: {
-      country: countryCode,
-      sector: sectorCode,
-    },
-  });
-  const url = `${SUPPLY_CHAIN_API_BASE}/risk.assess?input=${encodeURIComponent(input)}`;
+  // REST API endpoint
+  const url = `${SUPPLY_CHAIN_API_BASE}/api/assess?country=${countryCode}&sector=${sectorCode}`;
 
   const response = await retryAsync(async () => {
     const res = await fetch(url, {
       method: "GET",
       headers: {
+        "X-API-Key": SUPPLY_CHAIN_API_KEY,
         "Content-Type": "application/json",
       },
     });
@@ -109,10 +104,10 @@ export async function fetchSupplyChainRisk(
     return res.json();
   });
 
-  // Extract data from tRPC response format
-  const assessment = response.result.data.json as SupplyChainRiskAssessment;
+  // Parse REST API response
+  const assessment = response as SupplyChainRiskAssessment;
   
-  console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Expected Loss: ${assessment.climate_risk_detailed.expected_annual_loss_pct}%`);
+  console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Expected Loss: ${assessment.climate_details.expected_annual_loss_pct}%`);
 
   return assessment;
 }

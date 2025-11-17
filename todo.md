@@ -376,3 +376,16 @@
 - [ ] Deploy to production and verify successful startup
 - [ ] Note: If Manus platform doesn't support tsx, may need to contact support or use different deployment method
 
+
+
+
+## Migrate to Heroku Supply Chain Risk API
+- [ ] Update supplyChainApi.ts to use new Heroku endpoint (https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com)
+- [ ] Add API key authentication (zhSJ0IiDc1lb2qyOHK1rOkN20c4cXGRlNGSB4vhrNYM)
+- [ ] Update API call from tRPC GET to REST GET /api/assess
+- [ ] Update response parsing to match new API format (climate_details.expected_annual_loss_pct, top_suppliers)
+- [ ] Test API integration locally
+- [ ] Verify supply chain risk calculations work correctly
+- [ ] Save checkpoint and deploy to production
+- [ ] Provide dashboard URL to user
+
