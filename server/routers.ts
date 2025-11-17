@@ -208,54 +208,69 @@ export const appRouter = router({
      * Fetches the most recent uploaded Excel file from S3 and processes it
      */
     seedCompanies: publicProcedure.mutation(async () => {
-      const files = await db.getAllUploadedFiles();
-      if (!files || files.length === 0) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'No files uploaded yet' });
+      try {
+        console.log('[seedCompanies] Starting...');
+        const files = await db.getAllUploadedFiles();
+        console.log(`[seedCompanies] Found ${files?.length || 0} uploaded files`);
+        
+        if (!files || files.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'No files uploaded yet' });
+        }
+        
+        // Get the most recent Excel file
+        const excelFile = files.find(f => 
+          f.fileType.includes('spreadsheet') || 
+          f.filename.endsWith('.xlsx') || 
+          f.filename.endsWith('.xls')
+        );
+        console.log(`[seedCompanies] Excel file found: ${excelFile?.filename}`);
+        
+        if (!excelFile) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'No Excel file found in uploads' });
+        }
+        
+        // Fetch file from S3
+        console.log(`[seedCompanies] Fetching from S3: ${excelFile.s3Url}`);
+        const response = await fetch(excelFile.s3Url);
+        if (!response.ok) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to fetch file from S3: ${response.status}` });
+        }
+        
+        const buffer = Buffer.from(await response.arrayBuffer());
+        console.log(`[seedCompanies] Downloaded ${buffer.length} bytes`);
+        
+        // Parse Excel file
+        const XLSX = await import('xlsx');
+        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+        console.log(`[seedCompanies] Parsed ${data.length} rows from Excel`);
+        
+        // Transform data to match companies schema
+        const companiesData = data.map((row: any) => ({
+          isin: row.ISIN || row.isin,
+          name: row.Name || row.name || row['Company Name'],
+          sector: row.Sector || row.sector,
+          geography: row.Geography || row.geography || row.Country,
+          tangibleAssets: String(row['Tangible Assets'] || row.tangibleAssets || row['Tangible Assets (M)'] || '0'),
+          enterpriseValue: String(row['Enterprise Value'] || row.enterpriseValue || row['Enterprise Value (M)'] || '0'),
+        }));
+        console.log(`[seedCompanies] Transformed ${companiesData.length} companies`);
+        console.log(`[seedCompanies] First company:`, companiesData[0]);
+        
+        await db.bulkInsertCompanies(companiesData);
+        console.log(`[seedCompanies] Successfully inserted ${companiesData.length} companies`);
+        
+        return {
+          success: true,
+          count: companiesData.length,
+          filename: excelFile.filename,
+        };
+      } catch (error) {
+        console.error('[seedCompanies] Error:', error);
+        throw error;
       }
-      
-      // Get the most recent Excel file
-      const excelFile = files.find(f => 
-        f.fileType.includes('spreadsheet') || 
-        f.filename.endsWith('.xlsx') || 
-        f.filename.endsWith('.xls')
-      );
-      
-      if (!excelFile) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'No Excel file found in uploads' });
-      }
-      
-      // Fetch file from S3
-      const response = await fetch(excelFile.s3Url);
-      if (!response.ok) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch file from S3' });
-      }
-      
-      const buffer = Buffer.from(await response.arrayBuffer());
-      
-      // Parse Excel file
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet);
-      
-      // Transform data to match companies schema
-      const companiesData = data.map((row: any) => ({
-        isin: row.ISIN || row.isin,
-        name: row.Name || row.name || row['Company Name'],
-        sector: row.Sector || row.sector,
-        geography: row.Geography || row.geography || row.Country,
-        tangibleAssets: String(row['Tangible Assets'] || row.tangibleAssets || row['Tangible Assets (M)'] || '0'),
-        enterpriseValue: String(row['Enterprise Value'] || row.enterpriseValue || row['Enterprise Value (M)'] || '0'),
-      }));
-      
-      await db.bulkInsertCompanies(companiesData);
-      
-      return {
-        success: true,
-        count: companiesData.length,
-        filename: excelFile.filename,
-      };
     }),
 
     /**
