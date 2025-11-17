@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Globe,
   Loader2,
   MapPin,
   Shield,
@@ -34,15 +35,11 @@ export default function CompanyDetails() {
   const [, setLocation] = useLocation();
   const isin = params?.isin || "";
 
-  const [directExposureOpen, setDirectExposureOpen] = useState(true);
-  const [managementOpen, setManagementOpen] = useState(false);
+  const [assetsOpen, setAssetsOpen] = useState(true);
+  const [supplyChainOpen, setSupplyChainOpen] = useState(true);
+  const [managementOpen, setManagementOpen] = useState(true);
 
   const { data: fullDetails, isLoading, error } = trpc.companies.getFullDetails.useQuery(
-    { isin },
-    { enabled: !!isin }
-  );
-
-  const { data: overallLoss } = trpc.companies.calculateOverallLoss.useQuery(
     { isin },
     { enabled: !!isin }
   );
@@ -75,9 +72,25 @@ export default function CompanyDetails() {
     );
   }
 
-  const { company, assets, riskManagement } = fullDetails;
-  const managementScore = riskManagement?.overallScore || 0;
-  const assessmentData = riskManagement?.assessmentData as any;
+  const { company, assets, topSupplyChainContributors, managementMeasures } = fullDetails;
+  const supplyChainRisks = topSupplyChainContributors || [];
+
+  // Calculate totals
+  const assetRiskAnnual = assets.reduce((sum, asset) => sum + (asset.expectedAnnualLoss || 0), 0);
+  const supplyChainRiskAnnual = supplyChainRisks.reduce((sum: number, risk: any) => sum + (risk.expectedAnnualLoss || 0), 0);
+  const totalRiskAnnual = assetRiskAnnual + supplyChainRiskAnnual;
+  
+  // Management score calculation
+  const totalPoints = managementMeasures.reduce((sum: number, m: any) => sum + (m.maxPoints || 0), 0);
+  const earnedPoints = managementMeasures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
+  const managementScorePct = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+  
+  // Net expected loss with management adjustment
+  const managementFactor = 1 - (managementScorePct / 100) * 0.7; // 100% score → 30% of risk, 0% score → 100% of risk
+  const netExpectedLoss = totalRiskAnnual * managementFactor;
+  const netExpectedLossPctOfEV = company.enterpriseValue 
+    ? (netExpectedLoss / parseFloat(company.enterpriseValue)) * 100 
+    : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -114,83 +127,90 @@ export default function CompanyDetails() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="h-6 w-6 text-indigo-600" />
-              Overall Expected Losses from Physical Climate Risks
+              Climate Risk Analysis Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <div>
-                <div className="text-sm text-gray-600 mb-1">Direct Exposure</div>
+                <div className="text-sm text-gray-600 mb-1">Asset Risk (Annual)</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ${(overallLoss?.directExposure || 0).toLocaleString(undefined, {
+                  ${assetRiskAnnual.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
                   })}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 mb-1">Indirect Exposure</div>
+                <div className="text-sm text-gray-600 mb-1">Supply Chain Risk</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ${(overallLoss?.indirectExposure || 0).toLocaleString()}
+                  ${supplyChainRiskAnnual.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Currently not calculated</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 mb-1">Risk Management Score</div>
-                <div className="text-2xl font-bold text-green-600">{managementScore}%</div>
+                <div className="text-sm text-gray-600 mb-1">Total Risk (Annual)</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  ${totalRiskAnnual.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600 mb-1">Management Score</div>
+                <div className="text-2xl font-bold text-green-600">{managementScorePct.toFixed(0)}%</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  Mitigation factor: {((100 - managementScore) / 100).toFixed(2)}
+                  {earnedPoints}/{totalPoints} points
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 mb-1">Overall Expected Loss</div>
+                <div className="text-sm text-gray-600 mb-1">Net Expected Loss</div>
                 <div className="text-2xl font-bold text-red-600">
-                  ${(overallLoss?.overallExpectedLoss || 0).toLocaleString(undefined, {
+                  ${netExpectedLoss.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
                   })}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {overallLoss?.enterpriseValue && (
-                    <>
-                      {(
-                        ((overallLoss.overallExpectedLoss || 0) /
-                          parseFloat(overallLoss.enterpriseValue)) *
-                        100
-                      ).toFixed(2)}
-                      % of EV
-                    </>
-                  )}
+                  {netExpectedLossPctOfEV.toFixed(2)}% of EV
                 </div>
               </div>
             </div>
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <div className="text-sm font-medium text-blue-900 mb-2">Calculation Formula:</div>
-              <div className="text-sm text-blue-800 font-mono">
-                Overall Expected Losses = (Direct Exposure + Indirect Exposure) × (100% - Risk Management Score)
+              <div className="text-sm font-medium text-blue-900 mb-2">Calculation Logic:</div>
+              <div className="text-sm text-blue-800 space-y-1">
+                <div>1. Total Risk = Asset Risk + Supply Chain Risk</div>
+                <div>2. Management Adjustment Factor = 1 - (Management Score% × 0.7)</div>
+                <div>3. Net Expected Loss = Total Risk × Management Adjustment Factor</div>
+                <div className="text-xs text-blue-600 mt-2">
+                  * 100% management score reduces risk to 30%, 0% score keeps risk at 100%
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Direct Exposure Section */}
-        <Collapsible open={directExposureOpen} onOpenChange={setDirectExposureOpen}>
+        {/* Assets Section */}
+        <Collapsible open={assetsOpen} onOpenChange={setAssetsOpen}>
           <Card>
             <CollapsibleTrigger className="w-full">
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-indigo-600" />
-                    Direct Exposure - Asset Details
+                    Asset Locations & Risk Breakdown
                   </CardTitle>
-                  {directExposureOpen ? (
+                  {assetsOpen ? (
                     <ChevronUp className="h-5 w-5 text-gray-500" />
                   ) : (
                     <ChevronDown className="h-5 w-5 text-gray-500" />
                   )}
                 </div>
                 <CardDescription>
-                  {assets.length} assets identified • Click to {directExposureOpen ? "collapse" : "expand"}
+                  {assets.length} assets identified • Total annual loss: ${assetRiskAnnual.toLocaleString()}
                 </CardDescription>
               </CardHeader>
             </CollapsibleTrigger>
@@ -208,10 +228,7 @@ export default function CompanyDetails() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Asset Name</TableHead>
-                          <TableHead>Location</TableHead>
                           <TableHead>Coordinates</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="text-right">Value (USD)</TableHead>
                           <TableHead className="text-right">Flood</TableHead>
                           <TableHead className="text-right">Wildfire</TableHead>
                           <TableHead className="text-right">Heat Stress</TableHead>
@@ -240,62 +257,30 @@ export default function CompanyDetails() {
 
                           return (
                             <TableRow key={asset.id}>
-                              <TableCell className="font-medium">{asset.name}</TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  {asset.city && <div>{asset.city}</div>}
-                                  {asset.country && <div>{asset.country}</div>}
+                              <TableCell className="font-medium">
+                                <div>{asset.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {asset.city && <span>{asset.city}, </span>}
+                                  {asset.country}
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-sm font-mono">
                                 {asset.latitude && asset.longitude ? (
-                                  <div className="text-xs font-mono">
+                                  <>
                                     {parseFloat(asset.latitude).toFixed(4)}, {parseFloat(asset.longitude).toFixed(4)}
-                                  </div>
+                                  </>
                                 ) : (
                                   <span className="text-gray-400">N/A</span>
                                 )}
                               </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  <div>{asset.city || 'N/A'}</div>
-                                  {asset.country && (
-                                    <div className="text-xs text-gray-500">{asset.country}</div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                ${parseFloat(asset.estimatedValue || '0').toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatRisk(riskBreakdown.flood?.annual_loss)}
-                              </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatRisk(riskBreakdown.wildfire?.annual_loss)}
-                              </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatRisk(riskBreakdown.heat_stress?.annual_loss)}
-                              </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatRisk(riskBreakdown.extreme_precipitation?.annual_loss)}
-                              </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatRisk(riskBreakdown.hurricane?.annual_loss)}
-                              </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatRisk(riskBreakdown.drought?.annual_loss)}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {totalLoss > 0 ? (
-                                  <span className="text-red-600">
-                                    ${totalLoss.toLocaleString(undefined, {
-                                      minimumFractionDigits: 0,
-                                      maximumFractionDigits: 0,
-                                    })}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">Not assessed</span>
-                                )}
+                              <TableCell className="text-right">{formatRisk(riskBreakdown.flood)}</TableCell>
+                              <TableCell className="text-right">{formatRisk(riskBreakdown.wildfire)}</TableCell>
+                              <TableCell className="text-right">{formatRisk(riskBreakdown.heatStress)}</TableCell>
+                              <TableCell className="text-right">{formatRisk(riskBreakdown.extremePrecip)}</TableCell>
+                              <TableCell className="text-right">{formatRisk(riskBreakdown.hurricane)}</TableCell>
+                              <TableCell className="text-right">{formatRisk(riskBreakdown.drought)}</TableCell>
+                              <TableCell className="text-right font-bold">
+                                {formatRisk(totalLoss)}
                               </TableCell>
                             </TableRow>
                           );
@@ -309,15 +294,80 @@ export default function CompanyDetails() {
           </Card>
         </Collapsible>
 
-        {/* Risk Management Section */}
+        {/* Supply Chain Risk Section */}
+        <Collapsible open={supplyChainOpen} onOpenChange={setSupplyChainOpen}>
+          <Card>
+            <CollapsibleTrigger className="w-full">
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-indigo-600" />
+                    Top 5 Supply Chain Risk Contributors
+                  </CardTitle>
+                  {supplyChainOpen ? (
+                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+                <CardDescription>
+                  Country-sector pairs contributing to supply chain risk • Total: ${supplyChainRiskAnnual.toLocaleString()}
+                </CardDescription>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                {supplyChainRisks.length === 0 ? (
+                  <div className="text-center py-8 text-gray-600">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
+                    <p>No supply chain risk data available.</p>
+                    <p className="text-sm mt-2">Click "Fetch Supply Chain Risks" to load data.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Country</TableHead>
+                          <TableHead>Sector</TableHead>
+                          <TableHead className="text-right">Risk %</TableHead>
+                          <TableHead className="text-right">Expected Annual Loss</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {supplyChainRisks.slice(0, 5).map((risk: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{risk.country}</TableCell>
+                            <TableCell>{risk.sector}</TableCell>
+                            <TableCell className="text-right">
+                              {risk.riskPercentage ? `${(risk.riskPercentage * 100).toFixed(2)}%` : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-orange-600">
+                              ${(risk.expectedAnnualLoss || 0).toLocaleString(undefined, {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
+        {/* Management Performance Section */}
         <Collapsible open={managementOpen} onOpenChange={setManagementOpen}>
           <Card>
             <CollapsibleTrigger className="w-full">
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-green-600" />
-                    Risk Management Assessment
+                    <Shield className="h-5 w-5 text-indigo-600" />
+                    Management Performance Measures
                   </CardTitle>
                   {managementOpen ? (
                     <ChevronUp className="h-5 w-5 text-gray-500" />
@@ -326,76 +376,68 @@ export default function CompanyDetails() {
                   )}
                 </div>
                 <CardDescription>
-                  Overall Score: {managementScore}% • Click to {managementOpen ? "collapse" : "expand"}
+                  Detailed assessment of climate risk management practices • Score: {managementScorePct.toFixed(0)}%
                 </CardDescription>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent>
-                {!assessmentData || !assessmentData.measures || assessmentData.measures.length === 0 ? (
+                {managementMeasures.length === 0 ? (
                   <div className="text-center py-8 text-gray-600">
                     <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
-                    <p>No risk management assessment available for this company.</p>
-                    <p className="text-sm mt-2">Assessment data needs to be fetched from the Risk Management API.</p>
+                    <p>No management data available.</p>
+                    <p className="text-sm mt-2">Click "Fetch Risk Management Data" to load data.</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {assessmentData.measures.map((measure: any, index: number) => (
-                      <Card key={index} className="border-l-4 border-l-indigo-500">
-                        <CardHeader>
+                  <div className="space-y-4">
+                    {managementMeasures.map((measure: any, idx: number) => (
+                      <Card key={idx} className="border-l-4 border-l-indigo-400">
+                        <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <CardTitle className="text-base">{measure.measure_name}</CardTitle>
-                              <CardDescription className="mt-1">
-                                {measure.category} • ID: {measure.measure_id}
-                              </CardDescription>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-indigo-600">{measure.score}</div>
-                              <div className="text-xs text-gray-500">{measure.confidence} confidence</div>
+                              <CardTitle className="text-lg">{measure.measure}</CardTitle>
+                              <div className="flex items-center gap-4 mt-2">
+                                <div className="text-sm">
+                                  <span className="font-semibold">Score:</span>{' '}
+                                  <span className={`font-bold ${
+                                    (measure.score || 0) >= (measure.maxPoints || 0) * 0.7 
+                                      ? 'text-green-600' 
+                                      : (measure.score || 0) >= (measure.maxPoints || 0) * 0.4 
+                                        ? 'text-yellow-600' 
+                                        : 'text-red-600'
+                                  }`}>
+                                    {measure.score}/{measure.maxPoints}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Rationale:</div>
-                            <p className="text-sm text-gray-600">{measure.rationale}</p>
-                          </div>
-                          
-                          {measure.evidence && Array.isArray(measure.evidence) && measure.evidence.length > 0 && (
+                        <CardContent className="space-y-3">
+                          {measure.rationale && (
                             <div>
-                              <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                Evidence:
+                              <div className="text-sm font-medium text-gray-700 mb-1">Rationale:</div>
+                              <div className="text-sm text-gray-600">{measure.rationale}</div>
+                            </div>
+                          )}
+                          {measure.verbatimQuote && (
+                            <div>
+                              <div className="text-sm font-medium text-gray-700 mb-1">Verbatim Quote:</div>
+                              <div className="text-sm italic text-gray-600 bg-gray-50 p-3 rounded border-l-2 border-gray-300">
+                                "{measure.verbatimQuote}"
                               </div>
-                              <div className="space-y-3">
-                                {measure.evidence.map((ev: any, evIndex: number) => (
-                                  <div key={evIndex} className="bg-gray-50 p-3 rounded-lg text-sm">
-                                    <div className="italic text-gray-700 mb-2">
-                                      "{ev.verbatim_quote && ev.verbatim_quote.length > 300 
-                                        ? ev.verbatim_quote.substring(0, 300) + "..." 
-                                        : ev.verbatim_quote}"
-                                    </div>
-                                    <div className="text-xs text-gray-600">
-                                      <div>Source: {ev.source_doc_title || 'N/A'}</div>
-                                      {ev.source_page && ev.source_page !== 'N/A' && (
-                                        <div>Page: {ev.source_page}</div>
-                                      )}
-                                      {ev.source_url && ev.source_url !== "N/A" && (
-                                        <div className="mt-1">
-                                          <a
-                                            href={ev.source_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-indigo-600 hover:underline"
-                                          >
-                                            View Document
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
+                            </div>
+                          )}
+                          {measure.source && (
+                            <div>
+                              <div className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                <FileText className="h-4 w-4" />
+                                Source:
+                              </div>
+                              <div className="text-sm text-blue-600 hover:underline">
+                                <a href={measure.source} target="_blank" rel="noopener noreferrer">
+                                  {measure.source}
+                                </a>
                               </div>
                             </div>
                           )}

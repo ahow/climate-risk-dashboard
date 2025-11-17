@@ -85,21 +85,21 @@ export async function fetchSupplyChainRisk(
 
   console.log(`[fetchSupplyChainRisk] Mapping: ${companyGeography} → ${countryCode}, ${companySector} → ${sectorCode}`);
 
-  const url = `${SUPPLY_CHAIN_API_BASE}/risk.assess`;
-  const payload = {
+  // tRPC queries use GET with URL-encoded input parameter
+  const input = JSON.stringify({
     json: {
       country: countryCode,
       sector: sectorCode,
     },
-  };
+  });
+  const url = `${SUPPLY_CHAIN_API_BASE}/risk.assess?input=${encodeURIComponent(input)}`;
 
   const response = await retryAsync(async () => {
     const res = await fetch(url, {
-      method: "POST",
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
