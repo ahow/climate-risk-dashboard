@@ -16,7 +16,10 @@ import {
   InsertGeographicRisk,
   riskManagementScores,
   RiskManagementScore,
-  InsertRiskManagementScore
+  InsertRiskManagementScore,
+  supplyChainRisks,
+  SupplyChainRisk,
+  InsertSupplyChainRisk
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -203,6 +206,28 @@ export async function insertRiskManagement(score: InsertRiskManagementScore): Pr
   if (!db) return;
   
   await db.insert(riskManagementScores).values(score);
+}
+
+export async function getSupplyChainRiskByCompanyId(companyId: number): Promise<SupplyChainRisk | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(supplyChainRisks).where(eq(supplyChainRisks.companyId, companyId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function insertSupplyChainRisk(risk: InsertSupplyChainRisk): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.insert(supplyChainRisks).values(risk);
+}
+
+export async function deleteSupplyChainRiskByCompanyId(companyId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.delete(supplyChainRisks).where(eq(supplyChainRisks.companyId, companyId));
 }
 
 

@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, originalFilename, s3Url, uploadedAt FROM uploadedFiles ORDER BY uploadedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT id, originalFilename, s3Url, uploadedAt FROM uploadedFiles ORDER BY uploadedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "originalFilename": "20Companies(2).xlsx",
+      "s3Url": "https://d2xsxph8kpxj0f.cloudfront.net/310419663031471125/Rur7xAEUjvByHVg3PaP3cz/uploads/1/1763335715063-hz14bg-20Companies(2).xlsx",
+      "uploadedAt": "2025-11-16 23:28:35"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\toriginalFilename\ts3Url\tuploadedAt\n1\t20Companies(2).xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310419663031471125/Rur7xAEUjvByHVg3PaP3cz/uploads/1/1763335715063-hz14bg-20Companies(2).xlsx\t2025-11-16 23:28:35\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

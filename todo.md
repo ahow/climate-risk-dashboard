@@ -326,3 +326,39 @@
 - [x] Verified dashboard displays all 20 companies correctly
 - [x] Test public file URL accessibility (File 1 & 2 both accessible)
 
+
+
+
+## Public File URL Bug - External Applications Receiving Empty Files
+- [ ] Investigate why external applications receive 0-byte files from public URLs
+- [ ] Check Heroku logs for errors when external apps access /public/files/:fileId
+- [ ] Verify S3 file URLs are accessible and contain data
+- [ ] Test file download with curl from different network contexts
+- [ ] Fix any CORS, authentication, or streaming issues in publicFiles route
+- [ ] Deploy fix to Heroku
+- [ ] Verify external applications can successfully download files
+
+
+
+
+## Dashboard Restructuring - New Analysis Logic
+- [x] Search for Supply Chain Risk API in Manus API Hub (found at https://supplyrisk-bb4n56uc.manus.space)
+- [x] Add supplyChainRisks table to database schema
+- [x] Add supplierCosts column to companies table
+- [x] Implement Supply Chain Risk API integration in supplyChainApi.ts
+- [x] Add sector/country name mapping to match Supply Chain API classifications (oecdMappings.ts)
+- [x] Update file parser to handle SUPPLIERCOSTS column from spreadsheet
+- [x] Create OECD mapping utilities (country codes, sector codes, PV calculation, management adjustment)
+- [x] Add supply chain risk database helper functions
+- [ ] Add tRPC procedure: fetchSupplyChainRisks (call API for each company)
+- [ ] Implement Total Risk calculation logic (Asset Risk + Supply Chain Risk annual losses)
+- [ ] Update Management Score calculation (convert to percentage of maximum points)
+- [ ] Implement Net Expected Loss calculation with management adjustment
+- [ ] Calculate Present Value for both asset and supply chain risks
+- [ ] Update companies.list to return all new calculated fields
+- [ ] Redesign Home page UI to show new analysis structure
+- [ ] Create detailed company view with: (i) asset list, (ii) top 5 supply chain contributors, (iii) management measures
+- [ ] Clear old database and re-seed with new ShortCompanyListACWI.xlsx
+- [ ] Test complete workflow locally
+- [ ] Deploy to Heroku and verify all calculations
+
