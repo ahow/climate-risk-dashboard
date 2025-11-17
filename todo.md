@@ -311,3 +311,15 @@
 - [x] Retrieved public file URL for uploaded companies file
 - [ ] Note: Heroku app still shows error - companies table is empty, need to upload file again through Heroku interface
 
+
+
+
+## File Management UI and Retry Logic Implementation
+- [ ] Implement automatic retry logic for Risk Management API calls (handle hibernation)
+- [ ] Add exponential backoff for failed API requests
+- [ ] Create file management UI component showing uploaded files
+- [ ] Display public URLs, upload dates, and processing status
+- [ ] Re-upload 20Companies(2).xlsx through Heroku to populate companies table
+- [ ] Verify automated pipeline processes all data (assets → geographic risks → risk management)
+- [ ] Test public file URL accessibility from external applications
+

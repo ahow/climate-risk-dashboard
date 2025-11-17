@@ -3,6 +3,8 @@
  * Handles communication with Asset Discovery, Geographic Risks, and Risk Management APIs
  */
 
+import { fetchWithRetry } from '../utils/retry';
+
 const ASSET_DISCOVERY_API = "https://3000-ibweqg4u19d6b2l6kv5ro-ee585d51.manusvm.computer/api/trpc";
 const GEOGRAPHIC_RISKS_API = "http://167.71.187.110";
 const RISK_MANAGEMENT_API = "https://8000-iwnb9mmlojeywebr41d8n-96f6004a.manusvm.computer";
@@ -203,7 +205,16 @@ export async function fetchRiskManagement(isin: string): Promise<RiskManagementD
   try {
     console.log(`Fetching risk management for ISIN: ${isin}`);
     
-    const response = await fetch(`${RISK_MANAGEMENT_API}/assessment/${isin}`);
+    // Use retry logic to handle API hibernation and temporary failures
+    const response = await fetchWithRetry(
+      `${RISK_MANAGEMENT_API}/assessment/${isin}`,
+      undefined,
+      {
+        maxRetries: 5, // More retries for hibernation wake-up
+        initialDelay: 2000, // Start with 2 seconds
+        maxDelay: 30000, // Max 30 seconds between retries
+      }
+    );
     if (!response.ok) {
       // If 404, the company may not be in the assessed list
       if (response.status === 404) {

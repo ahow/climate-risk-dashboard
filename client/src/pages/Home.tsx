@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { Loader2, Search, TrendingDown } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { FileManagement } from "@/components/FileManagement";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -246,6 +247,9 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+
+        {/* File Management */}
+        <FileManagement />
 
         {/* Asset Value Calibration & Export */}
         {companies && companies.length > 0 && (
