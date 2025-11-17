@@ -248,13 +248,14 @@ export const appRouter = router({
         console.log(`[seedCompanies] Parsed ${data.length} rows from Excel`);
         
         // Transform data to match companies schema
+        // Excel columns: Type, NAME, LEVEL2 SECTOR NAME, LEVEL3 SECTOR NAME, LEVEL4 SECTOR NAME, LEVEL5 SECTOR NAME, GEOGRAPHIC DESCR., ASSETS, EV
         const companiesData = data.map((row: any) => ({
-          isin: row.ISIN || row.isin,
-          name: row.Name || row.name || row['Company Name'],
-          sector: row.Sector || row.sector,
-          geography: row.Geography || row.geography || row.Country,
-          tangibleAssets: String(row['Tangible Assets'] || row.tangibleAssets || row['Tangible Assets (M)'] || '0'),
-          enterpriseValue: String(row['Enterprise Value'] || row.enterpriseValue || row['Enterprise Value (M)'] || '0'),
+          isin: row.Type || row.ISIN || row.isin,
+          name: row.NAME || row.Name || row.name || row['Company Name'],
+          sector: row['LEVEL2 SECTOR NAME'] || row['LEVEL3 SECTOR NAME'] || row.Sector || row.sector,
+          geography: row['GEOGRAPHIC DESCR.'] || row.Geography || row.geography || row.Country,
+          tangibleAssets: String(row.ASSETS || row['Tangible Assets'] || row.tangibleAssets || row['Tangible Assets (M)'] || '0'),
+          enterpriseValue: String(row.EV || row['Enterprise Value'] || row.enterpriseValue || row['Enterprise Value (M)'] || '0'),
         }));
         console.log(`[seedCompanies] Transformed ${companiesData.length} companies`);
         console.log(`[seedCompanies] First company:`, companiesData[0]);
