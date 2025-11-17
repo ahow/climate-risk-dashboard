@@ -30,46 +30,64 @@ export const appRouter = router({
      * Get all companies with overall expected loss
      */
     list: publicProcedure.query(async () => {
-      const companies = await db.getAllCompanies();
-      
-      // Calculate overall expected loss for each company
-      const companiesWithLoss = await Promise.all(
-        companies.map(async (company) => {
-          // Get direct exposure
-          const assets = await db.getAssetsByCompanyId(company.id);
-          let directExposure = 0;
+      try {
+        console.log('[companies.list] Starting query...');
+        const companies = await db.getAllCompanies();
+        console.log(`[companies.list] Found ${companies.length} companies`);
+        
+        // Calculate overall expected loss for each company
+        const companiesWithLoss = await Promise.all(
+          companies.map(async (company) => {
+            try {
+              // Get direct exposure
+              const assets = await db.getAssetsByCompanyId(company.id);
+              let directExposure = 0;
 
-          for (const asset of assets) {
-            const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
-            if (geoRisk && geoRisk.riskData) {
-              const riskData = geoRisk.riskData as any;
-              directExposure += riskData.expected_annual_loss || 0;
+              for (const asset of assets) {
+                const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
+                if (geoRisk && geoRisk.riskData) {
+                  const riskData = geoRisk.riskData as any;
+                  directExposure += riskData.expected_annual_loss || 0;
+                }
+              }
+
+              // Get risk management score
+              const riskManagement = await db.getRiskManagementByCompanyId(company.id);
+              const managementScore = riskManagement?.overallScore || 0;
+              const managementFactor = (100 - managementScore) / 100;
+
+              // Calculate overall expected loss
+              const overallExpectedLoss = directExposure * managementFactor;
+              
+              // Calculate as percentage of EV
+              const enterpriseValue = parseFloat(company.enterpriseValue || '0');
+              const lossPercentageOfEV = enterpriseValue > 0 
+                ? (overallExpectedLoss / enterpriseValue) * 100 
+                : 0;
+
+              return {
+                ...company,
+                overallExpectedLoss,
+                lossPercentageOfEV,
+              };
+            } catch (error) {
+              console.error(`[companies.list] Error processing company ${company.name}:`, error);
+              // Return company with zero loss if calculation fails
+              return {
+                ...company,
+                overallExpectedLoss: 0,
+                lossPercentageOfEV: 0,
+              };
             }
-          }
-
-          // Get risk management score
-          const riskManagement = await db.getRiskManagementByCompanyId(company.id);
-          const managementScore = riskManagement?.overallScore || 0;
-          const managementFactor = (100 - managementScore) / 100;
-
-          // Calculate overall expected loss
-          const overallExpectedLoss = directExposure * managementFactor;
-          
-          // Calculate as percentage of EV
-          const enterpriseValue = parseFloat(company.enterpriseValue || '0');
-          const lossPercentageOfEV = enterpriseValue > 0 
-            ? (overallExpectedLoss / enterpriseValue) * 100 
-            : 0;
-
-          return {
-            ...company,
-            overallExpectedLoss,
-            lossPercentageOfEV,
-          };
-        })
-      );
-      
-      return companiesWithLoss;
+          })
+        );
+        
+        console.log(`[companies.list] Returning ${companiesWithLoss.length} companies with loss data`);
+        return companiesWithLoss;
+      } catch (error) {
+        console.error('[companies.list] Fatal error:', error);
+        throw error;
+      }
     }),
 
     /**
