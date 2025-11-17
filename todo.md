@@ -357,9 +357,11 @@
 - [x] Calculate Present Value for both asset and supply chain risks
 - [x] Update companies.list to return all new calculated fields
 - [x] Update getFullDetails to return: (i) assets with losses, (ii) top 5 supply chain contributors, (iii) management measures
-- [ ] Redesign Home page UI to show new analysis structure
-- [ ] Create detailed company view with: (i) asset list, (ii) top 5 supply chain contributors, (iii) management measures
-- [ ] Clear old database and re-seed with new ShortCompanyListACWI.xlsx
-- [ ] Test complete workflow locally
+- [x] Redesign Home page UI to show new analysis structure (Asset Risk, Supply Chain Risk, Total Risk, Management Score %, Net Expected Loss)
+- [x] Add Fetch Supply Chain Risks button to Data Loading section
+- [ ] Update detailed company view with: (i) asset list, (ii) top 5 supply chain contributors, (iii) management measures
+- [ ] Upload new ShortCompanyListACWI.xlsx with SUPPLIERCOSTS column
+- [ ] Test complete workflow: Load Companies → Fetch Assets → Fetch Supply Chain Risks → Calculate Geographic Risks → Fetch Management Data
+- [ ] Verify supply chain risk calculations are working correctly
 - [ ] Deploy to Heroku and verify all calculations
 

@@ -23,6 +23,7 @@ export default function Home() {
 
   const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation();
   const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
+  const fetchSupplyChainMutation = trpc.companies.fetchSupplyChainRisks.useMutation();
   const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation();
   const calibrateMutation = trpc.risks.recalculateWithCalibration.useMutation();
 
@@ -237,6 +238,20 @@ export default function Home() {
                 )}
               </Button>
               <Button
+                onClick={() => fetchSupplyChainMutation.mutate()}
+                disabled={fetchSupplyChainMutation.isPending}
+                variant="default"
+              >
+                {fetchSupplyChainMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching Supply Chain Risks...
+                  </>
+                ) : (
+                  "Fetch Supply Chain Risks"
+                )}
+              </Button>
+              <Button
                 onClick={() => fetchRiskMgmtMutation.mutate()}
                 disabled={fetchRiskMgmtMutation.isPending}
                 variant="default"
@@ -253,6 +268,11 @@ export default function Home() {
               {fetchAssetsMutation.isSuccess && (
                 <div className="text-sm text-green-600 flex items-center">
                   ✓ Assets loaded: {fetchAssetsMutation.data.totalAssetsFetched} from {fetchAssetsMutation.data.companiesProcessed} companies
+                </div>
+              )}
+              {fetchSupplyChainMutation.isSuccess && (
+                <div className="text-sm text-green-600 flex items-center">
+                  ✓ Supply chain risks loaded: {fetchSupplyChainMutation.data.risksFetched} companies
                 </div>
               )}
               {fetchRiskMgmtMutation.isSuccess && (
@@ -390,13 +410,48 @@ export default function Home() {
                       ${parseFloat(company.enterpriseValue || '0').toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between pt-2 mt-2 border-t">
-                    <span className="text-gray-600">Expected Loss:</span>
-                    <span className="font-semibold text-red-600">
-                      {(company as any).lossPercentageOfEV !== undefined 
-                        ? `${(company as any).lossPercentageOfEV.toFixed(2)}% of EV`
-                        : 'N/A'}
-                    </span>
+                  {/* New Analysis Structure */}
+                  <div className="pt-2 mt-2 border-t space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Asset Risk (Annual):</span>
+                      <span className="font-medium">
+                        {(company as any).assetRiskAnnual !== undefined 
+                          ? `$${((company as any).assetRiskAnnual).toLocaleString(undefined, {maximumFractionDigits: 0})}`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Supply Chain Risk:</span>
+                      <span className="font-medium">
+                        {(company as any).supplyChainRiskAnnual !== undefined 
+                          ? `$${((company as any).supplyChainRiskAnnual).toLocaleString(undefined, {maximumFractionDigits: 0})}`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Total Risk (Annual):</span>
+                      <span className="font-medium text-orange-600">
+                        {(company as any).totalRiskAnnual !== undefined 
+                          ? `$${((company as any).totalRiskAnnual).toLocaleString(undefined, {maximumFractionDigits: 0})}`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Management Score:</span>
+                      <span className="font-medium">
+                        {(company as any).managementScorePct !== undefined 
+                          ? `${((company as any).managementScorePct).toFixed(0)}%`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t">
+                      <span className="text-gray-700 font-medium">Net Expected Loss:</span>
+                      <span className="font-semibold text-red-600">
+                        {(company as any).netLossPercentageOfEV !== undefined 
+                          ? `${((company as any).netLossPercentageOfEV).toFixed(2)}% of EV`
+                          : 'N/A'}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <Button className="w-full mt-4" variant="outline">
