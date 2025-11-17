@@ -305,9 +305,9 @@
 
 
 ## Heroku Database Query Error
-- [ ] Diagnose database query error: "Failed query: select `id`, `companyId`, `assetName` ... where `assets`.`companyId` = ? params: 1"
-- [ ] Fix database schema mismatch between local and Heroku
-- [ ] Verify all tables exist on Heroku database
-- [ ] Test company loading on Heroku after fix
-- [ ] Retrieve public file URL for uploaded companies file
+- [x] Diagnose database query error: "Failed query: select `id`, `companyId`, `assetName` ... where `assets`.`companyId` = ? params: 1"
+- [x] Fix database schema mismatch between local and Heroku
+- [x] Verify all tables exist on Heroku database (migration endpoint created all tables)
+- [x] Retrieved public file URL for uploaded companies file
+- [ ] Note: Heroku app still shows error - companies table is empty, need to upload file again through Heroku interface
 
