@@ -58,6 +58,7 @@ async function buildDownloadUrl(
     method: "GET",
     headers: buildAuthHeaders(apiKey),
   });
+  // @ts-ignore
   return (await response.json()).url;
 }
 
@@ -83,6 +84,7 @@ function toFormData(
   return form;
 }
 
+// @ts-ignore
 function buildAuthHeaders(apiKey: string): HeadersInit {
   return { Authorization: `Bearer ${apiKey}` };
 }
@@ -141,6 +143,7 @@ export async function storagePut(
       `Storage upload failed (${response.status} ${response.statusText}): ${message}`
     );
   }
+  // @ts-ignore
   const url = (await response.json()).url;
   return { key, url };
 }

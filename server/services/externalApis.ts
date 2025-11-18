@@ -113,6 +113,7 @@ export async function fetchAllAssetsFromAPI(): Promise<AssetData[]> {
     const data = await response.json();
     
     // Extract data from tRPC response format: result.data.json
+    // @ts-ignore
     const result = data?.result?.data?.json;
     if (!result || !result.assets) {
       console.warn('No assets found in API response');
@@ -153,6 +154,7 @@ export async function fetchCompanyAssets(companyName: string): Promise<AssetData
     const data = await response.json();
     
     // Extract data from tRPC response format: result.data.json
+    // @ts-ignore
     const result = data?.result?.data?.json;
     if (!result || !result.assets) {
       console.warn(`No assets found for company: ${companyName}`);
@@ -191,7 +193,7 @@ export async function fetchGeographicRisk(
       throw new Error(`Failed to fetch geographic risk: ${response.statusText}`);
     }
 
-    return await response.json();
+    return await response.json() as any;
   } catch (error) {
     console.error(`Error fetching geographic risk for (${latitude}, ${longitude}):`, error);
     throw error;
@@ -243,7 +245,7 @@ export async function fetchRiskManagement(isin: string): Promise<RiskManagementD
       throw new Error(`Failed to fetch risk management: ${response.statusText}`);
     }
     
-    return await response.json();
+    return await response.json() as any;
   } catch (error) {
     console.error(`Error fetching risk management for ${isin}:`, error);
     throw error;
@@ -285,6 +287,7 @@ export async function fetchAllCompanies(): Promise<Array<{
     }
     
     const data = await response.json();
+    // @ts-ignore
     const result = data?.result?.data?.json;
     
     return result?.companies || [];

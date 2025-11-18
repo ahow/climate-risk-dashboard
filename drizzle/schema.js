@@ -39,6 +39,7 @@ export const companies = mysqlTable("companies", {
     geography: varchar("geography", { length: 255 }),
     tangibleAssets: varchar("tangibleAssets", { length: 50 }),
     enterpriseValue: varchar("enterpriseValue", { length: 50 }),
+    supplierCosts: varchar("supplierCosts", { length: 50 }), // Total annual spending on suppliers
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -88,3 +89,20 @@ export const riskManagementScores = mysqlTable("riskManagementScores", {
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+/**
+ * Supply chain risk assessments - stores results from Supply Chain Risk API
+ */
+export const supplyChainRisks = mysqlTable("supplyChainRisks", {
+    id: int("id").autoincrement().primaryKey(),
+    companyId: int("companyId").notNull(),
+    countryCode: varchar("countryCode", { length: 3 }).notNull(), // OECD 3-letter code
+    sectorCode: varchar("sectorCode", { length: 20 }).notNull(), // OECD ICIO sector code
+    expectedAnnualLossPct: varchar("expectedAnnualLossPct", { length: 50 }), // Percentage from API
+    expectedAnnualLoss: varchar("expectedAnnualLoss", { length: 50 }), // supplierCosts × lossPct
+    presentValue: varchar("presentValue", { length: 50 }), // 30-year PV at 10% discount
+    topSuppliers: json("topSuppliers"), // Top 5 country-sector contributors
+    assessmentData: json("assessmentData").notNull(), // Full API response
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+//# sourceMappingURL=schema.js.map
