@@ -35,33 +35,21 @@ export interface SupplyChainRiskAssessment {
     water_stress: number;
     nature_loss: number;
   };
-  climate_details: {
-    country: string;
-    expected_annual_loss: number;
-    expected_annual_loss_pct: number;
-    present_value_30y: number;
-    hazards: {
-      drought: number;
-      flood: number;
-      heat_stress: number;
-      hurricane: number;
-      extreme_precipitation: number;
-    };
-  };
-  top_suppliers: Array<{
+  top_suppliers?: Array<{
     country: string;
     country_name: string;
     sector: string;
     sector_name: string;
-    io_coefficient: number;
-    direct_risk: {
+    coefficient?: number;
+    io_coefficient?: number;
+    direct_risk?: {
       climate: number;
       modern_slavery: number;
       political: number;
       water_stress: number;
       nature_loss: number;
     };
-    risk_contribution: {
+    risk_contribution?: {
       climate: number;
       modern_slavery: number;
       political: number;
@@ -69,8 +57,28 @@ export interface SupplyChainRiskAssessment {
       nature_loss: number;
     };
   }>;
-  total_suppliers: number;
-  io_coverage: number;
+  total_suppliers?: number;
+  io_coverage?: number;
+  methodology?: {
+    direct_risk: string;
+    indirect_risk: string;
+    tier_weights: string;
+    total_risk: string;
+  };
+  // Computed field for compatibility
+  climate_details?: {
+    country: string;
+    expected_annual_loss: number;
+    expected_annual_loss_pct: number;
+    present_value_30y: number;
+    hazards?: {
+      drought: number;
+      flood: number;
+      heat_stress: number;
+      hurricane: number;
+      extreme_precipitation: number;
+    };
+  };
 }
 
 /**
@@ -117,6 +125,9 @@ export async function fetchSupplyChainRisk(
       country_name: companyGeography || countryCode,
       sector: sectorCode,
       sector_name: companySector || sectorCode,
+      direct_risk: { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
+      indirect_risk: { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
+      total_risk: { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
       climate_details: {
         country: countryCode,
         expected_annual_loss: 0,
@@ -133,13 +144,25 @@ export async function fetchSupplyChainRisk(
       top_suppliers: [],
       total_suppliers: 0,
       io_coverage: 0,
-    } as any;
+    };
   }
   
   // Parse REST API response
   const assessment = response as SupplyChainRiskAssessment;
   
-  console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Expected Loss: ${assessment.climate_details.expected_annual_loss_pct}%`);
+  // Convert total_risk.climate score (0-10 scale) to expected annual loss percentage
+  // Risk score interpretation: 0 = no risk, 10 = maximum risk (10% annual loss)
+  const expectedAnnualLossPct = assessment.total_risk.climate; // Direct mapping: risk score = loss %
+  
+  // Add computed climate_details for backward compatibility
+  assessment.climate_details = {
+    country: assessment.country,
+    expected_annual_loss: 0, // Will be calculated by caller using supplierCosts
+    expected_annual_loss_pct: expectedAnnualLossPct,
+    present_value_30y: 0, // Will be calculated by caller
+  };
+  
+  console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Climate Risk Score: ${assessment.total_risk.climate}, Expected Loss: ${expectedAnnualLossPct}%`);
 
   return assessment;
 }

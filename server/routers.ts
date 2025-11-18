@@ -525,14 +525,13 @@ export const appRouter = router({
           
           // Fetch supply chain risk assessment from API
           const assessment = await fetchSupplyChainRisk(company.geography, company.sector);
-          
-          // Calculate expected losses
+                // Calculate expected losses
           const supplierCosts = parseFloat(company.supplierCosts || '0');
-          const expectedAnnualLossPct = assessment.climate_details.expected_annual_loss_pct;
+          const expectedAnnualLossPct = assessment.climate_details?.expected_annual_loss_pct || 0;
           const { annualLoss, presentValue } = calculateSupplyChainLoss(supplierCosts, expectedAnnualLossPct);
           
           // Extract top 5 suppliers
-          const topSuppliers = assessment.top_suppliers.slice(0, 5);
+          const topSuppliers = (assessment.top_suppliers || []).slice(0, 5);
           
           // Delete existing supply chain risk data for this company
           await db.deleteSupplyChainRiskByCompanyId(company.id);

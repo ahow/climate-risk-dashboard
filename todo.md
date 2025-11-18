@@ -405,3 +405,18 @@
 - [ ] Deploy to permanent production URL via Publish button
 - [ ] Provide final production URL to user
 
+
+
+
+## Final Deployment and Testing
+- [ ] Execute Fetch All Assets button
+- [ ] Execute Calculate Geographic Risks button
+- [ ] Execute Fetch Supply Chain Risks button
+- [ ] Execute Fetch Risk Management Data button
+- [ ] Verify supply chain risk values populate correctly
+- [ ] Fix NaN enterprise values for FACTSET, AFLAC, BNP PARIBAS, AXA
+- [ ] Deploy to permanent production URL via Publish button
+- [ ] Re-run complete workflow on production
+- [ ] Verify all calculations work correctly on production
+- [ ] Provide final public dashboard URL to user
+
