@@ -30,6 +30,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  console.log('🚀 Starting Climate Risk Dashboard server...');
+  console.log('Environment:', process.env.NODE_ENV || 'development');
+  console.log('Port:', process.env.PORT || '3000');
+  
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
@@ -73,4 +77,15 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error('❌ Server startup failed:');
+  console.error('Error name:', error.name);
+  console.error('Error message:', error.message);
+  console.error('Error stack:', error.stack);
+  console.error('Environment check:');
+  console.error('- NODE_ENV:', process.env.NODE_ENV);
+  console.error('- PORT:', process.env.PORT);
+  console.error('- DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
+  console.error('- JWT_SECRET:', process.env.JWT_SECRET ? '✓ Set' : '✗ Missing');
+  process.exit(1);
+});
