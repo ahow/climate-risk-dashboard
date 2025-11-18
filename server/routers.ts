@@ -393,8 +393,14 @@ export const appRouter = router({
      * Fetch all assets from Asset Discovery API (565 assets with 100% coverage)
      */
     fetchAllAssets: publicProcedure.mutation(async () => {
+      const { progressTracker } = await import('./utils/progressTracker');
+      const operationId = `fetch-assets-${Date.now()}`;
+      
       try {
+        progressTracker.start(operationId, 'Fetching Assets', 100, 'Starting asset fetch...');
+        
         // Fetch all assets at once from the API
+        progressTracker.update(operationId, 10, 'Fetching assets from API...');
         const allAssets = await externalApis.fetchAllAssetsFromAPI();
         
         if (allAssets.length === 0) {
@@ -406,6 +412,7 @@ export const appRouter = router({
         }
 
         // Get all companies to map assets to company IDs
+        progressTracker.update(operationId, 30, `Received ${allAssets.length} assets from API`);
         const companies = await db.getAllCompanies();
         const companyMap = new Map(companies.map(c => [c.name, c.id]));
 
@@ -447,10 +454,17 @@ export const appRouter = router({
         }
 
         // Bulk insert assets for each company
+        progressTracker.update(operationId, 50, `Inserting ${assetsByCompany.size} companies' assets...`);
+        const totalCompanies = assetsByCompany.size;
+        let processedCompanies = 0;
+        
         for (const [companyId, assets] of Array.from(assetsByCompany.entries())) {
+          processedCompanies++;
+          const progress = 50 + Math.floor((processedCompanies / totalCompanies) * 40);
           try {
             await db.bulkInsertAssets(assets);
             totalAssetsFetched += assets.length;
+            progressTracker.update(operationId, progress, `Inserted ${totalAssetsFetched} assets (${processedCompanies}/${totalCompanies} companies)`);
           } catch (error) {
             const errorMsg = `Failed to insert assets for company ID ${companyId}: ${error}`;
             console.error(errorMsg);
@@ -458,6 +472,8 @@ export const appRouter = router({
           }
         }
 
+        progressTracker.complete(operationId, `Successfully loaded ${totalAssetsFetched} assets from ${assetsByCompany.size} companies`);
+        
         return {
           success: true,
           totalAssetsFetched,
@@ -465,13 +481,16 @@ export const appRouter = router({
           skipped,
           companiesProcessed: assetsByCompany.size,
           errors,
+          operationId,
         };
       } catch (error) {
         console.error('Error in fetchAllAssets:', error);
+        progressTracker.fail(operationId, error instanceof Error ? error.message : 'Unknown error');
         return {
           success: false,
           totalAssetsFetched: 0,
           message: `Failed to fetch assets: ${error}`,
+          operationId,
         };
       }
     }),
@@ -1241,6 +1260,26 @@ export const appRouter = router({
           throw new Error(error instanceof Error ? error.message : 'Failed to process file');
         }
       }),
+  }),
+
+  progress: router({
+    /**
+     * Get progress for a specific operation
+     */
+    get: publicProcedure
+      .input(z.object({ operationId: z.string() }))
+      .query(async ({ input }) => {
+        const { progressTracker } = await import('./utils/progressTracker');
+        return progressTracker.get(input.operationId);
+      }),
+
+    /**
+     * Get all active operations
+     */
+    getAll: publicProcedure.query(async () => {
+      const { progressTracker } = await import('./utils/progressTracker');
+      return progressTracker.getAll();
+    }),
   }),
 });
 

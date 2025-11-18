@@ -7,6 +7,7 @@ import { Loader2, Search, TrendingDown } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { FileManagement } from "@/components/FileManagement";
+import { useProgressTracking } from "@/hooks/useProgressTracking";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -21,11 +22,22 @@ export default function Home() {
     },
   });
 
-  const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation();
+  const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
+  
+  const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation({
+    onSuccess: (data) => {
+      if (data.operationId) {
+        setCurrentOperationId(data.operationId);
+      }
+    },
+  });
   const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
   const fetchSupplyChainMutation = trpc.companies.fetchSupplyChainRisks.useMutation();
   const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation();
   const calibrateMutation = trpc.risks.recalculateWithCalibration.useMutation();
+  
+  // Track progress for long-running operations
+  useProgressTracking(currentOperationId);
 
   // CSV Export
   const exportMutation = trpc.export.generateCSV.useQuery(undefined, {

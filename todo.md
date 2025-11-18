@@ -420,3 +420,14 @@
 - [ ] Verify all calculations work correctly on production
 - [ ] Provide final public dashboard URL to user
 
+
+
+## Progress Tracking Feature
+- [x] Add real-time progress tracking for asset fetching operations
+- [ ] Add progress tracking for supply chain risk loading
+- [ ] Add progress tracking for risk management data fetching
+- [ ] Add progress tracking for geographic risk calculations
+- [x] Display progress as "X/Y companies" or "X/Y assets"
+- [x] Show completion status and estimated time remaining
+- [x] Use toast notifications for progress updates
+
