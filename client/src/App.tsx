@@ -8,11 +8,13 @@ import Home from "./pages/Home";
 import CompanyFileUpload from "./pages/CompanyFileUpload";
 import CompanyDetails from "./pages/CompanyDetails";
 import FileUpload from "./pages/FileUpload";
+import Rankings from "./pages/Rankings";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/rankings"} component={Rankings} />
       <Route path={"/upload-companies"} component={CompanyFileUpload} />
       <Route path={"/company/:isin"} component={CompanyDetails} />
       <Route path={"/upload"} component={FileUpload} />

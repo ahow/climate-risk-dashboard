@@ -688,10 +688,23 @@ export const appRouter = router({
      * Calculate geographic risks for all assets with coordinates
      */
     calculateAllGeographicRisks: publicProcedure.mutation(async () => {
+      const { progressTracker } = await import('./utils/progressTracker');
+      const operationId = `geo-risks-${Date.now()}`;
+      
       const companies = await db.getAllCompanies();
       let risksCalculated = 0;
       let skipped = 0;
       const errors: string[] = [];
+      
+      // Count total assets to calculate
+      let totalAssets = 0;
+      for (const company of companies) {
+        const assets = await db.getAssetsByCompanyId(company.id);
+        totalAssets += assets.filter(a => a.latitude && a.longitude && a.estimatedValueUsd).length;
+      }
+      
+      progressTracker.start(operationId, 'Calculating geographic risks', totalAssets, `Found ${totalAssets} assets to process`);
+      let processedAssets = 0;
 
       console.log(`[Geographic Risks] Starting calculation for ${companies.length} companies`);
 
@@ -729,6 +742,8 @@ export const appRouter = router({
                   });
                   
                   risksCalculated++;
+                  processedAssets++;
+                  progressTracker.update(operationId, processedAssets, `Calculated ${risksCalculated} risks, skipped ${skipped}`);
                   console.log(`[Geographic Risks] ✓ Calculated (${risksCalculated} total)`);
                   
                   // Add a small delay to avoid overwhelming the API
@@ -751,12 +766,19 @@ export const appRouter = router({
       }
 
       console.log(`[Geographic Risks] Completed: ${risksCalculated} calculated, ${skipped} skipped, ${errors.length} errors`);
+      
+      if (errors.length > 0) {
+        progressTracker.fail(operationId, `Completed with ${errors.length} errors`);
+      } else {
+        progressTracker.complete(operationId, `Calculated ${risksCalculated} risks, skipped ${skipped}`);
+      }
 
       return {
         success: true,
         risksCalculated,
         skipped,
-        errors
+        errors,
+        operationId
       };
     }),
 

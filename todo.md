@@ -431,3 +431,27 @@
 - [x] Show completion status and estimated time remaining
 - [x] Use toast notifications for progress updates
 
+
+
+## User Requested Features (Nov 18)
+- [ ] Add progress tracking to "Calculate Geographic Risks" button
+- [ ] Create ranked company table sorted by Net Expected Loss (highest to lowest)
+- [ ] Add sector filter to ranked table (with option to leave blank)
+- [ ] Add country filter to ranked table (with option to leave blank)
+- [ ] Add CSV export for full company list including: name, ISIN, sector, geography, key risk measures
+- [ ] Clarify or remove "Recalculate with Calibrated Values" button
+- [ ] Document whether asset values are already calibrated
+- [ ] Document whether losses are present values or annual expected losses
+- [ ] Document how losses relate to EV
+
+
+
+
+## User Requested Features (Nov 18, 2025)
+- [x] Add progress tracking to "Calculate Geographic Risks" button
+- [x] Create ranked company table showing companies from highest to lowest Net Expected Loss
+- [x] Add sector and country filters to rankings table (with option to leave blank)
+- [x] Add CSV export for full company list including: name, ISIN, sector, geography, key risk measures
+- [x] Add tooltips/documentation explaining calibration button purpose
+- [x] Document loss calculation methodology (annual vs present value)
+

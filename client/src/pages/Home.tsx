@@ -33,7 +33,13 @@ export default function Home() {
   });
   const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
   const fetchSupplyChainMutation = trpc.companies.fetchSupplyChainRisks.useMutation();
-  const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation();
+  const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation({
+    onSuccess: (data) => {
+      if (data.operationId) {
+        setCurrentOperationId(data.operationId);
+      }
+    },
+  });
   const calibrateMutation = trpc.risks.recalculateWithCalibration.useMutation();
   
   // Track progress for long-running operations
@@ -211,14 +217,19 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <TrendingDown className="h-8 w-8 text-indigo-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{APP_TITLE}</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Assess physical climate risks across company portfolios
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <TrendingDown className="h-8 w-8 text-indigo-600" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{APP_TITLE}</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Assess physical climate risks across company portfolios
+                </p>
+              </div>
             </div>
+            <Button onClick={() => setLocation("/rankings")} variant="outline">
+              View Rankings
+            </Button>
           </div>
         </div>
       </header>
@@ -341,8 +352,20 @@ export default function Home() {
           <Card className="mb-6 bg-green-50 border-green-200">
             <CardHeader>
               <CardTitle className="text-lg">Asset Value Calibration & Export</CardTitle>
-              <CardDescription>
-                Recalculate risks using proportionate allocation based on reported tangible assets
+              <CardDescription className="space-y-2">
+                <p>
+                  <strong>Why calibrate?</strong> The Asset Discovery API returns estimated values for each asset, 
+                  but your spreadsheet contains actual reported tangible assets from financial statements.
+                </p>
+                <p>
+                  <strong>How it works:</strong> This button recalculates each asset's value proportionately 
+                  (e.g., if API estimates total $6M across 3 assets worth $1M, $2M, $3M, and actual reported value is $10M, 
+                  calibrated values become $1.67M, $3.33M, $5M). This ensures risk calculations use real financial data.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  <strong>Loss calculations:</strong> All figures show <strong>annual expected losses</strong> from climate hazards. 
+                  Net Expected Loss is adjusted by risk management scores (100% score = 70% risk reduction).
+                </p>
               </CardDescription>
             </CardHeader>
             <CardContent className="flex gap-4">
