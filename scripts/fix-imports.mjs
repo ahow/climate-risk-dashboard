@@ -4,7 +4,7 @@
  * Required for Node.js ES modules to work correctly
  */
 import { readdir, readFile, writeFile } from 'fs/promises';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +26,21 @@ async function* walkFiles(dir) {
 async function fixImports(filePath) {
   let content = await readFile(filePath, 'utf-8');
   let modified = false;
+
+  // Fix @shared path alias to relative path
+  // Calculate relative path from current file to shared directory
+  const fileDir = dirname(filePath);
+  const sharedDir = join(distDir, 'shared');
+  const relativePath = relative(fileDir, sharedDir).replace(/\\/g, '/');
+  const prefix = relativePath.startsWith('.') ? relativePath : './' + relativePath;
+  
+  content = content.replace(
+    /from\s+(['"])@shared\/([^'"]+)\1/g,
+    (match, quote, modulePath) => {
+      modified = true;
+      return `from ${quote}${prefix}/${modulePath}.js${quote}`;
+    }
+  );
 
   // Fix: import ... from "./module" -> import ... from "./module.js"
   // Fix: import ... from "../module" -> import ... from "../module.js"
