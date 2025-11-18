@@ -105,7 +105,12 @@ export async function fetchAllAssetsFromAPI(): Promise<AssetData[]> {
     
     const url = `${ASSET_DISCOVERY_API}/assets.getAll`;
     
-    const response = await fetch(url);
+    // Use retry logic to handle API hibernation (502/504 errors)
+    const response = await fetchWithRetry(url, undefined, {
+      maxRetries: 5,
+      initialDelay: 2000,
+      maxDelay: 30000,
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch all assets: ${response.statusText}`);
     }
@@ -146,7 +151,12 @@ export async function fetchCompanyAssets(companyName: string): Promise<AssetData
     const encodedInput = encodeURIComponent(JSON.stringify(inputData));
     const url = `${ASSET_DISCOVERY_API}/assets.getByCompany?input=${encodedInput}`;
     
-    const response = await fetch(url);
+    // Use retry logic to handle API hibernation (502/504 errors)
+    const response = await fetchWithRetry(url, undefined, {
+      maxRetries: 5,
+      initialDelay: 2000,
+      maxDelay: 30000,
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch assets: ${response.statusText}`);
     }
@@ -177,17 +187,26 @@ export async function fetchGeographicRisk(
   assetValue: number
 ): Promise<GeographicRiskData> {
   try {
-    const response = await fetch(`${GEOGRAPHIC_RISKS_API}/assess`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    // Use retry logic to handle API hibernation and temporary failures
+    const response = await fetchWithRetry(
+      `${GEOGRAPHIC_RISKS_API}/assess`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude,
+          asset_value: assetValue,
+        }),
       },
-      body: JSON.stringify({
-        latitude,
-        longitude,
-        asset_value: assetValue,
-      }),
-    });
+      {
+        maxRetries: 5,
+        initialDelay: 2000,
+        maxDelay: 30000,
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch geographic risk: ${response.statusText}`);
@@ -281,7 +300,12 @@ export async function fetchAllCompanies(): Promise<Array<{
   geocoding_percentage: string;
 }>> {
   try {
-    const response = await fetch(`${ASSET_DISCOVERY_API}/assets.getCompanies`);
+    // Use retry logic to handle API hibernation (502/504 errors)
+    const response = await fetchWithRetry(`${ASSET_DISCOVERY_API}/assets.getCompanies`, undefined, {
+      maxRetries: 5,
+      initialDelay: 2000,
+      maxDelay: 30000,
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch companies: ${response.statusText}`);
     }

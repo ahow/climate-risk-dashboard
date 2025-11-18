@@ -455,3 +455,12 @@
 - [x] Add tooltips/documentation explaining calibration button purpose
 - [x] Document loss calculation methodology (annual vs present value)
 
+
+
+
+## Retry Mechanism for API Hibernation
+- [x] Implement retry mechanism with exponential backoff for Asset Discovery API
+- [x] Add retry logic to Geographic Risk API calls
+- [x] Add retry logic to Supply Chain Risk API calls (already implemented)
+- [x] Test retry mechanism with hibernated APIs (successfully loaded 641 assets)
+
