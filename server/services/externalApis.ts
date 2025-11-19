@@ -6,7 +6,7 @@
 import { fetchWithRetry } from '../utils/retry';
 
 const ASSET_DISCOVERY_API = "https://3000-ibweqg4u19d6b2l6kv5ro-ee585d51.manusvm.computer/api/trpc";
-const GEOGRAPHIC_RISKS_API = "http://167.71.187.110";
+const GEOGRAPHIC_RISKS_API = "https://climate-risk-api-v4-7da6992dc867.herokuapp.com";
 const RISK_MANAGEMENT_API = "https://8000-iwnb9mmlojeywebr41d8n-96f6004a.manusvm.computer";
 
 export interface AssetData {

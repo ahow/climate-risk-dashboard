@@ -464,3 +464,13 @@
 - [x] Add retry logic to Supply Chain Risk API calls (already implemented)
 - [x] Test retry mechanism with hibernated APIs (successfully loaded 641 assets)
 
+
+
+
+## Create Publishable Geographic Risk Fix
+- [ ] Remove Express endpoint code (causes build errors)
+- [ ] Simplify tRPC mutation to process assets without complex background logic
+- [ ] Test fix in development environment
+- [ ] Create checkpoint that builds successfully
+- [ ] Publish checkpoint to production
+

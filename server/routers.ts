@@ -747,7 +747,7 @@ export const appRouter = router({
                   console.log(`[Geographic Risks] ✓ Calculated (${risksCalculated} total)`);
                   
                   // Add a small delay to avoid overwhelming the API
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await new Promise(resolve => setTimeout(resolve, 200));
                 }
               } catch (error) {
                 const errorMsg = `Asset ${asset.assetName} (ID: ${asset.id}): ${error}`;

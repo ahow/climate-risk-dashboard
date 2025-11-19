@@ -1,0 +1,15 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM assets WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND estimatedValueUsd IS NOT NULL) as assets_with_coordinates,\n  (SELECT COUNT(*) FROM geographicRisks) as risks_already_calculated,\n  (SELECT COUNT(DISTINCT companyId) FROM assets) as companies_with_assets",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT \n  (SELECT COUNT(*) FROM assets WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND estimatedValueUsd IS NOT NULL) as assets_with_coordinates,\n  (SELECT COUNT(*) FROM geographicRisks) as risks_already_calculated,\n  (SELECT COUNT(DISTINCT companyId) FROM assets) as companies_with_assets",
+  "rows": [
+    {
+      "assets_with_coordinates": "1282",
+      "risks_already_calculated": "14",
+      "companies_with_assets": "20"
+    }
+  ],
+  "messages": [],
+  "stdout": "assets_with_coordinates\trisks_already_calculated\tcompanies_with_assets\n1282\t14\t20\n",
+  "stderr": "",
+  "execution_time_ms": 74
+}
