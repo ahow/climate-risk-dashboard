@@ -474,3 +474,29 @@
 - [ ] Create checkpoint that builds successfully
 - [ ] Publish checkpoint to production
 
+
+
+
+## Asset Value Scaling Fix (URGENT)
+- [ ] Fix asset value scaling - divide by 1000 before sending to Geographic Risk API
+- [ ] Clear existing geographic risks (calculated with wrong values)
+- [ ] Recalculate all geographic risks with corrected asset values
+- [ ] Add visible progress indicator for Calculate Geographic Risks mutation
+- [ ] Test that risk percentages make sense relative to EV
+
+
+
+
+## Geographic Risk Value Scaling Issue (Nov 19 2025)
+- [x] Fixed Geographic Risk API endpoint (updated to working Heroku server)
+- [x] Added Clear All Geographic Risks button
+- [x] Added value scaling code (divide by 1000)
+- [x] Discovered different companies have different value scales:
+  - CSX: Assets inflated by 1000x (564765625 → 564765.625 works correctly with division)
+  - S&P GLOBAL: Assets already at correct scale (~7.4M per asset)
+- [ ] **DECISION NEEDED**: Current blanket "divide by 1000" helps CSX but doesn't affect S&P GLOBAL
+  - Option 1: Keep current code (helps some companies, doesn't hurt others)
+  - Option 2: Investigate why Asset Discovery API returns different scales
+  - Option 3: Use calibration feature to normalize all values relative to reported tangible assets
+- [ ] Test if current implementation produces reasonable percentages for both company types
+

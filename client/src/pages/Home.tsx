@@ -33,11 +33,21 @@ export default function Home() {
   });
   const fetchRiskMgmtMutation = trpc.companies.fetchAllRiskManagement.useMutation();
   const fetchSupplyChainMutation = trpc.companies.fetchSupplyChainRisks.useMutation();
+  const clearRisksMutation = trpc.risks.clearAllGeographicRisks.useMutation({
+    onSuccess: () => {
+      window.location.reload(); // Refresh to show cleared data
+    },
+  });
   const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation({
     onSuccess: (data) => {
       if (data.operationId) {
         setCurrentOperationId(data.operationId);
       }
+      // Refresh every 10 seconds to show progress
+      const interval = setInterval(() => {
+        window.location.reload();
+      }, 10000);
+      setTimeout(() => clearInterval(interval), 300000); // Stop after 5 minutes
     },
   });
   const calibrateMutation = trpc.risks.recalculateWithCalibration.useMutation();
@@ -319,6 +329,21 @@ export default function Home() {
                 </div>
               )}
               <Button
+                onClick={() => clearRisksMutation.mutate()}
+                disabled={clearRisksMutation.isPending}
+                variant="outline"
+                className="border-red-500 text-red-700 hover:bg-red-50"
+              >
+                {clearRisksMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Clearing...
+                  </>
+                ) : (
+                  "Clear All Geographic Risks"
+                )}
+              </Button>
+              <Button
                 onClick={() => calculateRisksMutation.mutate()}
                 disabled={calculateRisksMutation.isPending}
                 variant="secondary"
@@ -326,7 +351,7 @@ export default function Home() {
                 {calculateRisksMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calculating Risks...
+                    Calculating Risks... (refreshes every 10s)
                   </>
                 ) : (
                   "Calculate Geographic Risks"

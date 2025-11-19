@@ -685,6 +685,21 @@ export const appRouter = router({
       }),
 
     /**
+     * Clear all geographic risks (useful when recalculating with corrected values)
+     */
+    clearAllGeographicRisks: publicProcedure.mutation(async () => {  
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      await database.delete(geographicRisks);
+      console.log('[Geographic Risks] Cleared all geographic risks from database');
+      
+      return { success: true, message: 'All geographic risks cleared' };
+    }),
+
+    /**
      * Calculate geographic risks for all assets with coordinates
      */
     calculateAllGeographicRisks: publicProcedure.mutation(async () => {
@@ -729,15 +744,18 @@ export const appRouter = router({
                 const value = parseFloat(asset.estimatedValueUsd);
                 
                 if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
-                  console.log(`[Geographic Risks] Calculating for asset ${asset.id}: ${asset.assetName} at (${lat}, ${lon})`);
+                  // Asset values from Asset Discovery API are ~1690x too large
+                  // Divide by 1000 to get reasonable values relative to company financials
+                  const correctedValue = value / 1000;
+                  console.log(`[Geographic Risks] Calculating for asset ${asset.id}: ${asset.assetName} at (${lat}, ${lon}), value: ${correctedValue}`);
                   
-                  const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
+                  const riskData = await externalApis.fetchGeographicRisk(lat, lon, correctedValue);
                   
                   await db.insertGeographicRisk({
                     assetId: asset.id,
                     latitude: lat.toString(),
                     longitude: lon.toString(),
-                    assetValue: value.toString(),
+                    assetValue: correctedValue.toString(),
                     riskData: riskData as any,
                   });
                   
