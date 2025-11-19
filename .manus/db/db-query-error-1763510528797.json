@@ -1,0 +1,8 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM companies) as total_companies,\n  (SELECT COUNT(DISTINCT company_id) FROM assets) as companies_with_asset_records,\n  (SELECT COUNT(*) FROM assets) as total_assets",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT \n  (SELECT COUNT(*) FROM companies) as total_companies,\n  (SELECT COUNT(DISTINCT company_id) FROM assets) as companies_with_asset_records,\n  (SELECT COUNT(*) FROM assets) as total_assets",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'company_id' in 'field list'"
+  ]
+}

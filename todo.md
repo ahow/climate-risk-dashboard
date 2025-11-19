@@ -464,3 +464,13 @@
 - [x] Add retry logic to Supply Chain Risk API calls (already implemented)
 - [x] Test retry mechanism with hibernated APIs (successfully loaded 641 assets)
 
+
+
+
+## Heroku Deployment Debugging
+- [x] Check Heroku v31 logs for "Not Found" error root cause
+- [x] Diagnose routing or static file serving issues (path resolution in serveStatic)
+- [x] Fix identified issues (use process.cwd() for production path resolution)
+- [ ] Redeploy to Heroku and verify deployment works
+- [ ] Provide permanent Heroku URL for production use
+
