@@ -519,3 +519,36 @@
 - [ ] Recalculate geographic risks with correct values
 - [ ] Verify all 20 companies with assets have correct Asset Risk percentages
 
+
+
+
+## Update to New Asset Discovery API (Nov 19 2025)
+- [x] Update Asset Discovery API URL to production endpoint
+- [x] Update fetchCompanyAssets to map new API format (facility_name → asset_name, value_usd → estimated_value_usd)
+- [x] Remove value scaling division logic (API now returns normalized values)
+- [ ] Clear existing 1,218 assets from old API
+- [ ] Clear all geographic risks
+- [ ] Re-fetch all 100 companies from new API (expect 2,732 assets)
+- [ ] Verify Bayer now has 14 assets (was 0 before)
+- [ ] Clear all geographic risks
+- [ ] Recalculate geographic risks with new normalized asset values
+- [ ] Verify risk percentages are reasonable (2-10% of EV)
+- [ ] Save checkpoint with working solution
+
+
+
+
+## Switch to ISIN-based Asset Matching (Nov 19 2025)
+- [x] Review updated Corporate Asset Database API documentation
+- [x] Identify ISIN field in API response (all assets now include isin field)
+- [x] Update AssetData interface to include isin field
+- [x] Update fetchAllAssetsFromAPI mapping to extract isin from API
+- [x] Update company matching logic to use ISIN as primary key (fallback to name)
+- [x] Test API with Bayer's ISIN (DE000BAY0017)
+- [x] Clear existing assets (was 0)
+- [x] Fetch all assets using ISIN for all 100 companies (2,732 assets loaded!)
+- [x] Verify Bayer now has 14 assets loaded (Global HQ in Leverkusen, etc.)
+- [x] Verify all companies with assets in API are matched correctly (100% match rate)
+- [x] Calculate geographic risks with normalized values (running now - 2,732 assets)
+- [ ] Save checkpoint with working ISIN-based solution
+

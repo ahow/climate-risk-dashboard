@@ -5,13 +5,14 @@
 
 import { fetchWithRetry } from '../utils/retry';
 
-const ASSET_DISCOVERY_API = "https://3000-ibweqg4u19d6b2l6kv5ro-ee585d51.manusvm.computer/api/trpc";
+const ASSET_DISCOVERY_API = "https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc";
 const GEOGRAPHIC_RISKS_API = "https://climate-risk-api-v4-7da6992dc867.herokuapp.com";
 const RISK_MANAGEMENT_API = "https://8000-iwnb9mmlojeywebr41d8n-96f6004a.manusvm.computer";
 
 export interface AssetData {
   asset_name: string;
   company_name: string;
+  isin: string; // 12-digit International Securities Identification Number
   asset_type: string | null;
   location: string;
   city: string | null;
@@ -126,7 +127,29 @@ export async function fetchAllAssetsFromAPI(): Promise<AssetData[]> {
     }
     
     console.log(`Fetched ${result.total_assets} assets (${result.assets_with_coordinates} with coordinates)`);
-    return result.assets;
+    
+    // Map new API format to our AssetData interface
+    // New API v2.0 uses: facility_name, value_usd, address, isin
+    // Old API used: asset_name, estimated_value_usd, location
+    return result.assets.map((asset: any) => ({
+      asset_name: asset.facility_name || asset.asset_name,
+      company_name: asset.company_name,
+      isin: asset.isin, // 12-digit ISIN for reliable company matching
+      asset_type: asset.asset_type,
+      location: asset.address || asset.location,
+      city: asset.city,
+      country: asset.country,
+      latitude: asset.latitude,
+      longitude: asset.longitude,
+      geocoding_certainty: asset.geocoding_certainty,
+      coordinate_certainty: asset.coordinate_certainty,
+      estimated_value_usd: asset.value_usd || asset.estimated_value_usd,
+      value_confidence: asset.value_confidence,
+      description: asset.description,
+      data_source: asset.data_source,
+      ownership_share: asset.ownership_share,
+      notes: asset.notes,
+    }));
   } catch (error) {
     console.error('Error fetching all assets:', error);
     throw error;
@@ -171,7 +194,28 @@ export async function fetchCompanyAssets(companyName: string): Promise<AssetData
       return [];
     }
     
-    return result.assets;
+    // Map new API format to our AssetData interface
+    // New API v2.0 uses: facility_name, value_usd, address, isin
+    // Old API used: asset_name, estimated_value_usd, location
+    return result.assets.map((asset: any) => ({
+      asset_name: asset.facility_name || asset.asset_name,
+      company_name: asset.company_name,
+      isin: asset.isin, // 12-digit ISIN for reliable company matching
+      asset_type: asset.asset_type,
+      location: asset.address || asset.location,
+      city: asset.city,
+      country: asset.country,
+      latitude: asset.latitude,
+      longitude: asset.longitude,
+      geocoding_certainty: asset.geocoding_certainty,
+      coordinate_certainty: asset.coordinate_certainty,
+      estimated_value_usd: asset.value_usd || asset.estimated_value_usd,
+      value_confidence: asset.value_confidence,
+      description: asset.description,
+      data_source: asset.data_source,
+      ownership_share: asset.ownership_share,
+      notes: asset.notes,
+    }));
   } catch (error) {
     console.error(`Error fetching assets for ${companyName}:`, error);
     throw error;

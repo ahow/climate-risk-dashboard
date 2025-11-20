@@ -411,10 +411,13 @@ export const appRouter = router({
           };
         }
 
-        // Get all companies to map assets to company IDs
+        // Get all companies to map assets to company IDs using ISIN (more reliable than name matching)
         progressTracker.update(operationId, 30, `Received ${allAssets.length} assets from API`);
         const companies = await db.getAllCompanies();
-        const companyMap = new Map(companies.map(c => [c.name, c.id]));
+        // Create map using ISIN as key for reliable matching
+        const companyMapByISIN = new Map(companies.map(c => [c.isin, c.id]));
+        // Fallback map using name for companies without ISIN
+        const companyMapByName = new Map(companies.map(c => [c.name, c.id]));
 
         let totalAssetsFetched = 0;
         let skipped = 0;
@@ -424,10 +427,15 @@ export const appRouter = router({
         const assetsByCompany = new Map<number, any[]>();
         
         for (const asset of allAssets) {
-          const companyId = companyMap.get(asset.company_name);
+          // Try matching by ISIN first (most reliable), fallback to name
+          let companyId = asset.isin ? companyMapByISIN.get(asset.isin) : undefined;
+          if (!companyId) {
+            companyId = companyMapByName.get(asset.company_name);
+          }
           
           if (!companyId) {
             skipped++;
+            console.warn(`Skipping asset "${asset.asset_name}" - company not found (ISIN: ${asset.isin}, Name: ${asset.company_name})`);
             continue; // Skip assets for companies not in our database
           }
 
@@ -744,18 +752,16 @@ export const appRouter = router({
                 const value = parseFloat(asset.estimatedValueUsd);
                 
                 if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
-                  // Asset values from Asset Discovery API are ~1690x too large
-                  // Divide by 1000 to get reasonable values relative to company financials
-                  const correctedValue = value / 1000;
-                  console.log(`[Geographic Risks] Calculating for asset ${asset.id}: ${asset.assetName} at (${lat}, ${lon}), value: ${correctedValue}`);
+                  // New Asset Discovery API v4.0 returns normalized values - no division needed
+                  console.log(`[Geographic Risks] Calculating for asset ${asset.id}: ${asset.assetName} at (${lat}, ${lon}), value: $${value.toLocaleString()}`);
                   
-                  const riskData = await externalApis.fetchGeographicRisk(lat, lon, correctedValue);
+                  const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
                   
                   await db.insertGeographicRisk({
                     assetId: asset.id,
                     latitude: lat.toString(),
                     longitude: lon.toString(),
-                    assetValue: correctedValue.toString(),
+                    assetValue: value.toString(),
                     riskData: riskData as any,
                   });
                   
