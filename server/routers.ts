@@ -48,11 +48,14 @@ export const appRouter = router({
               let assetRiskPV = 0;
 
               for (const asset of assets) {
-                const geoRisk = await db.getGeographicRiskByAssetId(asset.id);
-                if (geoRisk && geoRisk.riskData) {
-                  const riskData = geoRisk.riskData as any;
-                  assetRiskAnnual += riskData.expected_annual_loss || 0;
-                  assetRiskPV += riskData.present_value_30yr || 0;
+                // Get ALL geographic risks for this asset (multiple hazard types per asset)
+                const geoRisks = await db.getAllGeographicRisksByAssetId(asset.id);
+                for (const geoRisk of geoRisks) {
+                  if (geoRisk && geoRisk.riskData) {
+                    const riskData = geoRisk.riskData as any;
+                    assetRiskAnnual += riskData.expected_annual_loss || 0;
+                    assetRiskPV += riskData.present_value_30yr || 0;
+                  }
                 }
               }
 

@@ -204,6 +204,13 @@ export async function getGeographicRiskByAssetId(assetId: number): Promise<Geogr
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getAllGeographicRisksByAssetId(assetId: number): Promise<GeographicRisk[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(geographicRisks).where(eq(geographicRisks.assetId, assetId));
+}
+
 export async function insertGeographicRisk(risk: InsertGeographicRisk): Promise<void> {
   const db = await getDb();
   if (!db) return;

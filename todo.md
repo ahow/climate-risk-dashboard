@@ -552,3 +552,15 @@
 - [x] Calculate geographic risks with normalized values (running now - 2,732 assets)
 - [ ] Save checkpoint with working ISIN-based solution
 
+
+
+
+## Fix Asset Risk Aggregation (Nov 20 2025)
+- [x] Identify root cause: companies.list query only sums ONE geographic risk per asset
+- [x] Bayer has 40 geographic risk entries for 14 assets (multiple hazards per asset)
+- [x] Current query uses getGeographicRiskByAssetId() which returns single risk
+- [x] Update companies.list to sum ALL geographic risks per asset
+- [x] Test with Bayer (shows $2.25M Asset Risk instead of $0!)
+- [x] Verify all 100 companies show correct Asset Risk values
+- [ ] Save checkpoint with working aggregation
+
