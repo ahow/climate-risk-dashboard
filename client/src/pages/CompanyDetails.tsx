@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { AssetMap } from "@/components/AssetMap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -223,70 +224,92 @@ export default function CompanyDetails() {
                     <p className="text-sm mt-2">Asset data needs to be fetched from the Asset Discovery API.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Asset Name</TableHead>
-                          <TableHead>Coordinates</TableHead>
-                          <TableHead className="text-right">Flood</TableHead>
-                          <TableHead className="text-right">Wildfire</TableHead>
-                          <TableHead className="text-right">Heat Stress</TableHead>
-                          <TableHead className="text-right">Extreme Precip</TableHead>
-                          <TableHead className="text-right">Hurricane</TableHead>
-                          <TableHead className="text-right">Drought</TableHead>
-                          <TableHead className="text-right">Total Loss</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {assets.map((asset) => {
-                          const riskBreakdown = asset.hazardBreakdown || {};
-                          const totalLoss = asset.expectedAnnualLoss || 0;
-
-                          const formatRisk = (value: number | undefined) => {
-                            if (!value || value === 0) return <span className="text-gray-400">$0</span>;
-                            return (
-                              <span className="text-orange-600">
-                                ${value.toLocaleString(undefined, {
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0,
-                                })}
-                              </span>
-                            );
-                          };
-
-                          return (
-                            <TableRow key={asset.id}>
-                              <TableCell className="font-medium">
-                                <div>{asset.name}</div>
-                                <div className="text-xs text-gray-500">
-                                  {asset.city && <span>{asset.city}, </span>}
-                                  {asset.country}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm font-mono">
-                                {asset.latitude && asset.longitude ? (
-                                  <>
-                                    {parseFloat(asset.latitude).toFixed(4)}, {parseFloat(asset.longitude).toFixed(4)}
-                                  </>
-                                ) : (
-                                  <span className="text-gray-400">N/A</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">{formatRisk(riskBreakdown.flood)}</TableCell>
-                              <TableCell className="text-right">{formatRisk(riskBreakdown.wildfire)}</TableCell>
-                              <TableCell className="text-right">{formatRisk(riskBreakdown.heatStress)}</TableCell>
-                              <TableCell className="text-right">{formatRisk(riskBreakdown.extremePrecip)}</TableCell>
-                              <TableCell className="text-right">{formatRisk(riskBreakdown.hurricane)}</TableCell>
-                              <TableCell className="text-right">{formatRisk(riskBreakdown.drought)}</TableCell>
-                              <TableCell className="text-right font-bold">
-                                {formatRisk(totalLoss)}
-                              </TableCell>
+                  <div className="space-y-6">
+                    {/* Interactive Map */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Asset Locations Map</h3>
+                      <AssetMap 
+                        assets={assets.map(a => ({
+                          id: a.id,
+                          facilityName: a.name,
+                          latitude: a.latitude ? parseFloat(a.latitude) : null,
+                          longitude: a.longitude ? parseFloat(a.longitude) : null,
+                          expectedAnnualLoss: a.expectedAnnualLoss,
+                          hazardBreakdown: a.hazardBreakdown
+                        }))}
+                        companyName={company.name}
+                      />
+                    </div>
+                    
+                    {/* Asset Details Table */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Asset Details & Risk Breakdown</h3>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Asset Name</TableHead>
+                              <TableHead>Coordinates</TableHead>
+                              <TableHead className="text-right">Flood</TableHead>
+                              <TableHead className="text-right">Wildfire</TableHead>
+                              <TableHead className="text-right">Heat Stress</TableHead>
+                              <TableHead className="text-right">Extreme Precip</TableHead>
+                              <TableHead className="text-right">Hurricane</TableHead>
+                              <TableHead className="text-right">Drought</TableHead>
+                              <TableHead className="text-right">Total Loss</TableHead>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {assets.map((asset) => {
+                              const riskBreakdown = asset.hazardBreakdown || {};
+                              const totalLoss = asset.expectedAnnualLoss || 0;
+
+                              const formatRisk = (value: number | undefined) => {
+                                if (!value || value === 0) return <span className="text-gray-400">$0</span>;
+                                return (
+                                  <span className="text-orange-600">
+                                    ${value.toLocaleString(undefined, {
+                                      minimumFractionDigits: 0,
+                                      maximumFractionDigits: 0,
+                                    })}
+                                  </span>
+                                );
+                              };
+
+                              return (
+                                <TableRow key={asset.id}>
+                                  <TableCell className="font-medium">
+                                    <div>{asset.name}</div>
+                                    <div className="text-xs text-gray-500">
+                                      {asset.city && <span>{asset.city}, </span>}
+                                      {asset.country}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-sm font-mono">
+                                    {asset.latitude && asset.longitude ? (
+                                      <>
+                                        {parseFloat(asset.latitude).toFixed(4)}, {parseFloat(asset.longitude).toFixed(4)}
+                                      </>
+                                    ) : (
+                                      <span className="text-gray-400">N/A</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">{formatRisk(riskBreakdown.flood)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk(riskBreakdown.wildfire)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk(riskBreakdown.heatStress)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk(riskBreakdown.extremePrecip)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk(riskBreakdown.hurricane)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk(riskBreakdown.drought)}</TableCell>
+                                  <TableCell className="text-right font-bold">
+                                    {formatRisk(totalLoss)}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>

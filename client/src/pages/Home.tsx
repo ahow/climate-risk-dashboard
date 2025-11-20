@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { FileManagement } from "@/components/FileManagement";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
+import { ProgressTracker } from "@/components/ProgressTracker";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -246,6 +247,9 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Progress Tracker */}
+        <ProgressTracker />
+
         {/* Data Loading Actions */}
         {companies && companies.length > 0 && (
           <Card className="mb-6 bg-indigo-50 border-indigo-200">

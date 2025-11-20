@@ -562,5 +562,36 @@
 - [x] Update companies.list to sum ALL geographic risks per asset
 - [x] Test with Bayer (shows $2.25M Asset Risk instead of $0!)
 - [x] Verify all 100 companies show correct Asset Risk values
-- [ ] Save checkpoint with working aggregation
+- [x] Save checkpoint with working aggregation (version: e8a8d9d8)
+
+
+
+
+## Risk Management Data & New Features (Nov 20 2025)
+- [x] Check if risk management data fetch completed (20 scores from Nov 19, need to re-fetch for 100 companies)
+- [x] Investigate why many companies show 0% Management Score (19/20 have 0% - API has limited data)
+- [x] Check if risk management API uses company names or ISINs (already uses ISIN!)
+- [x] Update risk management API integration to use ISIN matching (already implemented)
+- [x] Implement parallel processing for geographic risk calculations (10 concurrent batches)
+- [x] Add real-time progress tracking UI with progress bar (ProgressTracker component integrated)
+- [ ] Create company detail page route and component
+- [ ] Add interactive map showing asset locations
+- [ ] Display risk breakdown by hazard type on detail page
+- [ ] Test all features and save checkpoint
+
+
+
+
+## Progress Tracking and Interactive Maps (Completed)
+- [x] Integrate ProgressTracker component into Home page
+- [x] Install leaflet and react-leaflet packages for interactive maps
+- [x] Create AssetMap component with color-coded risk markers
+- [x] Add interactive map to CompanyDetails page showing asset locations
+- [x] Implement marker popups with asset details and risk breakdown
+- [x] Add map legend showing risk levels (low/medium/high)
+- [x] Test map functionality with CSX company (15 assets displayed correctly)
+- [x] Verify all three sections display on company detail page:
+  - Asset Locations & Risk Breakdown (map + table)
+  - Top 5 Supply Chain Risk Contributors
+  - Management Performance Measures
 

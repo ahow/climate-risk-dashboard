@@ -734,62 +734,63 @@ export const appRouter = router({
 
       console.log(`[Geographic Risks] Starting calculation for ${companies.length} companies`);
 
+      // Collect all assets to process
+      const assetsToProcess: Array<{ asset: any; company: any }> = [];
       for (const company of companies) {
-        try {
-          const assets = await db.getAssetsByCompanyId(company.id);
-          console.log(`[Geographic Risks] Processing ${company.name}: ${assets.length} assets`);
-          
-          for (const asset of assets) {
-            // Only calculate for assets with coordinates and value
-            if (asset.latitude && asset.longitude && asset.estimatedValueUsd) {
-              try {
-                // Check if risk already calculated for this asset
-                const existingRisk = await db.getGeographicRiskByAssetId(asset.id);
-                if (existingRisk) {
-                  skipped++;
-                  continue;
-                }
-
-                const lat = parseFloat(asset.latitude);
-                const lon = parseFloat(asset.longitude);
-                const value = parseFloat(asset.estimatedValueUsd);
-                
-                if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
-                  // New Asset Discovery API v4.0 returns normalized values - no division needed
-                  console.log(`[Geographic Risks] Calculating for asset ${asset.id}: ${asset.assetName} at (${lat}, ${lon}), value: $${value.toLocaleString()}`);
-                  
-                  const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
-                  
-                  await db.insertGeographicRisk({
-                    assetId: asset.id,
-                    latitude: lat.toString(),
-                    longitude: lon.toString(),
-                    assetValue: value.toString(),
-                    riskData: riskData as any,
-                  });
-                  
-                  risksCalculated++;
-                  processedAssets++;
-                  progressTracker.update(operationId, processedAssets, `Calculated ${risksCalculated} risks, skipped ${skipped}`);
-                  console.log(`[Geographic Risks] ✓ Calculated (${risksCalculated} total)`);
-                  
-                  // Add a small delay to avoid overwhelming the API
-                  await new Promise(resolve => setTimeout(resolve, 200));
-                }
-              } catch (error) {
-                const errorMsg = `Asset ${asset.assetName} (ID: ${asset.id}): ${error}`;
-                console.error(`[Geographic Risks] ✗ ${errorMsg}`);
-                errors.push(errorMsg);
-                // Continue processing other assets even if one fails
-              }
+        const assets = await db.getAssetsByCompanyId(company.id);
+        for (const asset of assets) {
+          if (asset.latitude && asset.longitude && asset.estimatedValueUsd) {
+            // Check if risk already calculated
+            const existingRisk = await db.getGeographicRiskByAssetId(asset.id);
+            if (!existingRisk) {
+              assetsToProcess.push({ asset, company });
+            } else {
+              skipped++;
             }
           }
-        } catch (error) {
-          const errorMsg = `Company ${company.name}: ${error}`;
-          console.error(`[Geographic Risks] ✗ ${errorMsg}`);
-          errors.push(errorMsg);
-          // Continue processing other companies even if one fails
         }
+      }
+
+      console.log(`[Geographic Risks] Processing ${assetsToProcess.length} assets in parallel (concurrency: 10)`);
+
+      // Process assets in parallel batches of 10
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < assetsToProcess.length; i += BATCH_SIZE) {
+        const batch = assetsToProcess.slice(i, i + BATCH_SIZE);
+        
+        await Promise.all(batch.map(async ({ asset, company }) => {
+          try {
+            const lat = parseFloat(asset.latitude);
+            const lon = parseFloat(asset.longitude);
+            const value = parseFloat(asset.estimatedValueUsd);
+            
+            if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
+              console.log(`[Geographic Risks] Calculating for ${asset.assetName} (${company.name})`);
+              
+              const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
+              
+              await db.insertGeographicRisk({
+                assetId: asset.id,
+                latitude: lat.toString(),
+                longitude: lon.toString(),
+                assetValue: value.toString(),
+                riskData: riskData as any,
+              });
+              
+              risksCalculated++;
+              processedAssets++;
+              progressTracker.update(operationId, processedAssets, `Calculated ${risksCalculated} risks, skipped ${skipped}`);
+              console.log(`[Geographic Risks] ✓ ${asset.assetName} (${risksCalculated}/${assetsToProcess.length})`);
+            }
+          } catch (error) {
+            const errorMsg = `Asset ${asset.assetName} (ID: ${asset.id}): ${error}`;
+            console.error(`[Geographic Risks] ✗ ${errorMsg}`);
+            errors.push(errorMsg);
+          }
+        }));
+        
+        // Small delay between batches
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       console.log(`[Geographic Risks] Completed: ${risksCalculated} calculated, ${skipped} skipped, ${errors.length} errors`);
@@ -883,10 +884,7 @@ export const appRouter = router({
                   
                   risksRecalculated++;
                   console.log(`[Calibration] ✓ Recalculated (${risksRecalculated} total)`);
-                  
-                  // Add delay to avoid overwhelming the API
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                } else {
+                             } else {
                   skipped++;
                 }
               } else {
