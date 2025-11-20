@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUploadedFile, 
@@ -171,7 +171,27 @@ export async function bulkInsertAssets(assetList: InsertAsset[]): Promise<void> 
   
   if (assetList.length === 0) return;
   
-  await db.insert(assets).values(assetList);
+  // Prevent duplicates: check if assets with same companyId + assetName already exist
+  const companyIds = [...new Set(assetList.map(a => a.companyId))];
+  const existingAssets = await db.select().from(assets).where(
+    inArray(assets.companyId, companyIds)
+  );
+  
+  const existingKeys = new Set(
+    existingAssets.map(a => `${a.companyId}-${a.assetName}`)
+  );
+  
+  const newAssets = assetList.filter(a => 
+    !existingKeys.has(`${a.companyId}-${a.assetName}`)
+  );
+  
+  if (newAssets.length === 0) {
+    console.log('[Database] All assets already exist, skipping insert');
+    return;
+  }
+  
+  console.log(`[Database] Inserting ${newAssets.length} new assets (${assetList.length - newAssets.length} duplicates skipped)`);
+  await db.insert(assets).values(newAssets);
 }
 
 // ========== Geographic Risk Queries ==========

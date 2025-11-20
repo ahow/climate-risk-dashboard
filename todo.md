@@ -500,3 +500,22 @@
   - Option 3: Use calibration feature to normalize all values relative to reported tangible assets
 - [ ] Test if current implementation produces reasonable percentages for both company types
 
+
+
+
+## Missing Asset Risk Investigation (Nov 19 2025)
+- [x] Investigate why Bayer and other companies have assets but $0 Asset Risk
+- [x] Check if Bayer's assets have valid coordinates (latitude/longitude)
+- [x] Check if Bayer's assets have valid estimated values
+- [x] Verify if geographic risks were calculated but failed
+- [x] Identify root cause: Asset Discovery API doesn't have data for 80/100 companies
+- [x] **ISSUE**: Duplicate assets in database (CSX has 128 assets, 10 are duplicates)
+- [x] **ISSUE**: Value scaling (÷1000) is inconsistent - alternates between divided/not divided
+- [x] Stop current geographic risk calculation
+- [x] Clear all geographic risks (incorrect values)
+- [x] Remove duplicate assets from database (kept newer batch - reduced from 128 to 64 CSX assets)
+- [x] Investigate value scaling inconsistency root cause (parallel mutations + duplicate assets)
+- [x] Fix value scaling issue (code is correct, duplicates removed, prevention added)
+- [ ] Recalculate geographic risks with correct values
+- [ ] Verify all 20 companies with assets have correct Asset Risk percentages
+
