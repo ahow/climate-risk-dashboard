@@ -136,48 +136,54 @@ export default function CompanyDetails() {
               <div>
                 <div className="text-sm text-gray-600 mb-1">Asset Risk (Annual)</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ${assetRiskAnnual.toLocaleString(undefined, {
+                  {assetRiskAnnual > 0 ? `$${assetRiskAnnual.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
-                  })}
+                  })}` : <span className="text-gray-400">—</span>}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Supply Chain Risk</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ${supplyChainRiskAnnual.toLocaleString(undefined, {
+                  {supplyChainRiskAnnual > 0 ? `$${supplyChainRiskAnnual.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
-                  })}
+                  })}` : <span className="text-gray-400">—</span>}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Total Risk (Annual)</div>
                 <div className="text-2xl font-bold text-orange-600">
-                  ${totalRiskAnnual.toLocaleString(undefined, {
+                  {totalRiskAnnual > 0 ? `$${totalRiskAnnual.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
-                  })}
+                  })}` : <span className="text-gray-400">—</span>}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Management Score</div>
-                <div className="text-2xl font-bold text-green-600">{managementScorePct.toFixed(0)}%</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {earnedPoints}/{totalPoints} points
+                <div className="text-2xl font-bold text-green-600">
+                  {managementScorePct > 0 ? `${managementScorePct.toFixed(0)}%` : <span className="text-gray-400">—</span>}
                 </div>
+                {managementScorePct > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {earnedPoints}/{totalPoints} points
+                  </div>
+                )}
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Net Expected Loss</div>
                 <div className="text-2xl font-bold text-red-600">
-                  ${netExpectedLoss.toLocaleString(undefined, {
+                  {netExpectedLoss > 0 ? `$${netExpectedLoss.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
-                  })}
+                  })}` : <span className="text-gray-400">—</span>}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {netExpectedLossPctOfEV.toFixed(2)}% of EV
-                </div>
+                {netExpectedLoss > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {netExpectedLossPctOfEV.toFixed(2)}% of EV
+                  </div>
+                )}
               </div>
             </div>
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">

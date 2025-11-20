@@ -494,41 +494,41 @@ export default function Home() {
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Asset Risk (Annual):</span>
                       <span className="font-medium">
-                        {(company as any).assetRiskAnnual !== undefined 
+                        {(company as any).assetRiskAnnual !== undefined && (company as any).assetRiskAnnual > 0
                           ? `$${((company as any).assetRiskAnnual).toLocaleString(undefined, {maximumFractionDigits: 0})}`
-                          : 'N/A'}
+                          : <span className="text-gray-400">—</span>}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Supply Chain Risk:</span>
                       <span className="font-medium">
-                        {(company as any).supplyChainRiskAnnual !== undefined 
+                        {(company as any).supplyChainRiskAnnual !== undefined && (company as any).supplyChainRiskAnnual > 0
                           ? `$${((company as any).supplyChainRiskAnnual).toLocaleString(undefined, {maximumFractionDigits: 0})}`
-                          : 'N/A'}
+                          : <span className="text-gray-400">—</span>}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Total Risk (Annual):</span>
                       <span className="font-medium text-orange-600">
-                        {(company as any).totalRiskAnnual !== undefined 
+                        {(company as any).totalRiskAnnual !== undefined && (company as any).totalRiskAnnual > 0
                           ? `$${((company as any).totalRiskAnnual).toLocaleString(undefined, {maximumFractionDigits: 0})}`
-                          : 'N/A'}
+                          : <span className="text-gray-400">—</span>}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Management Score:</span>
                       <span className="font-medium">
-                        {(company as any).managementScorePct !== undefined 
+                        {(company as any).managementScorePct !== undefined && (company as any).managementScorePct > 0
                           ? `${((company as any).managementScorePct).toFixed(0)}%`
-                          : 'N/A'}
+                          : <span className="text-gray-400">—</span>}
                       </span>
                     </div>
                     <div className="flex justify-between pt-1 border-t">
                       <span className="text-gray-700 font-medium">Net Expected Loss:</span>
                       <span className="font-semibold text-red-600">
-                        {(company as any).netLossPercentageOfEV !== undefined 
+                        {(company as any).netLossPercentageOfEV !== undefined && (company as any).netLossPercentageOfEV > 0
                           ? `${((company as any).netLossPercentageOfEV).toFixed(2)}% of EV`
-                          : 'N/A'}
+                          : <span className="text-gray-400">—</span>}
                       </span>
                     </div>
                   </div>

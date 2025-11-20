@@ -510,33 +510,67 @@ export const appRouter = router({
      * Fetch risk management assessments for all companies
      */
     fetchAllRiskManagement: publicProcedure.mutation(async () => {
-      const companies = await db.getAllCompanies();
-      let assessmentsFetched = 0;
-      const errors: string[] = [];
+      const { progressTracker } = await import('./utils/progressTracker');
+      const operationId = `risk-mgmt-${Date.now()}`;
+      progressTracker.start(operationId, 'Fetching Risk Management Data', 0, 'Starting...');
 
-      for (const company of companies) {
-        try {
-          const managementData = await externalApis.fetchRiskManagement(company.isin);
+      try {
+        const companies = await db.getAllCompanies();
+        let assessmentsFetched = 0;
+        const errors: string[] = [];
+        const totalCompanies = companies.length;
+
+        for (let i = 0; i < companies.length; i++) {
+          const company = companies[i];
+          const progress = Math.floor(((i + 1) / totalCompanies) * 100);
           
-          if (managementData.measures && managementData.measures.length > 0) {
-            await db.insertRiskManagement({
-              companyId: company.id,
-              overallScore: managementData.summary?.score_percentage || 0,
-              assessmentData: managementData as any,
-            });
-            assessmentsFetched++;
+          try {
+            progressTracker.update(
+              operationId, 
+              progress, 
+              `Fetching ${company.name} (${i + 1}/${totalCompanies})`
+            );
+            
+            const managementData = await externalApis.fetchRiskManagement(company.isin);
+            
+            if (managementData.measures && managementData.measures.length > 0) {
+              await db.insertRiskManagement({
+                companyId: company.id,
+                overallScore: managementData.summary?.score_percentage || 0,
+                assessmentData: managementData as any,
+              });
+              assessmentsFetched++;
+            }
+          } catch (error) {
+            const errorMsg = `${company.name}: ${error}`;
+            console.error(errorMsg);
+            errors.push(errorMsg);
           }
-        } catch (error) {
-          errors.push(`${company.name}: ${error}`);
         }
-      }
 
-      return { 
-        success: true, 
-        assessmentsFetched, 
-        companiesProcessed: companies.length,
-        errors 
-      };
+        progressTracker.complete(
+          operationId, 
+          `Successfully fetched ${assessmentsFetched}/${totalCompanies} risk management assessments`
+        );
+        
+        return { 
+          success: true, 
+          assessmentsFetched, 
+          companiesProcessed: companies.length,
+          errors,
+          operationId,
+        };
+      } catch (error) {
+        console.error('Error in fetchAllRiskManagement:', error);
+        progressTracker.fail(operationId, error instanceof Error ? error.message : 'Unknown error');
+        return {
+          success: false,
+          assessmentsFetched: 0,
+          companiesProcessed: 0,
+          errors: [error instanceof Error ? error.message : 'Unknown error'],
+          operationId,
+        };
+      }
     }),
 
     /**
