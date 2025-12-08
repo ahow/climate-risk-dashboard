@@ -616,3 +616,6 @@
 - [x] Test API with sample company data
 - [x] Fix integration to populate supply chain risk values
 - [x] Fixed: Use direct_risk.expected_loss instead of indirect_risk.expected_loss (API response structure)
+- [x] Fixed: Update OECD sector code mappings to use valid API codes (C28, C29, etc. instead of D29T30)
+- [ ] Clear existing supply chain data with zero values
+- [ ] Re-fetch supply chain data with corrected sector mappings

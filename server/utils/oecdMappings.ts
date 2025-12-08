@@ -70,30 +70,30 @@ export const COUNTRY_TO_OECD: Record<string, string> = {
  */
 export const SECTOR_TO_OECD: Record<string, string> = {
   // Primary sectors
-  "Agriculture": "D01T03",
-  "Mining": "D05T06",
-  "Oil & Gas": "D05T06",
-  "Energy": "D05T06", // Oil, Gas and Coal
+  "Agriculture": "A01", // Crop and animal production
+  "Mining": "B07", // Mining of metal ores
+  "Oil & Gas": "B06", // Extraction of crude petroleum and natural gas
+  "Energy": "D", // Electricity, gas, steam and air conditioning
   
   // Manufacturing
-  "Industrials": "D29T30", // Machinery and equipment
-  "Consumer Discretion": "D29T30", // Automobiles & Parts
-  "Consumer Staples": "D10T12", // Food products, beverages and tobacco
-  "Health Care": "D21", // Pharmaceutical products
-  "Technology": "D26T27", // Computer, electronic and optical products
-  "Materials": "D20T21", // Chemicals and pharmaceutical products
-  "Chemicals": "D20T21",
+  "Industrials": "C28", // Machinery and equipment n.e.c.
+  "Consumer Discretion": "C29", // Motor vehicles
+  "Consumer Staples": "C10T12", // Food products, beverages and tobacco
+  "Health Care": "C21", // Pharmaceuticals
+  "Technology": "C26", // Computer, electronic and optical products
+  "Materials": "C20", // Chemicals and chemical products
+  "Chemicals": "C20", // Chemicals and chemical products
   
   // Services
-  "Utilities": "D35T39", // Electricity, gas, water supply
-  "Telecommunications": "D61", // Telecommunications
-  "Financials": "D64T66", // Financial and insurance activities
-  "Real Estate": "D68", // Real estate activities
-  "Consumer Services": "D55T56", // Accommodation and food services
-  "Business Services": "D69T82", // Other business sector services
+  "Utilities": "D", // Electricity, gas, steam and air conditioning
+  "Telecommunications": "J61", // Telecommunications
+  "Financials": "K", // Financial and insurance activities
+  "Real Estate": "L", // Real estate activities
+  "Consumer Services": "I", // Accommodation and food services
+  "Business Services": "M", // Professional, scientific and technical activities
   
   // Default fallback
-  "Other": "D69T82",
+  "Other": "M", // Professional, scientific and technical activities
 };
 
 /**
