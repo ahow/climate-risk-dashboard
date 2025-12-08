@@ -20,6 +20,19 @@ export interface SupplyChainRiskAssessment {
     political: number;
     water_stress: number;
     nature_loss: number;
+    expected_loss?: {
+      total_annual_loss: number;
+      total_annual_loss_pct: number;
+      present_value_30yr: number;
+      present_value_30yr_pct: number;
+      breakdown?: {
+        drought?: { annual_loss: number; annual_loss_pct: number };
+        flood?: { annual_loss: number; annual_loss_pct: number };
+        heat_stress?: { annual_loss: number; annual_loss_pct: number };
+        hurricane?: { annual_loss: number; annual_loss_pct: number };
+        extreme_precipitation?: { annual_loss: number; annual_loss_pct: number };
+      };
+    };
   };
   indirect_risk: {
     climate: number;
@@ -150,19 +163,35 @@ export async function fetchSupplyChainRisk(
   // Parse REST API response
   const assessment = response as SupplyChainRiskAssessment;
   
-  // Convert total_risk.climate score (0-10 scale) to expected annual loss percentage
-  // Risk score interpretation: 0 = no risk, 10 = maximum risk (10% annual loss)
-  const expectedAnnualLossPct = assessment.total_risk.climate; // Direct mapping: risk score = loss %
+  // Extract expected loss from direct_risk (API v4.1 structure)
+  const expectedLoss = assessment.direct_risk.expected_loss;
   
   // Add computed climate_details for backward compatibility
-  assessment.climate_details = {
-    country: assessment.country,
-    expected_annual_loss: 0, // Will be calculated by caller using supplierCosts
-    expected_annual_loss_pct: expectedAnnualLossPct,
-    present_value_30y: 0, // Will be calculated by caller
-  };
+  if (expectedLoss) {
+    assessment.climate_details = {
+      country: assessment.country,
+      expected_annual_loss: expectedLoss.total_annual_loss,
+      expected_annual_loss_pct: expectedLoss.total_annual_loss_pct,
+      present_value_30y: expectedLoss.present_value_30yr,
+      hazards: expectedLoss.breakdown ? {
+        drought: expectedLoss.breakdown.drought?.annual_loss || 0,
+        flood: expectedLoss.breakdown.flood?.annual_loss || 0,
+        heat_stress: expectedLoss.breakdown.heat_stress?.annual_loss || 0,
+        hurricane: expectedLoss.breakdown.hurricane?.annual_loss || 0,
+        extreme_precipitation: expectedLoss.breakdown.extreme_precipitation?.annual_loss || 0,
+      } : undefined,
+    };
+  } else {
+    // Fallback if expected_loss is not available
+    assessment.climate_details = {
+      country: assessment.country,
+      expected_annual_loss: 0,
+      expected_annual_loss_pct: 0,
+      present_value_30y: 0,
+    };
+  }
   
-  console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Climate Risk Score: ${assessment.total_risk.climate}, Expected Loss: ${expectedAnnualLossPct}%`);
+  console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Expected Loss: $${expectedLoss?.total_annual_loss || 0} (${expectedLoss?.total_annual_loss_pct || 0}%)`);
 
   return assessment;
 }

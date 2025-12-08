@@ -608,3 +608,11 @@
 - [x] Add progress tracking integration to fetchRiskManagementData mutation (shows company name and X/100 progress)
 - [x] Test complete workflow: click button → see progress → verify progress tracker works (API slow but tracker functional)
 
+
+## Supply Chain Risk API Integration Issue
+- [x] Review Supply Chain Risk API v4.1 documentation
+- [x] Verify current integration is using correct endpoint and parameters
+- [x] Check if API key is being sent correctly (X-API-Key header)
+- [x] Test API with sample company data
+- [x] Fix integration to populate supply chain risk values
+- [x] Fixed: Use direct_risk.expected_loss instead of indirect_risk.expected_loss (API response structure)
