@@ -157,8 +157,8 @@ export async function fetchSupplyChainRisk(
   });
 
   // Check if API returned an error in the JSON response
-  if (response && 'error' in response) {
-    console.log(`[fetchSupplyChainRisk] API error: ${response.error}`);
+  if (response && typeof response === 'object' && 'error' in response) {
+    console.log(`[fetchSupplyChainRisk] API error: ${(response as any).error}`);
     return null; // Treat as unsupported combination
   }
 
