@@ -338,7 +338,9 @@ export async function fetchRiskManagement(isin: string): Promise<RiskManagementD
     const data = await response.json() as any;
     
     // Check if response contains error message
+    // @ts-ignore - data is typed as any
     if (data.message) {
+      // @ts-ignore - data is typed as any
       console.warn(`API message for ${isin}: ${data.message}`);
       return {
         company: {
