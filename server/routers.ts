@@ -198,13 +198,14 @@ export const appRouter = router({
         // (iii) Management performance measures
         const riskManagement = await db.getRiskManagementByCompanyId(company.id);
         const assessmentData = riskManagement?.assessmentData as any;
-        const measures = assessmentData?.measures || [];
-        const managementMeasures = measures.map((measure: any) => ({
-          measure: measure.measure || measure.category,
+        // New API structure uses measureScores array
+        const measureScores = assessmentData?.measureScores || assessmentData?.measures || [];
+        const managementMeasures = measureScores.map((measure: any) => ({
+          measure: measure.title || measure.measure || measure.category,
           score: measure.score || 0,
-          rationale: measure.rationale || measure.explanation || '',
-          verbatimQuote: measure.verbatim_quote || measure.quote || '',
-          source: measure.source || measure.document || '',
+          rationale: measure.evidenceSummary || measure.rationale || measure.explanation || '',
+          verbatimQuote: measure.quotes?.[0]?.text || measure.verbatim_quote || measure.quote || '',
+          source: measure.quotes?.[0]?.source || measure.source || measure.document || '',
         }));
 
         return {
@@ -533,13 +534,15 @@ export const appRouter = router({
             
             const managementData = await externalApis.fetchRiskManagement(company.isin);
             
-            if (managementData.measures && managementData.measures.length > 0) {
+            if (managementData.company && managementData.company.analysisStatus === 'completed' && managementData.company.totalScore !== null) {
               await db.insertRiskManagement({
                 companyId: company.id,
-                overallScore: managementData.summary?.score_percentage || 0,
+                overallScore: managementData.company.totalScore,
                 assessmentData: managementData as any,
               });
               assessmentsFetched++;
+            } else {
+              console.log(`[fetchRiskManagement] ${company.name} status: ${managementData.company?.analysisStatus || 'unknown'}`);
             }
           } catch (error) {
             const errorMsg = `${company.name}: ${error}`;
@@ -589,7 +592,14 @@ export const appRouter = router({
           
           // Fetch supply chain risk assessment from API
           const assessment = await fetchSupplyChainRisk(company.geography, company.sector);
-                // Calculate expected losses
+          
+          // Skip if API returned error or no data available
+          if (!assessment) {
+            console.log(`[fetchSupplyChainRisks] ${company.name}: No data available, skipping`);
+            continue;
+          }
+          
+          // Calculate expected losses
           const supplierCosts = parseFloat(company.supplierCosts || '0');
           const expectedAnnualLossPct = assessment.climate_details?.expected_annual_loss_pct || 0;
           const { annualLoss, presentValue } = calculateSupplyChainLoss(supplierCosts, expectedAnnualLossPct);
@@ -720,13 +730,21 @@ export const appRouter = router({
 
         const managementData = await externalApis.fetchRiskManagement(input.isin);
 
-        await db.insertRiskManagement({
-          companyId: company.id,
-          overallScore: managementData.summary?.score_percentage || 0,
-          assessmentData: managementData as any,
-        });
-
-        return { success: true };
+        // Only save if analysis is completed
+        if (managementData.company && managementData.company.analysisStatus === 'completed' && managementData.company.totalScore !== null) {
+          await db.insertRiskManagement({
+            companyId: company.id,
+            overallScore: managementData.company.totalScore,
+            assessmentData: managementData as any,
+          });
+          return { success: true, status: 'completed' };
+        } else {
+          return { 
+            success: false, 
+            status: managementData.company?.analysisStatus || 'unknown',
+            message: `Analysis not completed for ${input.isin}` 
+          };
+        }
       }),
 
     /**
@@ -748,10 +766,26 @@ export const appRouter = router({
      * Calculate geographic risks for all assets with coordinates
      */
     calculateAllGeographicRisks: publicProcedure.mutation(async () => {
+      console.log('[Geographic Risks] ========== MUTATION CALLED ==========');
       const { progressTracker } = await import('./utils/progressTracker');
       const operationId = `geo-risks-${Date.now()}`;
+      console.log(`[Geographic Risks] Operation ID: ${operationId}`);
+      
+      // Health check temporarily disabled for faster startup
+      // The retry logic will handle any API issues during calculation
+      // console.log('[Geographic Risks] Checking Climate Risk API health...');
+      // const healthCheck = await externalApis.checkClimateRiskApiHealth();
+      // 
+      // if (!healthCheck.healthy) {
+      //   const errorMsg = `Climate Risk API is not available: ${healthCheck.message}. Please wake up the API and try again.`;
+      //   console.error(`[Geographic Risks] ${errorMsg}`);
+      //   throw new Error(errorMsg);
+      // }
+      // 
+      // console.log('[Geographic Risks] API health check passed');
       
       const companies = await db.getAllCompanies();
+      console.log(`[Geographic Risks] Loaded ${companies.length} companies`);
       let risksCalculated = 0;
       let skipped = 0;
       const errors: string[] = [];
@@ -763,7 +797,9 @@ export const appRouter = router({
         totalAssets += assets.filter(a => a.latitude && a.longitude && a.estimatedValueUsd).length;
       }
       
+      console.log(`[Geographic Risks] Total assets to process: ${totalAssets}`);
       progressTracker.start(operationId, 'Calculating geographic risks', totalAssets, `Found ${totalAssets} assets to process`);
+      console.log(`[Geographic Risks] Progress tracker started`);
       let processedAssets = 0;
 
       console.log(`[Geographic Risks] Starting calculation for ${companies.length} companies`);
@@ -790,16 +826,36 @@ export const appRouter = router({
       // Process assets in parallel batches of 10
       const BATCH_SIZE = 10;
       for (let i = 0; i < assetsToProcess.length; i += BATCH_SIZE) {
+        // Check for cancellation
+        if (progressTracker.isCancelled(operationId)) {
+          console.log(`[Geographic Risks] Operation cancelled after ${risksCalculated} assets`);
+          return {
+            success: false,
+            risksCalculated,
+            skipped,
+            errors,
+            operationId,
+            cancelled: true
+          };
+        }
+        
         const batch = assetsToProcess.slice(i, i + BATCH_SIZE);
         
         await Promise.all(batch.map(async ({ asset, company }) => {
           try {
+            // Check cancellation before processing each asset
+            if (progressTracker.isCancelled(operationId)) {
+              return;
+            }
+            
             const lat = parseFloat(asset.latitude);
             const lon = parseFloat(asset.longitude);
             const value = parseFloat(asset.estimatedValueUsd);
             
             if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
-              console.log(`[Geographic Risks] Calculating for ${asset.assetName} (${company.name})`);
+              const progressMsg = `Processing ${asset.assetName} (${company.name}) - ${risksCalculated + 1}/${assetsToProcess.length}`;
+              progressTracker.update(operationId, processedAssets, progressMsg);
+              console.log(`[Geographic Risks] ${progressMsg}`);
               
               const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
               
@@ -813,13 +869,15 @@ export const appRouter = router({
               
               risksCalculated++;
               processedAssets++;
-              progressTracker.update(operationId, processedAssets, `Calculated ${risksCalculated} risks, skipped ${skipped}`);
-              console.log(`[Geographic Risks] ✓ ${asset.assetName} (${risksCalculated}/${assetsToProcess.length})`);
+              const completedMsg = `Calculated ${risksCalculated}/${assetsToProcess.length} risks (${Math.round((risksCalculated / assetsToProcess.length) * 100)}%)`;
+              progressTracker.update(operationId, processedAssets, completedMsg);
+              console.log(`[Geographic Risks] ✓ ${asset.assetName}`);
             }
           } catch (error) {
             const errorMsg = `Asset ${asset.assetName} (ID: ${asset.id}): ${error}`;
             console.error(`[Geographic Risks] ✗ ${errorMsg}`);
             errors.push(errorMsg);
+            processedAssets++; // Count failed assets too
           }
         }));
         
@@ -1311,15 +1369,22 @@ export const appRouter = router({
             try {
               const assessment = await fetchRiskManagement(company.isin);
               
-              if (assessment) {
+              if (assessment && assessment.company) {
                 const companyRecord = await db.getCompanyByIsin(company.isin);
                 if (companyRecord) {
-                  await db.insertRiskManagement({
-                    companyId: companyRecord.id,
-                    overallScore: assessment.summary.score_percentage,
-                    assessmentData: assessment,
-                  });
-                  managementResults.push({ companyIsin: company.isin, success: true });
+                  // Only save if analysis is completed and has a score
+                  if (assessment.company.analysisStatus === 'completed' && assessment.company.totalScore !== null) {
+                    await db.insertRiskManagement({
+                      companyId: companyRecord.id,
+                      overallScore: assessment.company.totalScore,
+                      assessmentData: assessment,
+                    });
+                    managementResults.push({ companyIsin: company.isin, success: true, status: 'completed' });
+                  } else {
+                    // Log companies with pending/idle analysis
+                    console.log(`[ProcessFile] ${company.isin} analysis status: ${assessment.company.analysisStatus}`);
+                    managementResults.push({ companyIsin: company.isin, success: false, status: assessment.company.analysisStatus });
+                  }
                 }
               }
             } catch (error) {
@@ -1360,6 +1425,28 @@ export const appRouter = router({
     getAll: publicProcedure.query(async () => {
       const { progressTracker } = await import('./utils/progressTracker');
       return progressTracker.getAll();
+    }),
+
+    /**
+     * Cancel an operation
+     */
+    cancel: publicProcedure
+      .input(z.object({ operationId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { progressTracker } = await import('./utils/progressTracker');
+        progressTracker.cancel(input.operationId);
+        return { success: true, message: 'Operation cancelled' };
+      }),
+
+    /**
+     * Clear all progress entries (debug endpoint)
+     */
+    clearAll: publicProcedure.mutation(async () => {
+      const { progressTracker } = await import('./utils/progressTracker');
+      const all = progressTracker.getAll();
+      console.log('[Progress] Clearing all progress entries:', all);
+      progressTracker.clearAll();
+      return { success: true, cleared: all.length };
     }),
   }),
 });

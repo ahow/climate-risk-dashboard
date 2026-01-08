@@ -6,13 +6,14 @@
 export interface ProgressState {
   operationId: string;
   operation: string;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
   current: number;
   total: number;
   message: string;
   startedAt: Date;
   completedAt?: Date;
   error?: string;
+  cancelled?: boolean;
 }
 
 class ProgressTracker {
@@ -75,6 +76,27 @@ class ProgressTracker {
   }
 
   /**
+   * Cancel an operation
+   */
+  cancel(operationId: string): void {
+    const progress = this.progressMap.get(operationId);
+    if (progress) {
+      progress.cancelled = true;
+      progress.status = 'cancelled';
+      progress.completedAt = new Date();
+      progress.message = 'Operation cancelled by user';
+    }
+  }
+
+  /**
+   * Check if an operation is cancelled
+   */
+  isCancelled(operationId: string): boolean {
+    const progress = this.progressMap.get(operationId);
+    return progress?.cancelled === true;
+  }
+
+  /**
    * Get progress for an operation
    */
   get(operationId: string): ProgressState | undefined {
@@ -86,6 +108,13 @@ class ProgressTracker {
    */
   getAll(): ProgressState[] {
     return Array.from(this.progressMap.values());
+  }
+
+  /**
+   * Clear all progress entries
+   */
+  clearAll(): void {
+    this.progressMap.clear();
   }
 
   /**

@@ -3,6 +3,8 @@
  * Used for Supply Chain Risk API integration
  */
 
+import { COMPREHENSIVE_SECTOR_MAPPING, getOECDSectorCode as getComprehensiveSectorCode } from '../services/comprehensiveSectorMapping';
+
 /**
  * Map company country names to OECD 3-letter country codes
  */
@@ -65,38 +67,6 @@ export const COUNTRY_TO_OECD: Record<string, string> = {
 };
 
 /**
- * Map company sector names to OECD ICIO sector codes
- * Based on LEVEL2 SECTOR NAME from the spreadsheet
- */
-export const SECTOR_TO_OECD: Record<string, string> = {
-  // Primary sectors
-  "Agriculture": "A01", // Crop and animal production
-  "Mining": "B07", // Mining of metal ores
-  "Oil & Gas": "B06", // Extraction of crude petroleum and natural gas
-  "Energy": "D", // Electricity, gas, steam and air conditioning
-  
-  // Manufacturing
-  "Industrials": "C28", // Machinery and equipment n.e.c.
-  "Consumer Discretion": "C29", // Motor vehicles
-  "Consumer Staples": "C10T12", // Food products, beverages and tobacco
-  "Health Care": "C21", // Pharmaceuticals
-  "Technology": "C26", // Computer, electronic and optical products
-  "Materials": "C20", // Chemicals and chemical products
-  "Chemicals": "C20", // Chemicals and chemical products
-  
-  // Services
-  "Utilities": "D", // Electricity, gas, steam and air conditioning
-  "Telecommunications": "J61", // Telecommunications
-  "Financials": "K", // Financial and insurance activities
-  "Real Estate": "L", // Real estate activities
-  "Consumer Services": "I", // Accommodation and food services
-  "Business Services": "M", // Professional, scientific and technical activities
-  
-  // Default fallback
-  "Other": "M", // Professional, scientific and technical activities
-};
-
-/**
  * Get OECD country code from company geography
  */
 export function getOECDCountryCode(geography: string | null | undefined): string {
@@ -107,27 +77,39 @@ export function getOECDCountryCode(geography: string | null | undefined): string
 }
 
 /**
- * Get OECD sector code from company sector
+ * Get OECD sector code from company industry
+ * Now uses comprehensive MSCI Level 4 industry mapping (219 industries → 45 OECD codes)
  */
-export function getOECDSectorCode(sector: string | null | undefined): string {
-  if (!sector) return "D69T82"; // Default to Other business services
+export function getOECDSectorCode(industry: string | null | undefined): string {
+  if (!industry) return "M"; // Default to Professional, scientific and technical activities
   
-  const normalized = sector.trim();
+  const normalized = industry.trim();
   
-  // Try exact match first
-  if (SECTOR_TO_OECD[normalized]) {
-    return SECTOR_TO_OECD[normalized];
+  // Try exact match with comprehensive mapping
+  const exactMatch = getComprehensiveSectorCode(normalized);
+  if (exactMatch) {
+    return exactMatch;
   }
   
-  // Try partial match
-  for (const [key, value] of Object.entries(SECTOR_TO_OECD)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
+  // Try case-insensitive match
+  const lowerIndustry = normalized.toLowerCase();
+  for (const [key, value] of Object.entries(COMPREHENSIVE_SECTOR_MAPPING)) {
+    if (key.toLowerCase() === lowerIndustry) {
+      return value;
+    }
+  }
+  
+  // Try partial match (industry name contains mapping key or vice versa)
+  for (const [key, value] of Object.entries(COMPREHENSIVE_SECTOR_MAPPING)) {
+    const lowerKey = key.toLowerCase();
+    if (lowerIndustry.includes(lowerKey) || lowerKey.includes(lowerIndustry)) {
       return value;
     }
   }
   
   // Default fallback
-  return "D69T82";
+  console.warn(`No OECD sector mapping found for industry: ${industry}`);
+  return "M"; // Professional, scientific and technical activities
 }
 
 /**
@@ -159,4 +141,3 @@ export function getManagementAdjustmentFactor(managementScorePct: number): numbe
   // At score=100: factor = 0.3 (70% reduction)
   return 1.0 - (0.7 * score / 100);
 }
-

@@ -41,6 +41,7 @@ export default function Home() {
   });
   const calculateRisksMutation = trpc.risks.calculateAllGeographicRisks.useMutation({
     onSuccess: (data) => {
+      console.log('[Frontend] Mutation succeeded:', data);
       if (data.operationId) {
         setCurrentOperationId(data.operationId);
       }
@@ -50,11 +51,21 @@ export default function Home() {
       }, 10000);
       setTimeout(() => clearInterval(interval), 300000); // Stop after 5 minutes
     },
+    onError: (error) => {
+      console.error('[Frontend] Mutation failed:', error);
+      alert(`Failed to calculate geographic risks: ${error.message}`);
+    },
   });
   const calibrateMutation = trpc.risks.recalculateWithCalibration.useMutation();
+  const cancelMutation = trpc.progress.cancel.useMutation({
+    onSuccess: () => {
+      setCurrentOperationId(null);
+      window.location.reload();
+    },
+  });
   
   // Track progress for long-running operations
-  useProgressTracking(currentOperationId);
+  const progress = useProgressTracking(currentOperationId);
 
   // CSV Export
   const exportMutation = trpc.export.generateCSV.useQuery(undefined, {
@@ -347,20 +358,49 @@ export default function Home() {
                   "Clear All Geographic Risks"
                 )}
               </Button>
-              <Button
-                onClick={() => calculateRisksMutation.mutate()}
-                disabled={calculateRisksMutation.isPending}
-                variant="secondary"
-              >
-                {calculateRisksMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calculating Risks... (refreshes every 10s)
-                  </>
-                ) : (
-                  "Calculate Geographic Risks"
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    console.log('[Frontend] Calculate Geographic Risks button clicked');
+                    console.log('[Frontend] isPending:', calculateRisksMutation.isPending);
+                    console.log('[Frontend] progress:', progress);
+                    calculateRisksMutation.mutate();
+                  }}
+                  disabled={calculateRisksMutation.isPending || progress?.status === 'running'}
+                  variant="secondary"
+                >
+                  {calculateRisksMutation.isPending || progress?.status === 'running' ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Calculating Geographic Risks...
+                    </>
+                  ) : (
+                    "Calculate Geographic Risks"
+                  )}
+                </Button>
+                {(calculateRisksMutation.isPending || progress?.status === 'running') && currentOperationId && (
+                  <Button
+                    onClick={() => cancelMutation.mutate({ operationId: currentOperationId })}
+                    disabled={cancelMutation.isPending}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    {cancelMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Stopping...
+                      </>
+                    ) : (
+                      "Stop"
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
+              {progress && progress.status === 'running' && (
+                <div className="text-sm text-blue-600 mt-2">
+                  {progress.message}
+                </div>
+              )}
               {calculateRisksMutation.isSuccess && (
                 <div className="text-sm text-green-600 flex items-center">
                   ✓ Geographic risks: {calculateRisksMutation.data.risksCalculated} calculated, {calculateRisksMutation.data.skipped} skipped

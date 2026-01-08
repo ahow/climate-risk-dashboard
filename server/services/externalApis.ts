@@ -6,8 +6,8 @@
 import { fetchWithRetry } from '../utils/retry';
 
 const ASSET_DISCOVERY_API = "https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc";
-const GEOGRAPHIC_RISKS_API = "https://climate-risk-api-v4-7da6992dc867.herokuapp.com";
-const RISK_MANAGEMENT_API = "https://8000-iwnb9mmlojeywebr41d8n-96f6004a.manusvm.computer";
+const GEOGRAPHIC_RISKS_API = "https://climate-risk-country-v4-fdee3b254d49.herokuapp.com";
+const RISK_MANAGEMENT_API = "https://climate-risk-replit-562361beb142.herokuapp.com";
 
 export interface AssetData {
   asset_name: string;
@@ -61,38 +61,37 @@ export interface RiskDetail {
   details: string;
 }
 
+// New API response structure from /api/company/isin/{ISIN}
 export interface RiskManagementData {
-  summary: {
-    company_name: string;
+  company: {
+    id: number;
+    name: string;
     isin: string;
-    assessment_date: string;
-    score_percentage: number;
-    total_score: number;
-    max_possible_score: number;
-    average_score: number;
-    total_measures: number;
-    measures_with_evidence: number;
-    evidence_coverage: number;
-    total_quotes: number;
-    high_confidence_count: number;
-    medium_confidence_count: number;
-    low_confidence_count: number;
+    sector: string;
+    industry?: string;
+    country?: string;
+    totalScore: number | null;
+    analysisStatus: 'idle' | 'processing' | 'completed' | 'failed';
+    summary: string | null;
   };
-  category_breakdown: any[];
-  measures: Array<{
-    measure_id: string;
-    measure_name: string;
+  documents: Array<{
+    id: number;
+    title: string;
+    url: string;
+    type: string;
+  }>;
+  measureScores: Array<{
+    measureId: string;
     category: string;
+    title: string;
     score: number;
-    confidence: string;
-    rationale: string;
-    evidence: Array<{
-      verbatim_quote: string;
-      source_url: string;
-      source_page: string;
-      source_doc_title: string;
+    evidenceSummary: string;
+    confidence: 'High' | 'Medium' | 'Low';
+    quotes: Array<{
+      text: string;
+      source: string;
+      page?: number;
     }>;
-    data_fields: Record<string, any>;
   }>;
 }
 
@@ -223,6 +222,39 @@ export async function fetchCompanyAssets(companyName: string): Promise<AssetData
 }
 
 /**
+ * Check if Climate Risk API is healthy and responsive
+ */
+export async function checkClimateRiskApiHealth(): Promise<{ healthy: boolean; message: string }> {
+  try {
+    const response = await fetch(`${GEOGRAPHIC_RISKS_API}/assess`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        latitude: 0,
+        longitude: 0,
+        asset_value: 1,
+      }),
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+
+    if (response.ok) {
+      return { healthy: true, message: 'API is responsive' };
+    } else if (response.status === 503) {
+      return { healthy: false, message: 'API is sleeping or unavailable (503)' };
+    } else {
+      return { healthy: false, message: `API returned status ${response.status}` };
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+      return { healthy: false, message: 'API health check timed out (30s)' };
+    }
+    return { healthy: false, message: `API health check failed: ${error.message}` };
+  }
+}
+
+/**
  * Fetch geographic risk assessment for a specific location
  */
 export async function fetchGeographicRisk(
@@ -270,45 +302,60 @@ export async function fetchRiskManagement(isin: string): Promise<RiskManagementD
   try {
     console.log(`Fetching risk management for ISIN: ${isin}`);
     
-    // Use retry logic to handle API hibernation and temporary failures
+    // Use new ISIN-based endpoint: GET /api/company/isin/{ISIN}
     const response = await fetchWithRetry(
-      `${RISK_MANAGEMENT_API}/assessment/${isin}`,
+      `${RISK_MANAGEMENT_API}/api/company/isin/${isin}`,
       undefined,
       {
-        maxRetries: 5, // More retries for hibernation wake-up
-        initialDelay: 2000, // Start with 2 seconds
-        maxDelay: 30000, // Max 30 seconds between retries
+        maxRetries: 3,
+        initialDelay: 1000,
+        maxDelay: 10000,
       }
     );
+    
     if (!response.ok) {
-      // If 404, the company may not be in the assessed list
+      // If 404, company not found in the system
       if (response.status === 404) {
-        console.warn(`No risk management assessment found for ISIN: ${isin}`);
+        console.warn(`Company not found for ISIN: ${isin}`);
+        // Return empty structure for companies not in the system
         return {
-          summary: {
-            company_name: '',
+          company: {
+            id: 0,
+            name: '',
             isin: isin,
-            assessment_date: new Date().toISOString(),
-            score_percentage: 0,
-            total_score: 0,
-            max_possible_score: 0,
-            average_score: 0,
-            total_measures: 0,
-            measures_with_evidence: 0,
-            evidence_coverage: 0,
-            total_quotes: 0,
-            high_confidence_count: 0,
-            medium_confidence_count: 0,
-            low_confidence_count: 0,
+            sector: '',
+            totalScore: null,
+            analysisStatus: 'idle',
+            summary: null,
           },
-          measures: [],
-          category_breakdown: [],
+          documents: [],
+          measureScores: [],
         };
       }
       throw new Error(`Failed to fetch risk management: ${response.statusText}`);
     }
     
-    return await response.json() as any;
+    const data = await response.json();
+    
+    // Check if response contains error message
+    if (data.message) {
+      console.warn(`API message for ${isin}: ${data.message}`);
+      return {
+        company: {
+          id: 0,
+          name: '',
+          isin: isin,
+          sector: '',
+          totalScore: null,
+          analysisStatus: 'idle',
+          summary: null,
+        },
+        documents: [],
+        measureScores: [],
+      };
+    }
+    
+    return data as RiskManagementData;
   } catch (error) {
     console.error(`Error fetching risk management for ${isin}:`, error);
     throw error;

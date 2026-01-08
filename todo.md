@@ -617,5 +617,198 @@
 - [x] Fix integration to populate supply chain risk values
 - [x] Fixed: Use direct_risk.expected_loss instead of indirect_risk.expected_loss (API response structure)
 - [x] Fixed: Update OECD sector code mappings to use valid API codes (C28, C29, etc. instead of D29T30)
-- [ ] Clear existing supply chain data with zero values
-- [ ] Re-fetch supply chain data with corrected sector mappings
+- [x] Identified: Supply Chain Risk API is DOWN (Heroku Application Error on all endpoints)
+- [ ] BLOCKED: Wait for API service to be restored before re-fetching data
+- [ ] Once API is back: Clear existing zero-value data and re-fetch with corrected mappings
+
+
+## Supply Chain API Comprehensive Fix
+- [x] Test API with skip_climate=true parameter (API responding successfully)
+- [x] Update supplyChainApi.ts to include skip_climate parameter in URL
+- [x] Add error field detection to skip companies with "Risk data not available"
+- [x] Add null check in routers.ts to skip companies without data
+- [x] Remove fallback zero-value response - return null instead
+- [x] **ROOT CAUSE FOUND**: API returns {country: {code, name}} but code expected {country: "USA"}
+- [x] Fix response parsing to normalize API structure (country.code, sector.code)
+- [x] Clear old supply chain data
+- [ ] User to click "Fetch Supply Chain Risks" button with comprehensive fix
+- [ ] Verify real non-zero values populate correctly
+
+
+## Risk Management API Update - New ISIN Endpoint
+- [x] Test new API endpoint (https://climate-risk-replit-562361beb142.herokuapp.com/api/company/isin/{ISIN})
+- [x] Update RISK_MANAGEMENT_API base URL in externalApis.ts
+- [x] Update fetchRiskManagement to use new endpoint (/api/company/isin/{ISIN})
+- [x] Update RiskManagementData interface to match new API response structure
+- [x] Update response parsing to extract company.totalScore and measureScores
+- [x] Update routers.ts to check analysisStatus before saving
+- [x] Update managementMeasures extraction to use measureScores array
+- [x] Test fetch with sample company ISIN (CSX - status: idle, will skip saving)
+- [ ] Run full fetch for all 100 companies (once analysis completes in other app)
+- [ ] Verify management scores populate correctly (after analysis completes)
+
+
+## Supply Chain Risk Fetch Issue - No Data Populating
+- [x] Check database for supply chain risk records (30 companies with data)
+- [x] Test Supply Chain API directly with sample company (working)
+- [x] Review server logs for errors during fetch (no errors)
+- [x] Identify root cause: Data IS saving and API IS returning it correctly
+- [x] Root cause: Frontend browser cache showing old JavaScript
+- [ ] User needs to do HARD REFRESH (Ctrl+Shift+R or Cmd+Shift+R) to see data
+
+
+## Supply Chain Risk API - ISIN-Based Integration Update
+- [x] Review ISIN-Based API Integration Guide documentation
+- [x] Extract comprehensive MSCI-to-OECD sector mapping (219 industries → 45 codes)
+- [x] Test API with both current and comprehensive mappings
+- [x] Get list of valid sector codes from API (56 codes)
+- [x] Validate comprehensive mapping against API (45/45 codes are valid)
+- [x] Finding: All codes in comprehensive mapping are valid
+- [x] 404 errors were due to country-sector combinations without data, not invalid codes
+- [x] Summary document created for user with findings and recommendations
+
+
+## Comprehensive Sector Mapping Upgrade
+- [ ] Convert Python sector mapping to TypeScript
+- [ ] Create comprehensiveSectorMapping.ts file
+- [ ] Update oecdMappings.ts to use comprehensive mapping
+- [ ] Clear existing supply chain data (30 records)
+- [ ] Re-fetch supply chain data with new mapping
+- [ ] Verify coverage improvements
+- [ ] Save checkpoint with upgraded mapping
+
+
+## Comprehensive Sector Mapping Upgrade
+- [x] Convert Python sector mapping to TypeScript
+- [x] Create comprehensiveSectorMapping.ts file (219 industries → 45 OECD codes)
+- [x] Update oecdMappings.ts to use comprehensive mapping
+- [x] Clear existing supply chain data (30 records)
+- [x] Re-fetch supply chain data with new mapping
+- [x] Verify coverage improvements (multiple companies showing non-zero values)
+- [ ] Save checkpoint with upgraded mapping
+
+
+## Supply Chain Risk Data Missing for Some Companies
+- [x] Investigate why S&P GLOBAL and other companies show no supply chain data
+- [x] Check database for missing records
+- [x] Review server logs for API errors
+- [x] Test sector mapping for affected companies
+- [x] Identify root cause: API coverage limitations for sectors K, D, Q, L (26 companies affected)
+- [x] Document findings - no code fix needed, API limitation
+
+
+## Supply Chain Risk Fetch Not Populating Data
+- [x] Check database to verify if any supply chain data exists after fetch (0 records found)
+- [x] Review browser console for JavaScript errors (no errors)
+- [x] Check server logs for API call errors
+- [x] Test manual API calls to verify they work (API is DOWN - Heroku application error)
+- [x] Identify why data isn't being saved or displayed (Supply Chain Risk API is hibernating/crashed)
+- [ ] Wait for API to wake up or contact API owner
+- [ ] Re-fetch supply chain data once API is back online
+- [ ] Verify data populates correctly after API recovery
+
+
+## Geographic Risk Calculation Issues
+- [x] Investigate why calculation shows "Calculated 7 risks, skipped 9"
+- [x] Check if geographic risk calculation is stalled (NOT stalled, completed successfully)
+- [x] Identify why assets are being skipped (8 assets missing lat/long coordinates)
+- [x] Determined: Working as designed - assets without coordinates cannot be assessed
+- [x] Companies affected: AFLAC (7 assets), AXA (1 asset)
+- [x] No code fix needed - this is expected behavior
+
+## Supply Chain Sector Support Issues
+- [x] Investigate why sectors K, D, Q, L still return no data despite comprehensive mapping
+- [x] Review API responses for these sectors (API supports all sectors!)
+- [x] Verify comprehensive mapping is being used correctly
+- [x] Identified root cause: skip_climate=true means no expected_loss data returned
+- [x] Fixed: Changed to skip_climate=false to get real climate expected loss percentages
+- [x] All sectors now supported with actual dollar loss calculations
+
+
+## Geographic Risk Calculation Stalled
+- [ ] Check server logs to see if calculation is still running
+- [ ] Check database to see how many geographic risks have been created
+- [ ] Identify if there's an error or timeout causing the stall
+- [ ] Fix the issue and restart calculation if needed
+- [ ] Verify calculation completes for all assets with coordinates
+
+
+## Geographic Risk Calculation Stuck in Loop
+- [x] Restart dev server to stop the calculation
+- [x] Review API configuration guide
+- [x] Identify why API calls are failing with 503 errors (Wrong API URL + API is asleep)
+- [x] Fix API configuration (Updated to Manus sandbox URL)
+- [ ] API needs to be woken up by user
+- [ ] Add stop button to dashboard for long-running operations (future enhancement)
+- [ ] Test geographic risk calculation works correctly after API is awake
+
+
+## Dashboard Enhancements for Long-Running Operations
+- [x] Add API health check endpoint for Climate Risk API
+- [x] Implement pre-flight health check before starting geographic risk calculation
+- [x] Add stop/cancel functionality for geographic risk calculation
+- [x] Improve progress indicators with detailed asset processing info (current asset name, company, progress percentage)
+- [x] Add Stop button to dashboard UI
+- [x] Update progress display to show current processing status
+- [x] Fix TypeScript compilation error in db.ts
+- [x] Update Climate Risk API URL to Manus sandbox
+- [x] Create comprehensive enhancement summary document
+- [ ] Save checkpoint with enhancements
+
+
+## Geographic Risk Calculation Stuck at 0%
+- [ ] Check server logs for errors
+- [ ] Identify why calculation is not progressing past 0%
+- [ ] Fix the issue preventing progress
+- [ ] Verify stop button appears when calculation is running
+- [ ] Test that calculation completes successfully
+
+
+## Stale Progress Tracker Blocking Geographic Risk Calculation
+- [ ] Clear stale progress tracker entries from database
+- [ ] Verify button becomes enabled after clearing
+- [ ] Test geographic risk calculation starts properly
+- [ ] Verify stop button appears during calculation
+- [ ] Add auto-cleanup for stale progress entries (older than 1 hour)
+
+
+## Published Site Showing Stale Progress
+- [ ] Check if published site (climaterisk-rur7xaeu.manus.space) has stale progress tracker
+- [ ] Verify if calculation is actually running or stuck at 0%
+- [ ] Compare published site behavior with dev server
+- [ ] Clear stale progress on published site if needed
+- [ ] Ensure both dev and published sites work correctly
+
+
+## Deployment Preparation
+- [ ] Create Heroku Procfile for deployment
+- [ ] Create Vercel configuration file
+- [ ] Document all required environment variables
+- [ ] Create comprehensive deployment guide
+- [ ] Add deployment instructions for GitHub export
+- [ ] Verify all external API configurations are documented
+- [ ] Create .env.example file with all required variables
+
+
+## Deployment Preparation (Completed)
+- [x] Create Heroku Procfile for deployment
+- [x] Create Vercel configuration file
+- [x] Document all required environment variables
+- [x] Create comprehensive deployment guide (DEPLOYMENT.md)
+- [x] Add deployment instructions for GitHub export (GITHUB_EXPORT.md)
+- [x] Verify all external API configurations are documented (ENV_VARIABLES.md)
+- [x] Create README.md with project overview and quick start
+- [x] Verify .gitignore excludes sensitive files
+- [x] Project ready for GitHub export and external deployment
+
+
+## GitHub and Heroku Deployment
+- [ ] Configure Git with GitHub credentials
+- [ ] Push code to GitHub repository (Heroku_Physical_Climate_Unified)
+- [ ] Install and configure Heroku CLI
+- [ ] Create Heroku app
+- [ ] Add JawsDB MySQL add-on
+- [ ] Configure all required environment variables
+- [ ] Deploy to Heroku
+- [ ] Initialize database schema
+- [ ] Verify deployment is successful

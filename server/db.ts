@@ -172,7 +172,7 @@ export async function bulkInsertAssets(assetList: InsertAsset[]): Promise<void> 
   if (assetList.length === 0) return;
   
   // Prevent duplicates: check if assets with same companyId + assetName already exist
-  const companyIds = [...new Set(assetList.map(a => a.companyId))];
+  const companyIds = Array.from(new Set(assetList.map(a => a.companyId)));
   const existingAssets = await db.select().from(assets).where(
     inArray(assets.companyId, companyIds)
   );

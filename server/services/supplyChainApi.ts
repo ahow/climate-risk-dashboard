@@ -9,6 +9,31 @@ import { retryAsync } from "../utils/retry";
 const SUPPLY_CHAIN_API_BASE = "https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com";
 const SUPPLY_CHAIN_API_KEY = "zhSJ0IiDc1lb2qyOHK1rOkN20c4cXGRlNGSB4vhrNYM";
 
+// Raw API response structure
+interface RawAPIResponse {
+  country: { code: string; name: string };
+  sector: { code: string; name: string };
+  direct_risk: {
+    climate: number;
+    modern_slavery: number;
+    political: number;
+    water_stress: number;
+    nature_loss: number;
+    expected_loss?: {
+      total_annual_loss: number;
+      total_annual_loss_pct: number;
+      present_value_30yr: number;
+      present_value_30yr_pct: number;
+      breakdown?: Record<string, any>;
+    };
+  };
+  indirect_risk: Record<string, number>;
+  total_risk?: Record<string, number>;
+  top_suppliers?: Array<any>;
+  [key: string]: any;
+}
+
+// Normalized assessment structure for internal use
 export interface SupplyChainRiskAssessment {
   country: string;
   country_name: string;
@@ -100,14 +125,15 @@ export interface SupplyChainRiskAssessment {
 export async function fetchSupplyChainRisk(
   companyGeography: string | null | undefined,
   companySector: string | null | undefined
-): Promise<SupplyChainRiskAssessment> {
+): Promise<SupplyChainRiskAssessment | null> {
   const countryCode = getOECDCountryCode(companyGeography);
   const sectorCode = getOECDSectorCode(companySector);
 
   console.log(`[fetchSupplyChainRisk] Mapping: ${companyGeography} → ${countryCode}, ${companySector} → ${sectorCode}`);
 
-  // REST API endpoint
-  const url = `${SUPPLY_CHAIN_API_BASE}/api/assess?country=${countryCode}&sector=${sectorCode}`;
+  // REST API endpoint with skip_climate=false to get real climate expected loss data
+  // This takes 20-30s per request but provides actual loss percentages for dollar calculations
+  const url = `${SUPPLY_CHAIN_API_BASE}/api/assess?country=${countryCode}&sector=${sectorCode}&model=oecd&skip_climate=false`;
 
   const response = await retryAsync(async () => {
     const res = await fetch(url, {
@@ -130,38 +156,34 @@ export async function fetchSupplyChainRisk(
     return res.json();
   });
 
-  // Handle unsupported country/sector combinations
+  // Check if API returned an error in the JSON response
+  if (response && 'error' in response) {
+    console.log(`[fetchSupplyChainRisk] API error: ${response.error}`);
+    return null; // Treat as unsupported combination
+  }
+
+  // Handle unsupported country/sector combinations or empty responses
   if (!response) {
-    // Return a default assessment with zero risk for unsupported combinations
-    return {
-      country: countryCode,
-      country_name: companyGeography || countryCode,
-      sector: sectorCode,
-      sector_name: companySector || sectorCode,
-      direct_risk: { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
-      indirect_risk: { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
-      total_risk: { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
-      climate_details: {
-        country: countryCode,
-        expected_annual_loss: 0,
-        expected_annual_loss_pct: 0,
-        present_value_30y: 0,
-        hazards: {
-          drought: 0,
-          flood: 0,
-          heat_stress: 0,
-          hurricane: 0,
-          extreme_precipitation: 0,
-        },
-      },
-      top_suppliers: [],
-      total_suppliers: 0,
-      io_coverage: 0,
-    };
+    console.log(`[fetchSupplyChainRisk] No response data for ${countryCode}/${sectorCode}`);
+    return null; // Return null so router skips saving this company
   }
   
-  // Parse REST API response
-  const assessment = response as SupplyChainRiskAssessment;
+  // Parse REST API response and normalize structure
+  const rawResponse = response as RawAPIResponse;
+  
+  // Normalize to expected structure
+  const assessment: SupplyChainRiskAssessment = {
+    country: rawResponse.country.code,
+    country_name: rawResponse.country.name,
+    sector: rawResponse.sector.code,
+    sector_name: rawResponse.sector.name,
+    direct_risk: rawResponse.direct_risk,
+    indirect_risk: rawResponse.indirect_risk as any,
+    total_risk: rawResponse.total_risk as any || { climate: 0, modern_slavery: 0, political: 0, water_stress: 0, nature_loss: 0 },
+    top_suppliers: rawResponse.top_suppliers || [],
+    total_suppliers: rawResponse.total_suppliers || 0,
+    io_coverage: rawResponse.io_coverage || 0,
+  };
   
   // Extract expected loss from direct_risk (API v4.1 structure)
   const expectedLoss = assessment.direct_risk.expected_loss;

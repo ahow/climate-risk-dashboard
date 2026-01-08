@@ -62,6 +62,13 @@ export function useProgressTracking(operationId: string | null | undefined) {
         description: progress.error || 'Operation failed',
       });
       toastRef.current = null;
+    } else if (progress.status === 'cancelled') {
+      // Show cancelled toast
+      toast.info('Operation cancelled', {
+        id: toastRef.current.toastId,
+        description: progress.message,
+      });
+      toastRef.current = null;
     }
   }, [progress]);
 
