@@ -837,5 +837,26 @@
 - [x] Check if uploadedFiles table exists in Heroku database (confirmed exists with correct schema)
 - [x] Verify table schema matches the query (all columns match)
 - [x] Add error handling and fallback to getAllUploadedFiles function
+- [x] Deploy fix to Heroku (Release: 247b3069-621f-48c4-8bc6-95c8e1bd9234)
+- [x] Build succeeded and deployed
+
+
+## Fix File Upload Functionality (Configure S3)
+- [x] Investigate file upload page (code is correct, needs S3 credentials)
+- [x] User created S3 bucket: physicalclimateunified
+- [x] User created IAM user and access keys
+- [x] Got AWS credentials from user
+- [x] Set AWS S3 environment variables on Heroku
+- [x] Configure S3 bucket policy for public read access
+- [x] Heroku app restarted automatically
+- [x] File upload page is accessible and ready for testing
+
+
+## Debug File Upload Button Not Responding
+- [x] Test file selection and upload button click
+- [x] Check browser console for JavaScript errors (found database insert error)
+- [x] Verify tRPC mutation is being called (S3 upload succeeded, database insert failed)
+- [x] Check server logs for upload errors (uploadedBy field issue)
+- [x] Fix uploadedBy field to not include when user is not logged in
 - [ ] Deploy fix to Heroku
-- [ ] Verify "Load from Uploaded File" works without errors
+- [ ] Verify upload works end-to-end

@@ -1281,16 +1281,22 @@ export const appRouter = router({
         const { url } = await storagePut(fileKey, buffer, input.fileType);
         
         // Store metadata in database
-        await db.createUploadedFile({
+        const fileData: any = {
           filename: input.filename,
           originalFilename: input.filename,
           fileType: input.fileType,
           fileSize: input.fileSize,
           s3Key: fileKey,
           s3Url: url,
-          uploadedBy: ctx.user?.id || null,
           description: input.description,
-        });
+        };
+        
+        // Only include uploadedBy if user is logged in
+        if (ctx.user?.id) {
+          fileData.uploadedBy = ctx.user.id;
+        }
+        
+        await db.createUploadedFile(fileData);
         
         return {
           success: true,
