@@ -858,5 +858,5 @@
 - [x] Verify tRPC mutation is being called (S3 upload succeeded, database insert failed)
 - [x] Check server logs for upload errors (uploadedBy field issue)
 - [x] Fix uploadedBy field to not include when user is not logged in
-- [ ] Deploy fix to Heroku
-- [ ] Verify upload works end-to-end
+- [x] Deploy fix to Heroku (Release: 85f8c3bd-6187-4b4e-baed-417520ebdb7d)
+- [x] Build succeeded
