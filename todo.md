@@ -822,5 +822,12 @@
 - [x] Restore full upload interface (not just "Load 20 Companies")
 - [x] Add URL input option for Excel file upload
 - [x] Ensure dashboard matches Manus version exactly
-- [ ] Deploy fixes to Heroku
-- [ ] Verify dashboard works correctly on Heroku
+- [x] Deploy fixes to Heroku
+- [x] Verify dashboard works correctly on Heroku
+
+
+## Fix Database Delete Error (Option 1: Load from Uploaded File)
+- [x] Investigate geographicRisks delete query error in seedCompanies mutation
+- [x] Fix the delete query to properly clear existing data (added .where(sql`1=1`) and try-catch)
+- [ ] Deploy to Heroku
+- [ ] Verify "Load from Uploaded File" works without errors

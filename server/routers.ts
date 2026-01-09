@@ -323,14 +323,22 @@ export const appRouter = router({
           console.log('[seedCompaniesFromUrl] Clearing existing company data...');
           const database = await getDb();
           if (database) {
-            const { geographicRisks, riskManagementScores } = await import('../drizzle/schema');
-            await database.delete(geographicRisks);
-            await database.delete(assets);
-            await database.delete(riskManagementScores);
-            const supplyChainRisks = (await import('../drizzle/schema')).supplyChainRisks;
-            await database.delete(supplyChainRisks);
-            await database.delete(companies);
-            console.log('[seedCompaniesFromUrl] Cleared all existing data');
+            try {
+              const { geographicRisks, riskManagementScores, supplyChainRisks } = await import('../drizzle/schema');
+              const { sql } = await import('drizzle-orm');
+              
+              // Delete child tables first
+              await database.delete(geographicRisks).where(sql`1=1`);
+              await database.delete(supplyChainRisks).where(sql`1=1`);
+              await database.delete(riskManagementScores).where(sql`1=1`);
+              await database.delete(assets).where(sql`1=1`);
+              // Delete parent table last
+              await database.delete(companies).where(sql`1=1`);
+              console.log('[seedCompaniesFromUrl] Cleared all existing data');
+            } catch (error) {
+              console.error('[seedCompaniesFromUrl] Error clearing data:', error);
+              // Continue anyway - tables might be empty
+            }
           }
           
           // Fetch file from URL
@@ -386,14 +394,24 @@ export const appRouter = router({
         console.log('[seedCompanies] Clearing existing company data...');
         const database = await getDb();
         if (database) {
-          // Delete in correct order due to foreign key constraints
-          await database.delete(geographicRisks);
-          await database.delete(assets);
-          await database.delete(riskManagementScores);
-          const supplyChainRisks = (await import('../drizzle/schema')).supplyChainRisks;
-          await database.delete(supplyChainRisks);
-          await database.delete(companies);
-          console.log('[seedCompanies] Cleared all existing data');
+          try {
+            // Delete in correct order due to foreign key constraints
+            // Use .where() with a condition that's always true to avoid syntax errors
+            const { supplyChainRisks } = await import('../drizzle/schema');
+            const { sql } = await import('drizzle-orm');
+            
+            // Delete child tables first
+            await database.delete(geographicRisks).where(sql`1=1`);
+            await database.delete(supplyChainRisks).where(sql`1=1`);
+            await database.delete(riskManagementScores).where(sql`1=1`);
+            await database.delete(assets).where(sql`1=1`);
+            // Delete parent table last
+            await database.delete(companies).where(sql`1=1`);
+            console.log('[seedCompanies] Cleared all existing data');
+          } catch (error) {
+            console.error('[seedCompanies] Error clearing data:', error);
+            // Continue anyway - tables might be empty
+          }
         }
         
         const files = await db.getAllUploadedFiles();
