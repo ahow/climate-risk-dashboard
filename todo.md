@@ -860,3 +860,13 @@
 - [x] Fix uploadedBy field to not include when user is not logged in
 - [x] Deploy fix to Heroku (Release: 85f8c3bd-6187-4b4e-baed-417520ebdb7d)
 - [x] Build succeeded
+
+
+## Thorough Investigation of uploadedBy Issue
+- [x] Check Heroku database schema for uploadedFiles table (schema correct, allows NULL)
+- [x] Verify uploadedBy column allows NULL values (confirmed: Null=YES)
+- [x] Check if there's a database constraint preventing NULL (no constraint issue)
+- [x] Verify deployed code matches local repository (code correct but Drizzle ORM issue)
+- [x] Root cause: Drizzle ORM doesn't handle null properly, need to omit field entirely
+- [x] Fix: Conditionally construct object without uploadedBy when no user
+- [ ] Deploy and verify fix works end-to-end
