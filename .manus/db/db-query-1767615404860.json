@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, name, sector, geography, supplierCosts FROM companies WHERE name LIKE '%S&P%' OR name LIKE '%SOUTHERN%' OR name LIKE '%STRYKER%' LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT id, name, sector, geography, supplierCosts FROM companies WHERE name LIKE '%S&P%' OR name LIKE '%SOUTHERN%' OR name LIKE '%STRYKER%' LIMIT 10",
+  "rows": [
+    {
+      "id": "60005",
+      "name": "SOUTHERN",
+      "sector": "Utilities",
+      "geography": "UNITED STATES",
+      "supplierCosts": "16658409.96250165"
+    },
+    {
+      "id": "60006",
+      "name": "S&P GLOBAL",
+      "sector": "Financials",
+      "geography": "UNITED STATES",
+      "supplierCosts": "4325528.259470576"
+    },
+    {
+      "id": "60010",
+      "name": "STRYKER",
+      "sector": "Health Care",
+      "geography": "UNITED STATES",
+      "supplierCosts": "10468254.674999917"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tsector\tgeography\tsupplierCosts\n60005\tSOUTHERN\tUtilities\tUNITED STATES\t16658409.96250165\n60006\tS&P GLOBAL\tFinancials\tUNITED STATES\t4325528.259470576\n60010\tSTRYKER\tHealth Care\tUNITED STATES\t10468254.674999917\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

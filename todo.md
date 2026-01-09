@@ -803,12 +803,24 @@
 
 
 ## GitHub and Heroku Deployment
-- [ ] Configure Git with GitHub credentials
-- [ ] Push code to GitHub repository (Heroku_Physical_Climate_Unified)
-- [ ] Install and configure Heroku CLI
-- [ ] Create Heroku app
-- [ ] Add JawsDB MySQL add-on
-- [ ] Configure all required environment variables
-- [ ] Deploy to Heroku
-- [ ] Initialize database schema
-- [ ] Verify deployment is successful
+- [x] Configure Git with GitHub credentials
+- [x] Push code to GitHub repository (Heroku_Physical_Climate_Unified)
+- [x] Install and configure Heroku CLI
+- [x] Create Heroku app (climate-risk-unified)
+- [x] Add JawsDB MySQL add-on
+- [x] Configure all required environment variables
+- [x] Deploy to Heroku
+- [x] Fix TypeScript compilation errors
+- [x] Fix static file path for production
+- [x] Verify deployment is successful
+
+
+## Heroku Dashboard Fixes
+- [x] Investigate database error: "Failed query: delete from `geographicRisks` params"
+- [x] Fix database schema to ensure geographicRisks table exists
+- [x] Initialize database schema on Heroku
+- [x] Restore full upload interface (not just "Load 20 Companies")
+- [x] Add URL input option for Excel file upload
+- [x] Ensure dashboard matches Manus version exactly
+- [ ] Deploy fixes to Heroku
+- [ ] Verify dashboard works correctly on Heroku

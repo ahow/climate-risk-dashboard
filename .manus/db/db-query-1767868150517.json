@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as total_processable_assets FROM assets WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND estimatedValueUsd IS NOT NULL AND CAST(estimatedValueUsd AS DECIMAL) > 0",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT COUNT(*) as total_processable_assets FROM assets WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND estimatedValueUsd IS NOT NULL AND CAST(estimatedValueUsd AS DECIMAL) > 0",
+  "rows": [
+    {
+      "total_processable_assets": "2527"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_processable_assets\n2527\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

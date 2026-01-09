@@ -1,0 +1,34 @@
+{
+  "query": "SELECT * FROM uploadedFiles ORDER BY uploadedAt DESC LIMIT 2",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT * FROM uploadedFiles ORDER BY uploadedAt DESC LIMIT 2",
+  "rows": [
+    {
+      "id": "30001",
+      "filename": "ShortCompanyListACWI.xlsx",
+      "originalFilename": "ShortCompanyListACWI.xlsx",
+      "fileType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "fileSize": "95677",
+      "s3Key": "uploads/public/1763385421369-kd42agn-ShortCompanyListACWI.xlsx",
+      "s3Url": "https://d2xsxph8kpxj0f.cloudfront.net/310419663031471125/Rur7xAEUjvByHVg3PaP3cz/uploads/public/1763385421369-kd42agn-ShortCompanyListACWI.xlsx",
+      "uploadedBy": "1",
+      "uploadedAt": "2025-11-17 13:17:01",
+      "description": "Updated company list with SUPPLIERCOSTS column for supply chain risk analysis"
+    },
+    {
+      "id": "1",
+      "filename": "20Companies(2).xlsx",
+      "originalFilename": "20Companies(2).xlsx",
+      "fileType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "fileSize": "14901",
+      "s3Key": "uploads/1/1763335715063-hz14bg-20Companies(2).xlsx",
+      "s3Url": "https://d2xsxph8kpxj0f.cloudfront.net/310419663031471125/Rur7xAEUjvByHVg3PaP3cz/uploads/1/1763335715063-hz14bg-20Companies(2).xlsx",
+      "uploadedBy": "1",
+      "uploadedAt": "2025-11-16 23:28:35",
+      "description": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfilename\toriginalFilename\tfileType\tfileSize\ts3Key\ts3Url\tuploadedBy\tuploadedAt\tdescription\n30001\tShortCompanyListACWI.xlsx\tShortCompanyListACWI.xlsx\tapplication/vnd.openxmlformats-officedocument.spreadsheetml.sheet\t95677\tuploads/public/1763385421369-kd42agn-ShortCompanyListACWI.xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310419663031471125/Rur7xAEUjvByHVg3PaP3cz/uploads/public/1763385421369-kd42agn-ShortCompanyListACWI.xlsx\t1\t2025-11-17 13:17:01\tUpdated company list with SUPPLIERCOSTS column for supply chain risk analysis\n1\t20Companies(2).xlsx\t20Companies(2).xlsx\tapplication/vnd.openxmlformats-officedocument.spreadsheetml.sheet\t14901\tuploads/1/1763335715063-hz14bg-20Companies(2).xlsx\thttps://d2xsxph8kpxj0f.cloudfront.net/310419663031471125/Rur7xAEUjvByHVg3PaP3cz/uploads/1/1763335715063-hz14bg-20Companies(2).xlsx\t1\t2025-11-16 23:28:35\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

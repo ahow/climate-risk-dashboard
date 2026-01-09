@@ -1,0 +1,130 @@
+{
+  "query": "SELECT c.id, c.name, c.sector, c.supplierCosts FROM companies c WHERE c.id NOT IN (SELECT DISTINCT companyId FROM supplyChainRisks WHERE expectedAnnualLoss IS NOT NULL AND expectedAnnualLoss != '' AND expectedAnnualLoss != '0') LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT c.id, c.name, c.sector, c.supplierCosts FROM companies c WHERE c.id NOT IN (SELECT DISTINCT companyId FROM supplyChainRisks WHERE expectedAnnualLoss IS NOT NULL AND expectedAnnualLoss != '' AND expectedAnnualLoss != '0') LIMIT 20",
+  "rows": [
+    {
+      "id": "60001",
+      "name": "CSX",
+      "sector": "Industrials",
+      "supplierCosts": "8518409.989517761"
+    },
+    {
+      "id": "60002",
+      "name": "COTERRA ENERGY",
+      "sector": "Energy",
+      "supplierCosts": "4117989.9811809952"
+    },
+    {
+      "id": "60003",
+      "name": "MAGNA INTL.",
+      "sector": "Consumer Discretion",
+      "supplierCosts": "31589407.456147317"
+    },
+    {
+      "id": "60004",
+      "name": "J M SMUCKER",
+      "sector": "Consumer Staples",
+      "supplierCosts": "6606698.090321525"
+    },
+    {
+      "id": "60005",
+      "name": "SOUTHERN",
+      "sector": "Utilities",
+      "supplierCosts": "16658409.96250165"
+    },
+    {
+      "id": "60006",
+      "name": "S&P GLOBAL",
+      "sector": "Financials",
+      "supplierCosts": "4325528.259470576"
+    },
+    {
+      "id": "60007",
+      "name": "MARTIN MRTA.MATS.",
+      "sector": "Industrials",
+      "supplierCosts": "4882176.983275277"
+    },
+    {
+      "id": "60008",
+      "name": "DARDEN RESTAURANTS",
+      "sector": "Consumer Discretion",
+      "supplierCosts": "6891551.6762956465"
+    },
+    {
+      "id": "60009",
+      "name": "BCE",
+      "sector": "Telecommunications",
+      "supplierCosts": "8483119.539195314"
+    },
+    {
+      "id": "60010",
+      "name": "STRYKER",
+      "sector": "Health Care",
+      "supplierCosts": "10468254.674999917"
+    },
+    {
+      "id": "60011",
+      "name": "AMPHENOL 'A'",
+      "sector": "Technology",
+      "supplierCosts": "10903257.566521825"
+    },
+    {
+      "id": "60012",
+      "name": "FACTSET RESEARCH SYS.",
+      "sector": "Financials",
+      "supplierCosts": "706840.2720558342"
+    },
+    {
+      "id": "60013",
+      "name": "AFLAC",
+      "sector": "Financials",
+      "supplierCosts": "13468841.462313185"
+    },
+    {
+      "id": "60014",
+      "name": "CELESTICA SBVTG.SHS.",
+      "sector": "Technology",
+      "supplierCosts": "6594202.106142969"
+    },
+    {
+      "id": "60015",
+      "name": "DOMINION ENERGY",
+      "sector": "Utilities",
+      "supplierCosts": "9013020.118538069"
+    },
+    {
+      "id": "60016",
+      "name": "POWER ASSETS HOLDINGS",
+      "sector": "Utilities",
+      "supplierCosts": "73746.68864816954"
+    },
+    {
+      "id": "60017",
+      "name": "BNP PARIBAS",
+      "sector": "Financials",
+      "supplierCosts": "69560630.52087784"
+    },
+    {
+      "id": "60018",
+      "name": "ABB LTD N",
+      "sector": "Industrials",
+      "supplierCosts": "23069081.732552443"
+    },
+    {
+      "id": "60019",
+      "name": "AXA",
+      "sector": "Financials",
+      "supplierCosts": "61085178.9457237"
+    },
+    {
+      "id": "60020",
+      "name": "OTSUKA",
+      "sector": "Technology",
+      "supplierCosts": "2958535.453685499"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tsector\tsupplierCosts\n60001\tCSX\tIndustrials\t8518409.989517761\n60002\tCOTERRA ENERGY\tEnergy\t4117989.9811809952\n60003\tMAGNA INTL.\tConsumer Discretion\t31589407.456147317\n60004\tJ M SMUCKER\tConsumer Staples\t6606698.090321525\n60005\tSOUTHERN\tUtilities\t16658409.96250165\n60006\tS&P GLOBAL\tFinancials\t4325528.259470576\n60007\tMARTIN MRTA.MATS.\tIndustrials\t4882176.983275277\n60008\tDARDEN RESTAURANTS\tConsumer Discretion\t6891551.6762956465\n60009\tBCE\tTelecommunications\t8483119.539195314\n60010\tSTRYKER\tHealth Care\t10468254.674999917\n60011\tAMPHENOL 'A'\tTechnology\t10903257.566521825\n60012\tFACTSET RESEARCH SYS.\tFinancials\t706840.2720558342\n60013\tAFLAC\tFinancials\t13468841.462313185\n60014\tCELESTICA SBVTG.SHS.\tTechnology\t6594202.106142969\n60015\tDOMINION ENERGY\tUtilities\t9013020.118538069\n60016\tPOWER ASSETS HOLDINGS\tUtilities\t73746.68864816954\n60017\tBNP PARIBAS\tFinancials\t69560630.52087784\n60018\tABB LTD N\tIndustrials\t23069081.732552443\n60019\tAXA\tFinancials\t61085178.9457237\n60020\tOTSUKA\tTechnology\t2958535.453685499\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}

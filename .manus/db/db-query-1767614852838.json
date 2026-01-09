@@ -1,0 +1,70 @@
+{
+  "query": "SELECT c.name, c.sector, scr.sectorCode, scr.expectedAnnualLoss FROM supplyChainRisks scr JOIN companies c ON scr.companyId = c.id WHERE scr.expectedAnnualLoss IS NOT NULL AND scr.expectedAnnualLoss != '' AND scr.expectedAnnualLoss != '0' LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT c.name, c.sector, scr.sectorCode, scr.expectedAnnualLoss FROM supplyChainRisks scr JOIN companies c ON scr.companyId = c.id WHERE scr.expectedAnnualLoss IS NOT NULL AND scr.expectedAnnualLoss != '' AND scr.expectedAnnualLoss != '0' LIMIT 10",
+  "rows": [
+    {
+      "name": "CSX",
+      "sector": "Industrials",
+      "sectorCode": "C28",
+      "expectedAnnualLoss": "68181.35355610016"
+    },
+    {
+      "name": "COTERRA ENERGY",
+      "sector": "Energy",
+      "sectorCode": "B06",
+      "expectedAnnualLoss": "32960.39180937269"
+    },
+    {
+      "name": "MAGNA INTL.",
+      "sector": "Consumer Discretion",
+      "sectorCode": "G",
+      "expectedAnnualLoss": "153735.11628658362"
+    },
+    {
+      "name": "J M SMUCKER",
+      "sector": "Consumer Staples",
+      "sectorCode": "C10T12",
+      "expectedAnnualLoss": "52880.01151493349"
+    },
+    {
+      "name": "MARTIN MRTA.MATS.",
+      "sector": "Industrials",
+      "sectorCode": "C28",
+      "expectedAnnualLoss": "39076.94457413532"
+    },
+    {
+      "name": "DARDEN RESTAURANTS",
+      "sector": "Consumer Discretion",
+      "sectorCode": "G",
+      "expectedAnnualLoss": "55159.979617070356"
+    },
+    {
+      "name": "BCE",
+      "sector": "Telecommunications",
+      "sectorCode": "J61",
+      "expectedAnnualLoss": "41284.51509075053"
+    },
+    {
+      "name": "ABB LTD N",
+      "sector": "Industrials",
+      "sectorCode": "C28",
+      "expectedAnnualLoss": "73936.78787052944"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "sector": "Consumer Discretion",
+      "sectorCode": "G",
+      "expectedAnnualLoss": "20280.87474765715"
+    },
+    {
+      "name": "ASSOCIATED BRIT.FOODS",
+      "sector": "Consumer Staples",
+      "sectorCode": "C10T12",
+      "expectedAnnualLoss": "101475.25440057703"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tsector\tsectorCode\texpectedAnnualLoss\nCSX\tIndustrials\tC28\t68181.35355610016\nCOTERRA ENERGY\tEnergy\tB06\t32960.39180937269\nMAGNA INTL.\tConsumer Discretion\tG\t153735.11628658362\nJ M SMUCKER\tConsumer Staples\tC10T12\t52880.01151493349\nMARTIN MRTA.MATS.\tIndustrials\tC28\t39076.94457413532\nDARDEN RESTAURANTS\tConsumer Discretion\tG\t55159.979617070356\nBCE\tTelecommunications\tJ61\t41284.51509075053\nABB LTD N\tIndustrials\tC28\t73936.78787052944\nARISTOCRAT LEISURE\tConsumer Discretion\tG\t20280.87474765715\nASSOCIATED BRIT.FOODS\tConsumer Staples\tC10T12\t101475.25440057703\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

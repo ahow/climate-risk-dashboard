@@ -1,0 +1,1490 @@
+{
+  "query": "SELECT c.name, a.id as asset_id, a.address, a.latitude, a.longitude, gr.id as risk_id FROM companies c LEFT JOIN assets a ON c.id = a.companyId LEFT JOIN geographicRisks gr ON a.id = gr.assetId WHERE c.id IN (SELECT id FROM companies LIMIT 10) ORDER BY c.name, a.id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT c.name, a.id as asset_id, a.address, a.latitude, a.longitude, gr.id as risk_id FROM companies c LEFT JOIN assets a ON c.id = a.companyId LEFT JOIN geographicRisks gr ON a.id = gr.assetId WHERE c.id IN (SELECT id FROM companies LIMIT 10) ORDER BY c.name, a.id",
+  "rows": [
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210353",
+      "address": "Building A, Pinnacle Office Park, 85 Epping Rd, North Ryde, NSW 2113",
+      "latitude": "-33.7979",
+      "longitude": "151.1215",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210354",
+      "address": "3571 Volunteer Blvd, Building 2, Henderson, NV",
+      "latitude": "35.9444",
+      "longitude": "-115.0739",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210355",
+      "address": "15336 East Admiral Place, Tulsa, OK 74116",
+      "latitude": "36.15398",
+      "longitude": "-95.99277",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210356",
+      "address": "325 7th Street NW, Washington, DC 20004",
+      "latitude": "38.8976",
+      "longitude": "-77.0268",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210357",
+      "address": "11801 Domain Boulevard, Austin, TX 78758",
+      "latitude": "30.3928",
+      "longitude": "-97.7288",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210358",
+      "address": "3401 Mallory Lane, Franklin, TN",
+      "latitude": "35.9255",
+      "longitude": "-86.8686",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210359",
+      "address": "10 Habarzel St. Building C, 16th floor, Tel Aviv",
+      "latitude": "32.1097",
+      "longitude": "34.8403",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210360",
+      "address": "98 BC Grand, Kyiv, 03150",
+      "latitude": "50.4501",
+      "longitude": "30.5234",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210361",
+      "address": "1A Ciuflea St. Chisinau, 2001",
+      "latitude": "47.0119",
+      "longitude": "28.844",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210362",
+      "address": "80 Strand, London",
+      "latitude": "51.5098",
+      "longitude": "-0.1213",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ARISTOCRAT LEISURE",
+      "asset_id": "210363",
+      "address": "2 Drake Avenue, Macquarie Park, NSW 2113",
+      "latitude": "-33.7899",
+      "longitude": "151.1215",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211327",
+      "address": "NULL",
+      "latitude": "45.459099",
+      "longitude": "-73.5731712",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211328",
+      "address": "NULL",
+      "latitude": "43.6534817",
+      "longitude": "-79.3839347",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211329",
+      "address": "NULL",
+      "latitude": "43.6605641",
+      "longitude": "-79.4357637",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211330",
+      "address": "NULL",
+      "latitude": "49.2845459",
+      "longitude": "-123.1116636",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211331",
+      "address": "NULL",
+      "latitude": "45.5031824",
+      "longitude": "-73.5698065",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211332",
+      "address": "NULL",
+      "latitude": "43.6534817",
+      "longitude": "-79.3839347",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211333",
+      "address": "NULL",
+      "latitude": "51.0456064",
+      "longitude": "-114.057541",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211334",
+      "address": "NULL",
+      "latitude": "49.2608724",
+      "longitude": "-123.113952",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211335",
+      "address": "NULL",
+      "latitude": "44.648618",
+      "longitude": "-63.5859487",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BCE",
+      "asset_id": "211336",
+      "address": "NULL",
+      "latitude": "49.8955367",
+      "longitude": "-97.1384584",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212484",
+      "address": "40 King Street West, Scotia Plaza, P.O. Box 4085, Station A",
+      "latitude": "43.6532",
+      "longitude": "-79.3832",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212485",
+      "address": "650 West Georgia Street, 18th Floor",
+      "latitude": "49.2608724",
+      "longitude": "-123.113952",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212486",
+      "address": "1709 Hollis Street, 4th floor",
+      "latitude": "44.6488",
+      "longitude": "-63.5752",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212487",
+      "address": "1002 Sherbrooke Street West, 8th Floor, Scotia Tower",
+      "latitude": "45.5031824",
+      "longitude": "-73.5698065",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212488",
+      "address": "1700, 225-6th Avenue South West, Brookfield Place",
+      "latitude": "51.0456064",
+      "longitude": "-114.057541",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212489",
+      "address": "711 Louisiana Street, Suite 1400",
+      "latitude": "29.7589382",
+      "longitude": "-95.3676974",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212490",
+      "address": "415 Mission Street, Salesforce Tower",
+      "latitude": "37.7792588",
+      "longitude": "-122.4193286",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212491",
+      "address": "250 Vesey Street, 23rd Floor",
+      "latitude": "40.7127281",
+      "longitude": "-74.0060152",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212492",
+      "address": "2601 Victory Ave",
+      "latitude": "32.7904492",
+      "longitude": "-96.8118154",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212493",
+      "address": "660 Fifth Ave",
+      "latitude": "42.7145238",
+      "longitude": "-73.7082177",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212494",
+      "address": "201 Bishopsgate",
+      "latitude": "51.5074",
+      "longitude": "-0.1278",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212495",
+      "address": "39/F, Two International Finance Centre, 8 Finance Street, Central",
+      "latitude": "22.3193",
+      "longitude": "114.1694",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212496",
+      "address": "10 Collyer Quay, #24-01 Ocean Financial Centre",
+      "latitude": "1.2899175",
+      "longitude": "103.8519072",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212497",
+      "address": "Level 35, 120 Collins Street",
+      "latitude": "-37.8142454",
+      "longitude": "144.9631732",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212498",
+      "address": "100-6223, Marunouchi Trust Tower Main, 1-8-3 Marunouchi, Chiyoda-ku",
+      "latitude": "35.6762",
+      "longitude": "139.6503",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212499",
+      "address": "12F, Seoul Finance Center, 136 Sejong-daero, Jung-gu",
+      "latitude": "37.5666791",
+      "longitude": "126.9782914",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212500",
+      "address": "Unit 2001, North Tower, Beijing Kerry Centre, 1 Guanghua Road, Chaoyang District",
+      "latitude": "40.190632",
+      "longitude": "116.412144",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212501",
+      "address": "Unit 2001, North Tower, Beijing Kerry Centre, 1 Guanghua Road, Chaoyang District",
+      "latitude": "31.2312707",
+      "longitude": "121.4700152",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212502",
+      "address": "11th Floor, The Capital, C-70, G Block, Bandra Kurla Complex, Bandra (East)",
+      "latitude": "19.054999",
+      "longitude": "72.8692035",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212503",
+      "address": "Blvd. Manuel Ãvila Camacho 36, Lomas de Chapultepec",
+      "latitude": "19.4311416",
+      "longitude": "-99.2076382",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212504",
+      "address": "Av. Apoquindo 3000, Las Condes",
+      "latitude": "-33.416848",
+      "longitude": "-70.5988997",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212505",
+      "address": "Av. Dionisio Derteano 184, San Isidro",
+      "latitude": "-12.0966597",
+      "longitude": "-77.0219913",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212506",
+      "address": "Carrera 7 # 71-21, Torre B, Piso 12",
+      "latitude": "4.6533817",
+      "longitude": "-74.0836331",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212507",
+      "address": "Av. Brigadeiro Faria Lima, 3400 - 10Âº andar, Itaim Bibi",
+      "latitude": "-23.5506507",
+      "longitude": "-46.6333824",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212508",
+      "address": "Av. Leandro N. Alem 855",
+      "latitude": "-34.5976209",
+      "longitude": "-58.3709873",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212509",
+      "address": "Scotia House, 404 East Bay Street",
+      "latitude": "25.0782266",
+      "longitude": "-77.3383438",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212510",
+      "address": "18 Forum Lane, Camana Bay",
+      "latitude": "19.3298472",
+      "longitude": "-81.1712216",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212511",
+      "address": "Torre Scotiabank, Calle 50",
+      "latitude": "8.9833333",
+      "longitude": "-79.5166667",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212512",
+      "address": "Avenida EscazÃº, Edificio 202, Piso 4",
+      "latitude": "9.9333333",
+      "longitude": "-84.0833333",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212513",
+      "address": "Plaza Independencia 811",
+      "latitude": "-34.9065677",
+      "longitude": "-56.195576",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212514",
+      "address": "Av. Winston Churchill esq. Av. 27 de Febrero",
+      "latitude": "18.4791857",
+      "longitude": "-69.9070823",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212515",
+      "address": "Scotia Centre, 56-58 Richmond Street",
+      "latitude": "10.6666667",
+      "longitude": "-61.5166667",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212516",
+      "address": "Scotia Centre, Cheapside",
+      "latitude": "13.1066667",
+      "longitude": "-59.6166667",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212517",
+      "address": "Scotia Centre, Corner of Duke and Port Royal Streets",
+      "latitude": "17.9791667",
+      "longitude": "-76.7916667",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212518",
+      "address": "Kaya Flamboyan 1",
+      "latitude": "12.1061111",
+      "longitude": "-68.9388889",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212519",
+      "address": "270 MuÃ±oz Rivera Ave",
+      "latitude": "18.4663333",
+      "longitude": "-66.105721",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212520",
+      "address": "104 Carmichael Street",
+      "latitude": "6.804519",
+      "longitude": "-58.155209",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212521",
+      "address": "10 Cor. Albert & Regent Streets",
+      "latitude": "17.499502",
+      "longitude": "-88.19756",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212522",
+      "address": "Corner of Market and Church Streets",
+      "latitude": "17.1213889",
+      "longitude": "-61.8458333",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212523",
+      "address": "William Peter Boulevard",
+      "latitude": "14.0166667",
+      "longitude": "-60.9833333",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212524",
+      "address": "Halifax Street",
+      "latitude": "13.15",
+      "longitude": "-61.2166667",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212525",
+      "address": "Fort Street",
+      "latitude": "17.2933333",
+      "longitude": "-62.735",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212526",
+      "address": "28 Hillsborough Street",
+      "latitude": "15.3033333",
+      "longitude": "-61.3888889",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212527",
+      "address": "Church Street",
+      "latitude": "12.05",
+      "longitude": "-61.75",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212528",
+      "address": "Wickhams Cay 1",
+      "latitude": "18.4216667",
+      "longitude": "-64.6180556",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212529",
+      "address": "Walter Nisbeth Road 39",
+      "latitude": "18.025895",
+      "longitude": "-63.0447007",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212530",
+      "address": "The Valley",
+      "latitude": "18.2179997",
+      "longitude": "-63.0400727",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212531",
+      "address": "Leeward Highway",
+      "latitude": "21.7778074",
+      "longitude": "-72.2157303",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212532",
+      "address": "40 Temperance Street",
+      "latitude": "43.6532",
+      "longitude": "-79.3832",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212533",
+      "address": "44 King St West",
+      "latitude": "43.6532",
+      "longitude": "-79.3832",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212534",
+      "address": "333 King St E",
+      "latitude": "43.6532",
+      "longitude": "-79.3832",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "asset_id": "212535",
+      "address": "Iselin, New Jersey",
+      "latitude": "40.5711834",
+      "longitude": "-74.3246656",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210168",
+      "address": "NULL",
+      "latitude": "43.76829",
+      "longitude": "-79.41295",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210169",
+      "address": "NULL",
+      "latitude": "44.06166",
+      "longitude": "-79.42131",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210170",
+      "address": "NULL",
+      "latitude": "43.5345346",
+      "longitude": "-79.7163775",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210171",
+      "address": "NULL",
+      "latitude": "40.5085",
+      "longitude": "-75.6256",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210172",
+      "address": "NULL",
+      "latitude": "42.0835",
+      "longitude": "-71.0185",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210173",
+      "address": "NULL",
+      "latitude": "37.4853",
+      "longitude": "-121.9361",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210174",
+      "address": "NULL",
+      "latitude": "45.0985",
+      "longitude": "-93.4419",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210175",
+      "address": "NULL",
+      "latitude": "45.5545",
+      "longitude": "-122.4696",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210176",
+      "address": "NULL",
+      "latitude": "32.98737",
+      "longitude": "-96.65822",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210177",
+      "address": "NULL",
+      "latitude": "32.3011107",
+      "longitude": "-110.9783763",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210178",
+      "address": "NULL",
+      "latitude": "37.3970717",
+      "longitude": "-121.9088522",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210179",
+      "address": "NULL",
+      "latitude": "37.426051",
+      "longitude": "-121.9752373",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210180",
+      "address": "NULL",
+      "latitude": "34.1033192",
+      "longitude": "-117.575173",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210181",
+      "address": "NULL",
+      "latitude": "25.7871006",
+      "longitude": "-100.1850769",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210182",
+      "address": "NULL",
+      "latitude": "53.2744122",
+      "longitude": "-9.0490601",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210183",
+      "address": "NULL",
+      "latitude": "47.1153753",
+      "longitude": "21.8134302",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210184",
+      "address": "NULL",
+      "latitude": "39.5907339",
+      "longitude": "-0.5532185",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210185",
+      "address": "NULL",
+      "latitude": "31.3869323",
+      "longitude": "120.9764683",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210186",
+      "address": "NULL",
+      "latitude": "31.2312707",
+      "longitude": "121.4700152",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210187",
+      "address": "NULL",
+      "latitude": "31.311123",
+      "longitude": "120.6212881",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210188",
+      "address": "NULL",
+      "latitude": "31.311123",
+      "longitude": "120.6212881",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210189",
+      "address": "NULL",
+      "latitude": "24.5438732",
+      "longitude": "118.0768065",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210190",
+      "address": "NULL",
+      "latitude": "22.3815527",
+      "longitude": "114.1904697",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210191",
+      "address": "NULL",
+      "latitude": "13.0836939",
+      "longitude": "80.270186",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210192",
+      "address": "NULL",
+      "latitude": "-6.9218457",
+      "longitude": "107.6070833",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210193",
+      "address": "NULL",
+      "latitude": "1.1030815",
+      "longitude": "104.0383696",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210194",
+      "address": "NULL",
+      "latitude": "35.6791305",
+      "longitude": "139.3968674",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210195",
+      "address": "NULL",
+      "latitude": "38.4373841",
+      "longitude": "140.8861302",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210196",
+      "address": "NULL",
+      "latitude": "14.5567949",
+      "longitude": "121.0211226",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210197",
+      "address": "NULL",
+      "latitude": "36.7899498",
+      "longitude": "127.0026769",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210198",
+      "address": "NULL",
+      "latitude": "37.5831776",
+      "longitude": "126.7877076",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210199",
+      "address": "NULL",
+      "latitude": "16.5001958",
+      "longitude": "105.7155946",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210200",
+      "address": "NULL",
+      "latitude": "1.4581986",
+      "longitude": "103.7649059",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210201",
+      "address": "NULL",
+      "latitude": "1.4581986",
+      "longitude": "103.7649059",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210202",
+      "address": "NULL",
+      "latitude": "5.3707128",
+      "longitude": "100.6172071",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210203",
+      "address": "NULL",
+      "latitude": "5.3707128",
+      "longitude": "100.6172071",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210204",
+      "address": "NULL",
+      "latitude": "5.2948137",
+      "longitude": "100.2595968",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210205",
+      "address": "NULL",
+      "latitude": "5.4065013",
+      "longitude": "100.2559077",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210206",
+      "address": "NULL",
+      "latitude": "1.357107",
+      "longitude": "103.8194992",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210207",
+      "address": "NULL",
+      "latitude": "1.3292032",
+      "longitude": "103.6958522",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210208",
+      "address": "NULL",
+      "latitude": "1.357107",
+      "longitude": "103.8194992",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "CELESTICA SBVTG.SHS.",
+      "asset_id": "210209",
+      "address": "NULL",
+      "latitude": "13.1048394",
+      "longitude": "100.8989225",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211558",
+      "address": "NULL",
+      "latitude": "49.2858",
+      "longitude": "-123.1197",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211559",
+      "address": "NULL",
+      "latitude": "-31.9482",
+      "longitude": "115.8427",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211560",
+      "address": "NULL",
+      "latitude": "41.085",
+      "longitude": "40.3175",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211561",
+      "address": "NULL",
+      "latitude": "37.4",
+      "longitude": "-6.05",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211562",
+      "address": "NULL",
+      "latitude": "9.0833",
+      "longitude": "-80.75",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211563",
+      "address": "NULL",
+      "latitude": "-12.2333",
+      "longitude": "26.05",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211564",
+      "address": "NULL",
+      "latitude": "-33.5833",
+      "longitude": "120.05",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211565",
+      "address": "NULL",
+      "latitude": "-12.2",
+      "longitude": "26.4",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211566",
+      "address": "NULL",
+      "latitude": "-12.2333",
+      "longitude": "26.05",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211567",
+      "address": "NULL",
+      "latitude": "19.75",
+      "longitude": "-14.3833",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211568",
+      "address": "NULL",
+      "latitude": "-6.3",
+      "longitude": "-79.1",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211569",
+      "address": "NULL",
+      "latitude": "-14.25",
+      "longitude": "-71.75",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "asset_id": "211570",
+      "address": "NULL",
+      "latitude": "63.6667",
+      "longitude": "25.9833",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211573",
+      "address": "NULL",
+      "latitude": "47.5605",
+      "longitude": "-52.7128",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211574",
+      "address": "NULL",
+      "latitude": "42.4806",
+      "longitude": "-83.4755",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211575",
+      "address": "NULL",
+      "latitude": "32.2535",
+      "longitude": "-110.9118",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211576",
+      "address": "NULL",
+      "latitude": "49.1639",
+      "longitude": "-122.8445",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211577",
+      "address": "NULL",
+      "latitude": "51.0461",
+      "longitude": "-114.0655",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211578",
+      "address": "NULL",
+      "latitude": "41.7066",
+      "longitude": "-73.9284",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211579",
+      "address": "NULL",
+      "latitude": "47.5605",
+      "longitude": "-52.7128",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211580",
+      "address": "NULL",
+      "latitude": "46.2389",
+      "longitude": "-63.1292",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211581",
+      "address": "NULL",
+      "latitude": "19.293",
+      "longitude": "-81.3668",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211582",
+      "address": "NULL",
+      "latitude": "21.8041",
+      "longitude": "-72.3058",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "FORTIS",
+      "asset_id": "211583",
+      "address": "NULL",
+      "latitude": "17.4995",
+      "longitude": "-88.1976",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211889",
+      "address": "NULL",
+      "latitude": "22.350627",
+      "longitude": "114.1849161",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211890",
+      "address": "NULL",
+      "latitude": "38.9171604",
+      "longitude": "-77.0278211",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211891",
+      "address": "NULL",
+      "latitude": "45.2429147",
+      "longitude": "-75.9890284",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211892",
+      "address": "NULL",
+      "latitude": "21.8621605",
+      "longitude": "-102.3306563",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211893",
+      "address": "NULL",
+      "latitude": "-10.3333333",
+      "longitude": "-53.2",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211894",
+      "address": "NULL",
+      "latitude": "-34.6095579",
+      "longitude": "-58.3887904",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211895",
+      "address": "NULL",
+      "latitude": "-33.4377756",
+      "longitude": "-70.6504502",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211896",
+      "address": "NULL",
+      "latitude": "52.4131625",
+      "longitude": "13.3535251",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211897",
+      "address": "NULL",
+      "latitude": "51.5398163",
+      "longitude": "-0.2341549",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211898",
+      "address": "NULL",
+      "latitude": "48.8588897",
+      "longitude": "2.320041",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211899",
+      "address": "NULL",
+      "latitude": "16.4418901",
+      "longitude": "80.5866942",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211900",
+      "address": "NULL",
+      "latitude": "40.190632",
+      "longitude": "116.412144",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211901",
+      "address": "NULL",
+      "latitude": "35.6276333",
+      "longitude": "139.7506382",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211902",
+      "address": "NULL",
+      "latitude": "37.5666791",
+      "longitude": "126.9782914",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211903",
+      "address": "NULL",
+      "latitude": "1.357107",
+      "longitude": "103.8194992",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211904",
+      "address": "NULL",
+      "latitude": "-35.2803245",
+      "longitude": "149.1269645",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211905",
+      "address": "NULL",
+      "latitude": "-25.7179689",
+      "longitude": "28.2013662",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211906",
+      "address": "NULL",
+      "latitude": "30.023829",
+      "longitude": "31.7549459",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "ORIENT OVERSEAS (INTL.)",
+      "asset_id": "211907",
+      "address": "NULL",
+      "latitude": "24.4538352",
+      "longitude": "54.3774014",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212035",
+      "address": "NULL",
+      "latitude": "-27.6533",
+      "longitude": "153.1167",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212036",
+      "address": "NULL",
+      "latitude": "-32.0833",
+      "longitude": "115.9167",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212037",
+      "address": "NULL",
+      "latitude": "-12.4634",
+      "longitude": "130.8456",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212038",
+      "address": "NULL",
+      "latitude": "-27.4333",
+      "longitude": "153.0833",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212039",
+      "address": "NULL",
+      "latitude": "-42.8821",
+      "longitude": "147.3272",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212040",
+      "address": "NULL",
+      "latitude": "-33.7833",
+      "longitude": "150.8833",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212041",
+      "address": "NULL",
+      "latitude": "-33.8833",
+      "longitude": "150.7833",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212042",
+      "address": "NULL",
+      "latitude": "-34.8333",
+      "longitude": "138.6",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212043",
+      "address": "NULL",
+      "latitude": "-34.845",
+      "longitude": "138.5",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212044",
+      "address": "NULL",
+      "latitude": "-37.6",
+      "longitude": "144.9167",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212045",
+      "address": "NULL",
+      "latitude": "-31.9",
+      "longitude": "116",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212046",
+      "address": "NULL",
+      "latitude": "-19.2587",
+      "longitude": "146.8169",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212047",
+      "address": "NULL",
+      "latitude": "-37.8333",
+      "longitude": "144.7333",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "SIGMA HEALTHCARE",
+      "asset_id": "212048",
+      "address": "NULL",
+      "latitude": "-37.8136",
+      "longitude": "144.9631",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESFARMERS",
+      "asset_id": "212147",
+      "address": "NULL",
+      "latitude": "-31.9558967",
+      "longitude": "115.8605784",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESFARMERS",
+      "asset_id": "212148",
+      "address": "NULL",
+      "latitude": "-37.8276223",
+      "longitude": "145.0080912",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESFARMERS",
+      "asset_id": "212149",
+      "address": "NULL",
+      "latitude": "-36.852095",
+      "longitude": "174.7631803",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESFARMERS",
+      "asset_id": "212150",
+      "address": "NULL",
+      "latitude": "-37.9194942",
+      "longitude": "145.1593103",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESFARMERS",
+      "asset_id": "212151",
+      "address": "NULL",
+      "latitude": "-37.9069247",
+      "longitude": "145.0618208",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212152",
+      "address": "NULL",
+      "latitude": "-33.8659215",
+      "longitude": "151.20406",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212153",
+      "address": "NULL",
+      "latitude": "-36.852095",
+      "longitude": "174.7631803",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212154",
+      "address": "NULL",
+      "latitude": "51.5161482",
+      "longitude": "-0.0964384",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212155",
+      "address": "NULL",
+      "latitude": "40.7127281",
+      "longitude": "-74.0060152",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212156",
+      "address": "NULL",
+      "latitude": "1.357107",
+      "longitude": "103.8194992",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212157",
+      "address": "NULL",
+      "latitude": "-18.1415884",
+      "longitude": "178.4421662",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212158",
+      "address": "NULL",
+      "latitude": "-9.4743301",
+      "longitude": "147.1599504",
+      "risk_id": "NULL"
+    },
+    {
+      "name": "WESTPAC BANKING",
+      "asset_id": "212159",
+      "address": "NULL",
+      "latitude": "50.1106444",
+      "longitude": "8.6820917",
+      "risk_id": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tasset_id\taddress\tlatitude\tlongitude\trisk_id\nARISTOCRAT LEISURE\t210353\tBuilding A, Pinnacle Office Park, 85 Epping Rd, North Ryde, NSW 2113\t-33.7979\t151.1215\tNULL\nARISTOCRAT LEISURE\t210354\t3571 Volunteer Blvd, Building 2, Henderson, NV\t35.9444\t-115.0739\tNULL\nARISTOCRAT LEISURE\t210355\t15336 East Admiral Place, Tulsa, OK 74116\t36.15398\t-95.99277\tNULL\nARISTOCRAT LEISURE\t210356\t325 7th Street NW, Washington, DC 20004\t38.8976\t-77.0268\tNULL\nARISTOCRAT LEISURE\t210357\t11801 Domain Boulevard, Austin, TX 78758\t30.3928\t-97.7288\tNULL\nARISTOCRAT LEISURE\t210358\t3401 Mallory Lane, Franklin, TN\t35.9255\t-86.8686\tNULL\nARISTOCRAT LEISURE\t210359\t10 Habarzel St. Building C, 16th floor, Tel Aviv\t32.1097\t34.8403\tNULL\nARISTOCRAT LEISURE\t210360\t98 BC Grand, Kyiv, 03150\t50.4501\t30.5234\tNULL\nARISTOCRAT LEISURE\t210361\t1A Ciuflea St. Chisinau, 2001\t47.0119\t28.844\tNULL\nARISTOCRAT LEISURE\t210362\t80 Strand, London\t51.5098\t-0.1213\tNULL\nARISTOCRAT LEISURE\t210363\t2 Drake Avenue, Macquarie Park, NSW 2113\t-33.7899\t151.1215\tNULL\nBCE\t211327\tNULL\t45.459099\t-73.5731712\tNULL\nBCE\t211328\tNULL\t43.6534817\t-79.3839347\tNULL\nBCE\t211329\tNULL\t43.6605641\t-79.4357637\tNULL\nBCE\t211330\tNULL\t49.2845459\t-123.1116636\tNULL\nBCE\t211331\tNULL\t45.5031824\t-73.5698065\tNULL\nBCE\t211332\tNULL\t43.6534817\t-79.3839347\tNULL\nBCE\t211333\tNULL\t51.0456064\t-114.057541\tNULL\nBCE\t211334\tNULL\t49.2608724\t-123.113952\tNULL\nBCE\t211335\tNULL\t44.648618\t-63.5859487\tNULL\nBCE\t211336\tNULL\t49.8955367\t-97.1384584\tNULL\nBK.OF NOVA SCOTIA\t212484\t40 King Street West, Scotia Plaza, P.O. Box 4085, Station A\t43.6532\t-79.3832\tNULL\nBK.OF NOVA SCOTIA\t212485\t650 West Georgia Street, 18th Floor\t49.2608724\t-123.113952\tNULL\nBK.OF NOVA SCOTIA\t212486\t1709 Hollis Street, 4th floor\t44.6488\t-63.5752\tNULL\nBK.OF NOVA SCOTIA\t212487\t1002 Sherbrooke Street West, 8th Floor, Scotia Tower\t45.5031824\t-73.5698065\tNULL\nBK.OF NOVA SCOTIA\t212488\t1700, 225-6th Avenue South West, Brookfield Place\t51.0456064\t-114.057541\tNULL\nBK.OF NOVA SCOTIA\t212489\t711 Louisiana Street, Suite 1400\t29.7589382\t-95.3676974\tNULL\nBK.OF NOVA SCOTIA\t212490\t415 Mission Street, Salesforce Tower\t37.7792588\t-122.4193286\tNULL\nBK.OF NOVA SCOTIA\t212491\t250 Vesey Street, 23rd Floor\t40.7127281\t-74.0060152\tNULL\nBK.OF NOVA SCOTIA\t212492\t2601 Victory Ave\t32.7904492\t-96.8118154\tNULL\nBK.OF NOVA SCOTIA\t212493\t660 Fifth Ave\t42.7145238\t-73.7082177\tNULL\nBK.OF NOVA SCOTIA\t212494\t201 Bishopsgate\t51.5074\t-0.1278\tNULL\nBK.OF NOVA SCOTIA\t212495\t39/F, Two International Finance Centre, 8 Finance Street, Central\t22.3193\t114.1694\tNULL\nBK.OF NOVA SCOTIA\t212496\t10 Collyer Quay, #24-01 Ocean Financial Centre\t1.2899175\t103.8519072\tNULL\nBK.OF NOVA SCOTIA\t212497\tLevel 35, 120 Collins Street\t-37.8142454\t144.9631732\tNULL\nBK.OF NOVA SCOTIA\t212498\t100-6223, Marunouchi Trust Tower Main, 1-8-3 Marunouchi, Chiyoda-ku\t35.6762\t139.6503\tNULL\nBK.OF NOVA SCOTIA\t212499\t12F, Seoul Finance Center, 136 Sejong-daero, Jung-gu\t37.5666791\t126.9782914\tNULL\nBK.OF NOVA SCOTIA\t212500\tUnit 2001, North Tower, Beijing Kerry Centre, 1 Guanghua Road, Chaoyang District\t40.190632\t116.412144\tNULL\nBK.OF NOVA SCOTIA\t212501\tUnit 2001, North Tower, Beijing Kerry Centre, 1 Guanghua Road, Chaoyang District\t31.2312707\t121.4700152\tNULL\nBK.OF NOVA SCOTIA\t212502\t11th Floor, The Capital, C-70, G Block, Bandra Kurla Complex, Bandra (East)\t19.054999\t72.8692035\tNULL\nBK.OF NOVA SCOTIA\t212503\tBlvd. Manuel Ãvila Camacho 36, Lomas de Chapultepec\t19.4311416\t-99.2076382\tNULL\nBK.OF NOVA SCOTIA\t212504\tAv. Apoquindo 3000, Las Condes\t-33.416848\t-70.5988997\tNULL\nBK.OF NOVA SCOTIA\t212505\tAv. Dionisio Derteano 184, San Isidro\t-12.0966597\t-77.0219913\tNULL\nBK.OF NOVA SCOTIA\t212506\tCarrera 7 # 71-21, Torre B, Piso 12\t4.6533817\t-74.0836331\tNULL\nBK.OF NOVA SCOTIA\t212507\tAv. Brigadeiro Faria Lima, 3400 - 10Âº andar, Itaim Bibi\t-23.5506507\t-46.6333824\tNULL\nBK.OF NOVA SCOTIA\t212508\tAv. Leandro N. Alem 855\t-34.5976209\t-58.3709873\tNULL\nBK.OF NOVA SCOTIA\t212509\tScotia House, 404 East Bay Street\t25.0782266\t-77.3383438\tNULL\nBK.OF NOVA SCOTIA\t212510\t18 Forum Lane, Camana Bay\t19.3298472\t-81.1712216\tNULL\nBK.OF NOVA SCOTIA\t212511\tTorre Scotiabank, Calle 50\t8.9833333\t-79.5166667\tNULL\nBK.OF NOVA SCOTIA\t212512\tAvenida EscazÃº, Edificio 202, Piso 4\t9.9333333\t-84.0833333\tNULL\nBK.OF NOVA SCOTIA\t212513\tPlaza Independencia 811\t-34.9065677\t-56.195576\tNULL\nBK.OF NOVA SCOTIA\t212514\tAv. Winston Churchill esq. Av. 27 de Febrero\t18.4791857\t-69.9070823\tNULL\nBK.OF NOVA SCOTIA\t212515\tScotia Centre, 56-58 Richmond Street\t10.6666667\t-61.5166667\tNULL\nBK.OF NOVA SCOTIA\t212516\tScotia Centre, Cheapside\t13.1066667\t-59.6166667\tNULL\nBK.OF NOVA SCOTIA\t212517\tScotia Centre, Corner of Duke and Port Royal Streets\t17.9791667\t-76.7916667\tNULL\nBK.OF NOVA SCOTIA\t212518\tKaya Flamboyan 1\t12.1061111\t-68.9388889\tNULL\nBK.OF NOVA SCOTIA\t212519\t270 MuÃ±oz Rivera Ave\t18.4663333\t-66.105721\tNULL\nBK.OF NOVA SCOTIA\t212520\t104 Carmichael Street\t6.804519\t-58.155209\tNULL\nBK.OF NOVA SCOTIA\t212521\t10 Cor. Albert & Regent Streets\t17.499502\t-88.19756\tNULL\nBK.OF NOVA SCOTIA\t212522\tCorner of Market and Church Streets\t17.1213889\t-61.8458333\tNULL\nBK.OF NOVA SCOTIA\t212523\tWilliam Peter Boulevard\t14.0166667\t-60.9833333\tNULL\nBK.OF NOVA SCOTIA\t212524\tHalifax Street\t13.15\t-61.2166667\tNULL\nBK.OF NOVA SCOTIA\t212525\tFort Street\t17.2933333\t-62.735\tNULL\nBK.OF NOVA SCOTIA\t212526\t28 Hillsborough Street\t15.3033333\t-61.3888889\tNULL\nBK.OF NOVA SCOTIA\t212527\tChurch Street\t12.05\t-61.75\tNULL\nBK.OF NOVA SCOTIA\t212528\tWickhams Cay 1\t18.4216667\t-64.6180556\tNULL\nBK.OF NOVA SCOTIA\t212529\tWalter Nisbeth Road 39\t18.025895\t-63.0447007\tNULL\nBK.OF NOVA SCOTIA\t212530\tThe Valley\t18.2179997\t-63.0400727\tNULL\nBK.OF NOVA SCOTIA\t212531\tLeeward Highway\t21.7778074\t-72.2157303\tNULL\nBK.OF NOVA SCOTIA\t212532\t40 Temperance Street\t43.6532\t-79.3832\tNULL\nBK.OF NOVA SCOTIA\t212533\t44 King St West\t43.6532\t-79.3832\tNULL\nBK.OF NOVA SCOTIA\t212534\t333 King St E\t43.6532\t-79.3832\tNULL\nBK.OF NOVA SCOTIA\t212535\tIselin, New Jersey\t40.5711834\t-74.3246656\tNULL\nCELESTICA SBVTG.SHS.\t210168\tNULL\t43.76829\t-79.41295\tNULL\nCELESTICA SBVTG.SHS.\t210169\tNULL\t44.06166\t-79.42131\tNULL\nCELESTICA SBVTG.SHS.\t210170\tNULL\t43.5345346\t-79.7163775\tNULL\nCELESTICA SBVTG.SHS.\t210171\tNULL\t40.5085\t-75.6256\tNULL\nCELESTICA SBVTG.SHS.\t210172\tNULL\t42.0835\t-71.0185\tNULL\nCELESTICA SBVTG.SHS.\t210173\tNULL\t37.4853\t-121.9361\tNULL\nCELESTICA SBVTG.SHS.\t210174\tNULL\t45.0985\t-93.4419\tNULL\nCELESTICA SBVTG.SHS.\t210175\tNULL\t45.5545\t-122.4696\tNULL\nCELESTICA SBVTG.SHS.\t210176\tNULL\t32.98737\t-96.65822\tNULL\nCELESTICA SBVTG.SHS.\t210177\tNULL\t32.3011107\t-110.9783763\tNULL\nCELESTICA SBVTG.SHS.\t210178\tNULL\t37.3970717\t-121.9088522\tNULL\nCELESTICA SBVTG.SHS.\t210179\tNULL\t37.426051\t-121.9752373\tNULL\nCELESTICA SBVTG.SHS.\t210180\tNULL\t34.1033192\t-117.575173\tNULL\nCELESTICA SBVTG.SHS.\t210181\tNULL\t25.7871006\t-100.1850769\tNULL\nCELESTICA SBVTG.SHS.\t210182\tNULL\t53.2744122\t-9.0490601\tNULL\nCELESTICA SBVTG.SHS.\t210183\tNULL\t47.1153753\t21.8134302\tNULL\nCELESTICA SBVTG.SHS.\t210184\tNULL\t39.5907339\t-0.5532185\tNULL\nCELESTICA SBVTG.SHS.\t210185\tNULL\t31.3869323\t120.9764683\tNULL\nCELESTICA SBVTG.SHS.\t210186\tNULL\t31.2312707\t121.4700152\tNULL\nCELESTICA SBVTG.SHS.\t210187\tNULL\t31.311123\t120.6212881\tNULL\nCELESTICA SBVTG.SHS.\t210188\tNULL\t31.311123\t120.6212881\tNULL\nCELESTICA SBVTG.SHS.\t210189\tNULL\t24.5438732\t118.0768065\tNULL\nCELESTICA SBVTG.SHS.\t210190\tNULL\t22.3815527\t114.1904697\tNULL\nCELESTICA SBVTG.SHS.\t210191\tNULL\t13.0836939\t80.270186\tNULL\nCELESTICA SBVTG.SHS.\t210192\tNULL\t-6.9218457\t107.6070833\tNULL\nCELESTICA SBVTG.SHS.\t210193\tNULL\t1.1030815\t104.0383696\tNULL\nCELESTICA SBVTG.SHS.\t210194\tNULL\t35.6791305\t139.3968674\tNULL\nCELESTICA SBVTG.SHS.\t210195\tNULL\t38.4373841\t140.8861302\tNULL\nCELESTICA SBVTG.SHS.\t210196\tNULL\t14.5567949\t121.0211226\tNULL\nCELESTICA SBVTG.SHS.\t210197\tNULL\t36.7899498\t127.0026769\tNULL\nCELESTICA SBVTG.SHS.\t210198\tNULL\t37.5831776\t126.7877076\tNULL\nCELESTICA SBVTG.SHS.\t210199\tNULL\t16.5001958\t105.7155946\tNULL\nCELESTICA SBVTG.SHS.\t210200\tNULL\t1.4581986\t103.7649059\tNULL\nCELESTICA SBVTG.SHS.\t210201\tNULL\t1.4581986\t103.7649059\tNULL\nCELESTICA SBVTG.SHS.\t210202\tNULL\t5.3707128\t100.6172071\tNULL\nCELESTICA SBVTG.SHS.\t210203\tNULL\t5.3707128\t100.6172071\tNULL\nCELESTICA SBVTG.SHS.\t210204\tNULL\t5.2948137\t100.2595968\tNULL\nCELESTICA SBVTG.SHS.\t210205\tNULL\t5.4065013\t100.2559077\tNULL\nCELESTICA SBVTG.SHS.\t210206\tNULL\t1.357107\t103.8194992\tNULL\nCELESTICA SBVTG.SHS.\t210207\tNULL\t1.3292032\t103.6958522\tNULL\nCELESTICA SBVTG.SHS.\t210208\tNULL\t1.357107\t103.8194992\tNULL\nCELESTICA SBVTG.SHS.\t210209\tNULL\t13.1048394\t100.8989225\tNULL\nFIRST QUANTUM MRLS.\t211558\tNULL\t49.2858\t-123.1197\tNULL\nFIRST QUANTUM MRLS.\t211559\tNULL\t-31.9482\t115.8427\tNULL\nFIRST QUANTUM MRLS.\t211560\tNULL\t41.085\t40.3175\tNULL\nFIRST QUANTUM MRLS.\t211561\tNULL\t37.4\t-6.05\tNULL\nFIRST QUANTUM MRLS.\t211562\tNULL\t9.0833\t-80.75\tNULL\nFIRST QUANTUM MRLS.\t211563\tNULL\t-12.2333\t26.05\tNULL\nFIRST QUANTUM MRLS.\t211564\tNULL\t-33.5833\t120.05\tNULL\nFIRST QUANTUM MRLS.\t211565\tNULL\t-12.2\t26.4\tNULL\nFIRST QUANTUM MRLS.\t211566\tNULL\t-12.2333\t26.05\tNULL\nFIRST QUANTUM MRLS.\t211567\tNULL\t19.75\t-14.3833\tNULL\nFIRST QUANTUM MRLS.\t211568\tNULL\t-6.3\t-79.1\tNULL\nFIRST QUANTUM MRLS.\t211569\tNULL\t-14.25\t-71.75\tNULL\nFIRST QUANTUM MRLS.\t211570\tNULL\t63.6667\t25.9833\tNULL\nFORTIS\t211573\tNULL\t47.5605\t-52.7128\tNULL\nFORTIS\t211574\tNULL\t42.4806\t-83.4755\tNULL\nFORTIS\t211575\tNULL\t32.2535\t-110.9118\tNULL\nFORTIS\t211576\tNULL\t49.1639\t-122.8445\tNULL\nFORTIS\t211577\tNULL\t51.0461\t-114.0655\tNULL\nFORTIS\t211578\tNULL\t41.7066\t-73.9284\tNULL\nFORTIS\t211579\tNULL\t47.5605\t-52.7128\tNULL\nFORTIS\t211580\tNULL\t46.2389\t-63.1292\tNULL\nFORTIS\t211581\tNULL\t19.293\t-81.3668\tNULL\nFORTIS\t211582\tNULL\t21.8041\t-72.3058\tNULL\nFORTIS\t211583\tNULL\t17.4995\t-88.1976\tNULL\nORIENT OVERSEAS (INTL.)\t211889\tNULL\t22.350627\t114.1849161\tNULL\nORIENT OVERSEAS (INTL.)\t211890\tNULL\t38.9171604\t-77.0278211\tNULL\nORIENT OVERSEAS (INTL.)\t211891\tNULL\t45.2429147\t-75.9890284\tNULL\nORIENT OVERSEAS (INTL.)\t211892\tNULL\t21.8621605\t-102.3306563\tNULL\nORIENT OVERSEAS (INTL.)\t211893\tNULL\t-10.3333333\t-53.2\tNULL\nORIENT OVERSEAS (INTL.)\t211894\tNULL\t-34.6095579\t-58.3887904\tNULL\nORIENT OVERSEAS (INTL.)\t211895\tNULL\t-33.4377756\t-70.6504502\tNULL\nORIENT OVERSEAS (INTL.)\t211896\tNULL\t52.4131625\t13.3535251\tNULL\nORIENT OVERSEAS (INTL.)\t211897\tNULL\t51.5398163\t-0.2341549\tNULL\nORIENT OVERSEAS (INTL.)\t211898\tNULL\t48.8588897\t2.320041\tNULL\nORIENT OVERSEAS (INTL.)\t211899\tNULL\t16.4418901\t80.5866942\tNULL\nORIENT OVERSEAS (INTL.)\t211900\tNULL\t40.190632\t116.412144\tNULL\nORIENT OVERSEAS (INTL.)\t211901\tNULL\t35.6276333\t139.7506382\tNULL\nORIENT OVERSEAS (INTL.)\t211902\tNULL\t37.5666791\t126.9782914\tNULL\nORIENT OVERSEAS (INTL.)\t211903\tNULL\t1.357107\t103.8194992\tNULL\nORIENT OVERSEAS (INTL.)\t211904\tNULL\t-35.2803245\t149.1269645\tNULL\nORIENT OVERSEAS (INTL.)\t211905\tNULL\t-25.7179689\t28.2013662\tNULL\nORIENT OVERSEAS (INTL.)\t211906\tNULL\t30.023829\t31.7549459\tNULL\nORIENT OVERSEAS (INTL.)\t211907\tNULL\t24.4538352\t54.3774014\tNULL\nSIGMA HEALTHCARE\t212035\tNULL\t-27.6533\t153.1167\tNULL\nSIGMA HEALTHCARE\t212036\tNULL\t-32.0833\t115.9167\tNULL\nSIGMA HEALTHCARE\t212037\tNULL\t-12.4634\t130.8456\tNULL\nSIGMA HEALTHCARE\t212038\tNULL\t-27.4333\t153.0833\tNULL\nSIGMA HEALTHCARE\t212039\tNULL\t-42.8821\t147.3272\tNULL\nSIGMA HEALTHCARE\t212040\tNULL\t-33.7833\t150.8833\tNULL\nSIGMA HEALTHCARE\t212041\tNULL\t-33.8833\t150.7833\tNULL\nSIGMA HEALTHCARE\t212042\tNULL\t-34.8333\t138.6\tNULL\nSIGMA HEALTHCARE\t212043\tNULL\t-34.845\t138.5\tNULL\nSIGMA HEALTHCARE\t212044\tNULL\t-37.6\t144.9167\tNULL\nSIGMA HEALTHCARE\t212045\tNULL\t-31.9\t116\tNULL\nSIGMA HEALTHCARE\t212046\tNULL\t-19.2587\t146.8169\tNULL\nSIGMA HEALTHCARE\t212047\tNULL\t-37.8333\t144.7333\tNULL\nSIGMA HEALTHCARE\t212048\tNULL\t-37.8136\t144.9631\tNULL\nWESFARMERS\t212147\tNULL\t-31.9558967\t115.8605784\tNULL\nWESFARMERS\t212148\tNULL\t-37.8276223\t145.0080912\tNULL\nWESFARMERS\t212149\tNULL\t-36.852095\t174.7631803\tNULL\nWESFARMERS\t212150\tNULL\t-37.9194942\t145.1593103\tNULL\nWESFARMERS\t212151\tNULL\t-37.9069247\t145.0618208\tNULL\nWESTPAC BANKING\t212152\tNULL\t-33.8659215\t151.20406\tNULL\nWESTPAC BANKING\t212153\tNULL\t-36.852095\t174.7631803\tNULL\nWESTPAC BANKING\t212154\tNULL\t51.5161482\t-0.0964384\tNULL\nWESTPAC BANKING\t212155\tNULL\t40.7127281\t-74.0060152\tNULL\nWESTPAC BANKING\t212156\tNULL\t1.357107\t103.8194992\tNULL\nWESTPAC BANKING\t212157\tNULL\t-18.1415884\t178.4421662\tNULL\nWESTPAC BANKING\t212158\tNULL\t-9.4743301\t147.1599504\tNULL\nWESTPAC BANKING\t212159\tNULL\t50.1106444\t8.6820917\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

@@ -310,6 +310,74 @@ export const appRouter = router({
      * Seed companies from the uploaded Excel file
      * Fetches the most recent uploaded Excel file from S3 and processes it
      */
+    /**
+     * Seed companies from a URL to an Excel file
+     */
+    seedCompaniesFromUrl: publicProcedure
+      .input(z.object({ url: z.string().url() }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[seedCompaniesFromUrl] Starting with URL:', input.url);
+          
+          // Clear all existing company data before re-seeding
+          console.log('[seedCompaniesFromUrl] Clearing existing company data...');
+          const database = await getDb();
+          if (database) {
+            const { geographicRisks, riskManagementScores } = await import('../drizzle/schema');
+            await database.delete(geographicRisks);
+            await database.delete(assets);
+            await database.delete(riskManagementScores);
+            const supplyChainRisks = (await import('../drizzle/schema')).supplyChainRisks;
+            await database.delete(supplyChainRisks);
+            await database.delete(companies);
+            console.log('[seedCompaniesFromUrl] Cleared all existing data');
+          }
+          
+          // Fetch file from URL
+          console.log(`[seedCompaniesFromUrl] Fetching from URL: ${input.url}`);
+          const response = await fetch(input.url);
+          if (!response.ok) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to fetch file from URL: ${response.status}` });
+          }
+          
+          const buffer = Buffer.from(await response.arrayBuffer());
+          console.log(`[seedCompaniesFromUrl] Downloaded ${buffer.length} bytes`);
+          
+          // Parse Excel file
+          const XLSX = await import('xlsx');
+          const workbook = XLSX.read(buffer, { type: 'buffer' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const data = XLSX.utils.sheet_to_json(worksheet);
+          console.log(`[seedCompaniesFromUrl] Parsed ${data.length} rows from Excel`);
+          
+          // Transform data to match companies schema
+          const companiesData = data.map((row: any) => ({
+            isin: String(row.ISIN || row.isin || ''),
+            name: String(row.NAME || row.Name || row.name || ''),
+            sector: String(row['LEVEL4 SECTOR NAME'] || row.Sector || row.sector || ''),
+            country: String(row['GEOGRAPHIC DESCR.'] || row.Country || row.country || ''),
+            enterpriseValue: String(row.EV || row['Enterprise Value'] || row.enterpriseValue || row['Enterprise Value (M)'] || '0'),
+            supplierCosts: String(row.SUPPLIERCOSTS || row['Supplier Costs'] || row.supplierCosts || '0'),
+          }));
+          console.log(`[seedCompaniesFromUrl] Transformed ${companiesData.length} companies`);
+          console.log(`[seedCompaniesFromUrl] First company:`, companiesData[0]);
+          
+          await db.bulkInsertCompanies(companiesData);
+          console.log(`[seedCompaniesFromUrl] Successfully inserted ${companiesData.length} companies`);
+          
+          return {
+            success: true,
+            count: companiesData.length,
+            source: 'url',
+            url: input.url,
+          };
+        } catch (error) {
+          console.error('[seedCompaniesFromUrl] Error:', error);
+          throw error;
+        }
+      }),
+
     seedCompanies: publicProcedure.mutation(async () => {
       try {
         console.log('[seedCompanies] Starting...');

@@ -23,6 +23,14 @@ export default function Home() {
     },
   });
 
+  const seedFromUrlMutation = trpc.companies.seedCompaniesFromUrl.useMutation({
+    onSuccess: () => {
+      window.location.reload();
+    },
+  });
+
+  const [excelUrl, setExcelUrl] = useState("");
+
   const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
   
   const fetchAssetsMutation = trpc.companies.fetchAllAssets.useMutation({
@@ -151,37 +159,112 @@ export default function Home() {
   }
 
   if (error) {
-    // If error is about empty companies table, show the seed button
+    // If error is about empty companies table, show the upload interface
     if (error.message.includes('Failed query') || error.message.includes('companies')) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-          <Card className="max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+          <Card className="max-w-2xl w-full">
             <CardHeader>
-              <CardTitle>No Companies Found</CardTitle>
+              <CardTitle>Upload Company Data</CardTitle>
               <CardDescription>
-                The database is empty. Load company data from your uploaded Excel file.
+                Load company data from an Excel file to get started. You can either upload a file or provide a URL.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => seedMutation.mutate()} 
-                disabled={seedMutation.isPending}
-                className="w-full"
-              >
-                {seedMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading Companies from Excel...
-                  </>
-                ) : (
-                  "Load 20 Companies from Uploaded File"
+            <CardContent className="space-y-6">
+              {/* Option 1: Load from previously uploaded file */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Option 1: Load from Uploaded File</h3>
+                <p className="text-sm text-muted-foreground">Load companies from the most recently uploaded Excel file.</p>
+                <Button 
+                  onClick={() => seedMutation.mutate()} 
+                  disabled={seedMutation.isPending || seedFromUrlMutation.isPending}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {seedMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading Companies...
+                    </>
+                  ) : (
+                    "Load from Uploaded File"
+                  )}
+                </Button>
+                {seedMutation.isError && (
+                  <p className="text-sm text-red-600 mt-2">
+                    Error: {seedMutation.error.message}
+                  </p>
                 )}
-              </Button>
-              {seedMutation.isError && (
-                <p className="text-sm text-red-600 mt-2">
-                  Error: {seedMutation.error.message}
-                </p>
-              )}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              {/* Option 2: Load from URL */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Option 2: Load from URL</h3>
+                <p className="text-sm text-muted-foreground">Provide a direct URL to an Excel file (.xlsx or .xls).</p>
+                <div className="flex gap-2">
+                  <Input
+                    type="url"
+                    placeholder="https://example.com/companies.xlsx"
+                    value={excelUrl}
+                    onChange={(e) => setExcelUrl(e.target.value)}
+                    disabled={seedMutation.isPending || seedFromUrlMutation.isPending}
+                  />
+                  <Button
+                    onClick={() => {
+                      if (excelUrl.trim()) {
+                        seedFromUrlMutation.mutate({ url: excelUrl.trim() });
+                      }
+                    }}
+                    disabled={!excelUrl.trim() || seedMutation.isPending || seedFromUrlMutation.isPending}
+                  >
+                    {seedFromUrlMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      "Load from URL"
+                    )}
+                  </Button>
+                </div>
+                {seedFromUrlMutation.isError && (
+                  <p className="text-sm text-red-600 mt-2">
+                    Error: {seedFromUrlMutation.error.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              {/* Option 3: Upload new file */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Option 3: Upload New File</h3>
+                <p className="text-sm text-muted-foreground">Upload a new Excel file to the system.</p>
+                <Button
+                  onClick={() => window.location.href = '/upload'}
+                  variant="outline"
+                  className="w-full"
+                  disabled={seedMutation.isPending || seedFromUrlMutation.isPending}
+                >
+                  Go to File Upload Page
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -207,27 +290,109 @@ export default function Home() {
 
   if (!companies || companies.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Card className="max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="max-w-2xl w-full">
           <CardHeader>
-            <CardTitle>No Companies Found</CardTitle>
-            <CardDescription>The database is empty. Would you like to load the initial company data?</CardDescription>
+            <CardTitle>Upload Company Data</CardTitle>
+            <CardDescription>
+              Load company data from an Excel file to get started. You can either upload a file or provide a URL.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => seedMutation.mutate()} 
-              disabled={seedMutation.isPending}
-              className="w-full"
-            >
-              {seedMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading Companies...
-                </>
-              ) : (
-                "Load 20 Companies"
+          <CardContent className="space-y-6">
+            {/* Option 1: Load from previously uploaded file */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Option 1: Load from Uploaded File</h3>
+              <p className="text-sm text-muted-foreground">Load companies from the most recently uploaded Excel file.</p>
+              <Button 
+                onClick={() => seedMutation.mutate()} 
+                disabled={seedMutation.isPending || seedFromUrlMutation.isPending}
+                className="w-full"
+                variant="outline"
+              >
+                {seedMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading Companies...
+                  </>
+                ) : (
+                  "Load from Uploaded File"
+                )}
+              </Button>
+              {seedMutation.isError && (
+                <p className="text-sm text-red-600 mt-2">
+                  Error: {seedMutation.error.message}
+                </p>
               )}
-            </Button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            {/* Option 2: Load from URL */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Option 2: Load from URL</h3>
+              <p className="text-sm text-muted-foreground">Provide a direct URL to an Excel file (.xlsx or .xls).</p>
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://example.com/companies.xlsx"
+                  value={excelUrl}
+                  onChange={(e) => setExcelUrl(e.target.value)}
+                  disabled={seedMutation.isPending || seedFromUrlMutation.isPending}
+                />
+                <Button
+                  onClick={() => {
+                    if (excelUrl.trim()) {
+                      seedFromUrlMutation.mutate({ url: excelUrl.trim() });
+                    }
+                  }}
+                  disabled={!excelUrl.trim() || seedMutation.isPending || seedFromUrlMutation.isPending}
+                >
+                  {seedFromUrlMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Load from URL"
+                  )}
+                </Button>
+              </div>
+              {seedFromUrlMutation.isError && (
+                <p className="text-sm text-red-600 mt-2">
+                  Error: {seedFromUrlMutation.error.message}
+                </p>
+              )}
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            {/* Option 3: Upload new file */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Option 3: Upload New File</h3>
+              <p className="text-sm text-muted-foreground">Upload a new Excel file to the system.</p>
+              <Button
+                onClick={() => window.location.href = '/upload'}
+                variant="outline"
+                className="w-full"
+                disabled={seedMutation.isPending || seedFromUrlMutation.isPending}
+              >
+                Go to File Upload Page
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

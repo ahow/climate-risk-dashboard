@@ -1,0 +1,20 @@
+{
+  "query": "SELECT DISTINCT c.name, c.geography, COUNT(a.id) as missing_assets FROM companies c JOIN assets a ON c.id = a.companyId WHERE a.latitude IS NULL OR a.longitude IS NULL GROUP BY c.id, c.name, c.geography ORDER BY c.name",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT DISTINCT c.name, c.geography, COUNT(a.id) as missing_assets FROM companies c JOIN assets a ON c.id = a.companyId WHERE a.latitude IS NULL OR a.longitude IS NULL GROUP BY c.id, c.name, c.geography ORDER BY c.name",
+  "rows": [
+    {
+      "name": "BNP PARIBAS",
+      "geography": "FRANCE",
+      "missing_assets": "4"
+    },
+    {
+      "name": "TDK",
+      "geography": "JAPAN",
+      "missing_assets": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tgeography\tmissing_assets\nBNP PARIBAS\tFRANCE\t4\nTDK\tJAPAN\t4\n",
+  "stderr": "",
+  "execution_time_ms": 72
+}

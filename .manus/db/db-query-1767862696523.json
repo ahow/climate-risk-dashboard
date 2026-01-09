@@ -1,0 +1,70 @@
+{
+  "query": "SELECT c.name, scr.expectedAnnualLoss, scr.sectorCode, scr.countryCode FROM supplyChainRisks scr JOIN companies c ON scr.companyId = c.id LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT c.name, scr.expectedAnnualLoss, scr.sectorCode, scr.countryCode FROM supplyChainRisks scr JOIN companies c ON scr.companyId = c.id LIMIT 10",
+  "rows": [
+    {
+      "name": "BAYER",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "C21",
+      "countryCode": "DEU"
+    },
+    {
+      "name": "STORA ENSO R",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "C20",
+      "countryCode": "FIN"
+    },
+    {
+      "name": "BK.OF NOVA SCOTIA",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "K",
+      "countryCode": "CAN"
+    },
+    {
+      "name": "KOMERCNI BANKA",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "K",
+      "countryCode": "CZE"
+    },
+    {
+      "name": "INTUITIVE SURGICAL",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "C21",
+      "countryCode": "USA"
+    },
+    {
+      "name": "CHINA OILFIELD SVS.'A'",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "D",
+      "countryCode": "CHN"
+    },
+    {
+      "name": "SEKISUI CHEMICAL",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "C29",
+      "countryCode": "JPN"
+    },
+    {
+      "name": "FIRST QUANTUM MRLS.",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "C20",
+      "countryCode": "CAN"
+    },
+    {
+      "name": "HINDUSTAN PETROLEUM",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "D",
+      "countryCode": "IND"
+    },
+    {
+      "name": "HERO MOTOCORP",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "C29",
+      "countryCode": "IND"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\texpectedAnnualLoss\tsectorCode\tcountryCode\nBAYER\t0\tC21\tDEU\nSTORA ENSO R\t0\tC20\tFIN\nBK.OF NOVA SCOTIA\t0\tK\tCAN\nKOMERCNI BANKA\t0\tK\tCZE\nINTUITIVE SURGICAL\t0\tC21\tUSA\nCHINA OILFIELD SVS.'A'\t0\tD\tCHN\nSEKISUI CHEMICAL\t0\tC29\tJPN\nFIRST QUANTUM MRLS.\t0\tC20\tCAN\nHINDUSTAN PETROLEUM\t0\tD\tIND\nHERO MOTOCORP\t0\tC29\tIND\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

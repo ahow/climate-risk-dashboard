@@ -1,0 +1,17 @@
+{
+  "query": "SELECT c.name, c.sector, c.supplierCosts, scr.expectedAnnualLoss, scr.sectorCode FROM companies c LEFT JOIN supplyChainRisks scr ON c.id = scr.companyId WHERE c.name LIKE '%S&P GLOBAL%'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT c.name, c.sector, c.supplierCosts, scr.expectedAnnualLoss, scr.sectorCode FROM companies c LEFT JOIN supplyChainRisks scr ON c.id = scr.companyId WHERE c.name LIKE '%S&P GLOBAL%'",
+  "rows": [
+    {
+      "name": "S&P GLOBAL",
+      "sector": "Financials",
+      "supplierCosts": "4325528.259470576",
+      "expectedAnnualLoss": "0",
+      "sectorCode": "K"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tsector\tsupplierCosts\texpectedAnnualLoss\tsectorCode\nS&P GLOBAL\tFinancials\t4325528.259470576\t0\tK\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}
