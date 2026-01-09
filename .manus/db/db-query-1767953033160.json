@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, filename, fileType, fileSize, uploadedAt FROM uploadedFiles ORDER BY uploadedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SELECT id, filename, fileType, fileSize, uploadedAt FROM uploadedFiles ORDER BY uploadedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30001",
+      "filename": "ShortCompanyListACWI.xlsx",
+      "fileType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "fileSize": "95677",
+      "uploadedAt": "2025-11-17 13:17:01"
+    },
+    {
+      "id": "1",
+      "filename": "20Companies(2).xlsx",
+      "fileType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "fileSize": "14901",
+      "uploadedAt": "2025-11-16 23:28:35"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfilename\tfileType\tfileSize\tuploadedAt\n30001\tShortCompanyListACWI.xlsx\tapplication/vnd.openxmlformats-officedocument.spreadsheetml.sheet\t95677\t2025-11-17 13:17:01\n1\t20Companies(2).xlsx\tapplication/vnd.openxmlformats-officedocument.spreadsheetml.sheet\t14901\t2025-11-16 23:28:35\n",
+  "stderr": "",
+  "execution_time_ms": 318
+}

@@ -829,5 +829,13 @@
 ## Fix Database Delete Error (Option 1: Load from Uploaded File)
 - [x] Investigate geographicRisks delete query error in seedCompanies mutation
 - [x] Fix the delete query to properly clear existing data (added .where(sql`1=1`) and try-catch)
-- [ ] Deploy to Heroku
+- [x] Deploy to Heroku
+- [x] Verify fix deployed successfully (Release: 0f47ed7c-f0f5-401f-a8c6-2d19486c3846)
+
+
+## Fix uploadedFiles Table Query Error
+- [x] Check if uploadedFiles table exists in Heroku database (confirmed exists with correct schema)
+- [x] Verify table schema matches the query (all columns match)
+- [x] Add error handling and fallback to getAllUploadedFiles function
+- [ ] Deploy fix to Heroku
 - [ ] Verify "Load from Uploaded File" works without errors

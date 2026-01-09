@@ -302,8 +302,25 @@ export async function getAllUploadedFiles() {
   const db = await getDb();
   if (!db) return [];
   
-  const result = await db.select().from(uploadedFiles).orderBy(desc(uploadedFiles.uploadedAt));
-  return result;
+  try {
+    const result = await db.select().from(uploadedFiles).orderBy(desc(uploadedFiles.uploadedAt));
+    return result;
+  } catch (error) {
+    console.error('[getAllUploadedFiles] Error:', error);
+    // Fallback: try without ordering
+    try {
+      const result = await db.select().from(uploadedFiles);
+      // Sort in JavaScript instead
+      return result.sort((a, b) => {
+        const dateA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+        const dateB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+    } catch (fallbackError) {
+      console.error('[getAllUploadedFiles] Fallback error:', fallbackError);
+      return [];
+    }
+  }
 }
 
 export async function getUploadedFileById(id: number) {
