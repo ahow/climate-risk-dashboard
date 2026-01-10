@@ -369,3 +369,64 @@ migrateRouter.get("/reset-database", async (req, res) => {
     });
   }
 });
+
+/**
+ * Debug endpoint to compare database ISINs with Asset API ISINs
+ * Access: GET /migrate/debug-isins
+ */
+migrateRouter.get("/debug-isins", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Get ISINs from database
+    const { companies } = await import("../../drizzle/schema");
+    const companyRecords = await db.select().from(companies);
+    const dbIsins = companyRecords.map((c: any) => c.isin).sort();
+
+    // Get ISINs from Asset API
+    const apiResponse = await fetch("https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc/assets.getAll");
+    const apiData = await apiResponse.json();
+    const assets = apiData?.result?.data?.json?.assets || [];
+    const apiIsinSet = new Set(assets.map((a: any) => a.isin));
+    const apiIsins = Array.from(apiIsinSet).sort();
+
+    // Find matches and mismatches
+    const matches = dbIsins.filter(isin => apiIsins.includes(isin));
+    const inDbNotInApi = dbIsins.filter(isin => !apiIsins.includes(isin));
+    const inApiNotInDb = apiIsins.filter(isin => !dbIsins.includes(isin));
+
+    res.json({
+      database: {
+        total: dbIsins.length,
+        sample: dbIsins.slice(0, 10),
+        all: dbIsins
+      },
+      api: {
+        total: apiIsins.length,
+        sample: apiIsins.slice(0, 10),
+        all: apiIsins
+      },
+      matching: {
+        count: matches.length,
+        isins: matches
+      },
+      inDbNotInApi: {
+        count: inDbNotInApi.length,
+        isins: inDbNotInApi
+      },
+      inApiNotInDb: {
+        count: inApiNotInDb.length,
+        isins: inApiNotInDb
+      }
+    });
+  } catch (error: any) {
+    console.error("Debug ISINs error:", error);
+    res.status(500).json({
+      error: "Failed to debug ISINs",
+      details: error.message
+    });
+  }
+});
