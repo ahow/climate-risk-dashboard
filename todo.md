@@ -917,3 +917,11 @@
 - [ ] Check why only 876 assets returned for 100 companies (expected more based on 20-company ratio)
 - [ ] Test Asset Discovery API directly to verify coverage for 100 companies
 - [ ] Compare asset count: API response vs. database records
+
+
+## Database Schema Mismatch Resolution
+- [x] Identified root cause: supplierCosts column missing from Heroku database
+- [x] Updated migration script to include supplierCosts column in companies table
+- [x] Added supplyChainRisks table to migration script
+- [ ] Migration endpoint failing - need to investigate database connection/permissions issue
+- [ ] Alternative: Recreate Heroku database from scratch using /migrate/schema endpoint

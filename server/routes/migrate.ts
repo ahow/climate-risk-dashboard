@@ -213,3 +213,159 @@ migrateRouter.get("/fix-uploaded-files", async (req, res) => {
   }
 });
 
+
+/**
+ * Reset database - DROP and recreate all tables with correct schema
+ * WARNING: This will delete ALL data!
+ * Access: GET /migrate/reset-database
+ */
+migrateRouter.get("/reset-database", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Drop all tables in reverse order (to handle foreign keys)
+    const tablesToDrop = [
+      'uploadedFiles',
+      'supplyChainRisks',
+      'riskManagementScores',
+      'geographicRisks',
+      'assets',
+      'companies',
+      'users'
+    ];
+
+    for (const table of tablesToDrop) {
+      try {
+        await db.execute(`DROP TABLE IF EXISTS ${table}`);
+      } catch (err) {
+        console.warn(`Could not drop table ${table}:`, err);
+      }
+    }
+
+    // Recreate all tables with correct schema
+    
+    // 1. Users table
+    await db.execute(`
+      CREATE TABLE users (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        openId varchar(64) NOT NULL UNIQUE,
+        name text,
+        email varchar(320),
+        loginMethod varchar(64),
+        role enum('user', 'admin') NOT NULL DEFAULT 'user',
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        lastSignedIn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 2. Companies table (with supplierCosts)
+    await db.execute(`
+      CREATE TABLE companies (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        isin varchar(12) NOT NULL UNIQUE,
+        name varchar(255) NOT NULL,
+        sector varchar(255),
+        geography varchar(255),
+        tangibleAssets varchar(50),
+        enterpriseValue varchar(50),
+        supplierCosts varchar(50),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 3. Assets table
+    await db.execute(`
+      CREATE TABLE assets (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        companyId int NOT NULL,
+        assetName varchar(500),
+        address text,
+        latitude varchar(50),
+        longitude varchar(50),
+        city varchar(255),
+        stateProvince varchar(255),
+        country varchar(255),
+        assetType varchar(255),
+        assetValue varchar(50),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 4. Geographic risks table
+    await db.execute(`
+      CREATE TABLE geographicRisks (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        assetId int NOT NULL,
+        latitude varchar(50) NOT NULL,
+        longitude varchar(50) NOT NULL,
+        assetValue varchar(50) NOT NULL,
+        riskData json NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 5. Risk management scores table
+    await db.execute(`
+      CREATE TABLE riskManagementScores (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        companyId int NOT NULL,
+        overallScore int,
+        assessmentData json NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 6. Supply chain risks table
+    await db.execute(`
+      CREATE TABLE supplyChainRisks (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        companyId int NOT NULL,
+        countryCode varchar(3) NOT NULL,
+        sectorCode varchar(20) NOT NULL,
+        expectedAnnualLossPct varchar(50),
+        expectedAnnualLoss varchar(50),
+        presentValue varchar(50),
+        topSuppliers json,
+        assessmentData json NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 7. Uploaded files table (no foreign key)
+    await db.execute(`
+      CREATE TABLE uploadedFiles (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        filename varchar(255) NOT NULL,
+        originalFilename varchar(255) NOT NULL,
+        fileType varchar(100) NOT NULL,
+        fileSize int NOT NULL,
+        s3Key varchar(512) NOT NULL,
+        s3Url varchar(1024) NOT NULL,
+        uploadedBy int,
+        uploadedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        description text
+      )
+    `);
+
+    res.json({
+      success: true,
+      message: "Database reset successfully - all tables recreated with correct schema",
+      tables_created: tablesToDrop.length
+    });
+  } catch (error: any) {
+    console.error("Reset database error:", error);
+    res.status(500).json({
+      error: "Failed to reset database",
+      details: error.message
+    });
+  }
+});
