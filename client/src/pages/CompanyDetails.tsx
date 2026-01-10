@@ -300,12 +300,12 @@ export default function CompanyDetails() {
                                       <span className="text-gray-400">N/A</span>
                                     )}
                                   </TableCell>
-                                  <TableCell className="text-right">{formatRisk(riskBreakdown.flood)}</TableCell>
-                                  <TableCell className="text-right">{formatRisk(riskBreakdown.wildfire)}</TableCell>
-                                  <TableCell className="text-right">{formatRisk(riskBreakdown.heatStress)}</TableCell>
-                                  <TableCell className="text-right">{formatRisk(riskBreakdown.extremePrecip)}</TableCell>
-                                  <TableCell className="text-right">{formatRisk(riskBreakdown.hurricane)}</TableCell>
-                                  <TableCell className="text-right">{formatRisk(riskBreakdown.drought)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk((riskBreakdown.flood as any)?.annual_loss)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk((riskBreakdown.wildfire as any)?.annual_loss)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk((riskBreakdown.heat_stress as any)?.annual_loss)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk((riskBreakdown.extreme_precipitation as any)?.annual_loss)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk((riskBreakdown.hurricane as any)?.annual_loss)}</TableCell>
+                                  <TableCell className="text-right">{formatRisk((riskBreakdown.drought as any)?.annual_loss)}</TableCell>
                                   <TableCell className="text-right font-bold">
                                     {formatRisk(totalLoss)}
                                   </TableCell>

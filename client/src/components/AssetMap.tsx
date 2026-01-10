@@ -93,12 +93,17 @@ export function AssetMap({ assets, companyName }: AssetMapProps) {
       // Create popup content
       const hazards = asset.hazardBreakdown || {};
       const hazardList = Object.entries(hazards)
-        .filter(([_, value]) => value && value > 0)
+        .filter(([_, value]) => {
+          const annualLoss = (value as any)?.annual_loss;
+          return annualLoss && annualLoss > 0;
+        })
         .map(([key, value]) => {
+          const annualLoss = (value as any)?.annual_loss || 0;
           const label = key
             .replace(/([A-Z])/g, " $1")
+            .replace(/_/g, " ")
             .replace(/^./, (str) => str.toUpperCase());
-          return `<li>${label}: $${value?.toLocaleString()}</li>`;
+          return `<li>${label}: $${annualLoss.toLocaleString()}</li>`;
         })
         .join("");
 
