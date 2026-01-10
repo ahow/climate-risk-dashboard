@@ -147,11 +147,22 @@ migrateRouter.get("/add-supplier-costs", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Add supplierCosts column if it doesn't exist
-    await db.execute(`
-      ALTER TABLE companies 
-      ADD COLUMN IF NOT EXISTS supplierCosts varchar(50)
+    // Check if supplierCosts column exists
+    const [columns] = await db.execute(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'companies' 
+      AND COLUMN_NAME = 'supplierCosts'
     `);
+    
+    // Add column only if it doesn't exist
+    if (Array.isArray(columns) && columns.length === 0) {
+      await db.execute(`
+        ALTER TABLE companies 
+        ADD COLUMN supplierCosts varchar(50)
+      `);
+    }
 
     res.json({
       success: true,
