@@ -179,7 +179,7 @@ export const appRouter = router({
               estimatedValue: asset.estimatedValueUsd,
               expectedAnnualLoss: riskData?.expected_annual_loss || 0,
               presentValue30yr: riskData?.present_value_30yr || 0,
-              hazardBreakdown: riskData?.hazard_breakdown || {},
+              hazardBreakdown: riskData?.risk_breakdown || {},
             };
           })
         );
