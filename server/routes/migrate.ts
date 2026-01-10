@@ -129,11 +129,9 @@ migrateRouter.get("/fix-uploaded-files", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Drop the uploadedFiles table and recreate without foreign key
-    await db.execute(`DROP TABLE IF EXISTS uploadedFiles`);
-    
+    // Create uploadedFiles table without foreign key constraint
     await db.execute(`
-      CREATE TABLE uploadedFiles (
+      CREATE TABLE IF NOT EXISTS uploadedFiles (
         id int AUTO_INCREMENT PRIMARY KEY,
         filename varchar(255) NOT NULL,
         originalFilename varchar(255) NOT NULL,
