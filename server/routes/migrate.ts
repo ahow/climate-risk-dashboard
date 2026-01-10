@@ -383,7 +383,7 @@ migrateRouter.get("/debug-isins", async (req, res) => {
 
     // Get ISINs from Asset API
     const apiResponse = await fetch("https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc/assets.getAll");
-    const apiData = await apiResponse.json();
+    const apiData: any = await apiResponse.json();
     const assets = apiData?.result?.data?.json?.assets || [];
     const apiIsinMap = new Map();
     assets.forEach((a: any) => apiIsinMap.set(a.isin, true));
