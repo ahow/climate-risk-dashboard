@@ -8,6 +8,7 @@ export interface RetryOptions {
   maxDelay?: number;
   backoffMultiplier?: number;
   retryableStatuses?: number[];
+  timeout?: number; // Request timeout in milliseconds
 }
 
 const DEFAULT_OPTIONS: Required<RetryOptions> = {
@@ -16,6 +17,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   maxDelay: 10000, // 10 seconds
   backoffMultiplier: 2,
   retryableStatuses: [502, 503, 504, 408, 429], // Bad Gateway, Service Unavailable, Gateway Timeout, Request Timeout, Too Many Requests
+  timeout: 30000, // 30 seconds default
 };
 
 /**
@@ -42,7 +44,16 @@ export async function fetchWithRetry(
   
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
     try {
-      const response = await fetch(url, options);
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
       
       // If response is OK or not retryable, return it
       if (response.ok || !config.retryableStatuses.includes(response.status)) {

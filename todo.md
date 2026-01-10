@@ -869,4 +869,27 @@
 - [x] Verify deployed code matches local repository (code correct but Drizzle ORM issue)
 - [x] Root cause: Drizzle ORM doesn't handle null properly, need to omit field entirely
 - [x] Fix: Conditionally construct object without uploadedBy when no user
-- [ ] Deploy and verify fix works end-to-end
+- [x] Deploy and verify fix works end-to-end (Release: d31a3764-7a58-4868-8e74-f41bd35bebdb)
+
+
+## Comprehensive File Upload Fix - Final Solution
+- [x] Analyze exact Drizzle ORM error: DEFAULT keyword used but column had no default
+- [x] Check if uploadedBy column has DEFAULT NULL in database
+- [x] Root cause: Database was completely empty, tables never created
+- [x] Solution: Run drizzle-kit push to create all tables properly
+- [x] Verify upload works with browser test (SUCCESS!)
+- [x] Verify file appears in S3 bucket (https://physicalclimateunified.s3.eu-west-2.amazonaws.com/...)
+- [x] Verify file record appears in database (id=1, uploadedBy=null)
+
+
+## Fix Asset Extraction and Geographic Risk Calculation
+- [x] Check asset extraction results in database (100 companies, assets extracted successfully)
+- [x] Verify external API calls are being made correctly
+- [x] Investigate geographic risk calculation JSON parsing error (API timeout/hibernation)
+- [x] Root cause: Geographic risk API needs 35+ second timeout and proper error handling
+- [x] Update fetchWithRetry to support configurable timeout (added timeout option)
+- [x] Update fetchGeographicRisk to use 40-second timeout
+- [x] Add 404 to retryable status codes
+- [x] Add proper 404 error handling with descriptive message
+- [ ] Deploy fixes to Heroku
+- [ ] Test geographic risk calculation with real data

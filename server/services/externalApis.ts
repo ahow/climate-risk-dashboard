@@ -264,6 +264,7 @@ export async function fetchGeographicRisk(
 ): Promise<GeographicRiskData> {
   try {
     // Use retry logic to handle API hibernation and temporary failures
+    // API requires 35+ second timeout to wake from hibernation
     const response = await fetchWithRetry(
       `${GEOGRAPHIC_RISKS_API}/assess`,
       {
@@ -281,11 +282,17 @@ export async function fetchGeographicRisk(
         maxRetries: 5,
         initialDelay: 2000,
         maxDelay: 30000,
+        timeout: 40000, // 40 seconds to allow API to wake up
+        retryableStatuses: [502, 503, 504, 408, 429, 404], // Include 404 as retryable
       }
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch geographic risk: ${response.statusText}`);
+      // Handle 404 errors specifically
+      if (response.status === 404) {
+        throw new Error(`Geographic risk API endpoint not found (404). The API may be hibernating or the endpoint has changed.`);
+      }
+      throw new Error(`Failed to fetch geographic risk: ${response.status} ${response.statusText}`);
     }
 
     return await response.json() as any;
