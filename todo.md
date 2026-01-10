@@ -901,3 +901,12 @@
 - [ ] Check browser console for JavaScript errors
 - [ ] Verify upload endpoint is working on Heroku
 - [ ] Test file upload functionality end-to-end
+
+
+## File Upload Fix - January 10, 2026
+- [x] Diagnosed file upload failure: foreign key constraint on uploadedBy column
+- [x] Modified upload mutation to explicitly set uploadedBy to null for anonymous uploads
+- [x] Created migration endpoint to recreate uploadedFiles table without foreign key constraint
+- [x] Verified file upload working: 2 files successfully uploaded to Heroku
+- [x] Fixed hazard breakdown display: extract annual_loss from risk objects
+- [x] Deployed all fixes to Heroku (v21)
