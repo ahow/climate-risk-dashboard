@@ -82,7 +82,7 @@ migrateRouter.get("/schema", async (req, res) => {
       )
     `);
     
-    // 5. Create uploadedFiles table
+    // 5. Create uploadedFiles table (without foreign key constraint to allow anonymous uploads)
     await db.execute(`
       CREATE TABLE IF NOT EXISTS uploadedFiles (
         id int AUTO_INCREMENT PRIMARY KEY,
@@ -94,8 +94,7 @@ migrateRouter.get("/schema", async (req, res) => {
         s3Url varchar(1024) NOT NULL,
         uploadedBy int,
         uploadedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        description text,
-        FOREIGN KEY (uploadedBy) REFERENCES users(id)
+        description text
       )
     `);
 
@@ -114,6 +113,48 @@ migrateRouter.get("/schema", async (req, res) => {
     console.error("Migration error:", error);
     res.status(500).json({
       error: "Migration failed",
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Fix uploadedFiles table by dropping foreign key constraint
+ * Access: GET /migrate/fix-uploaded-files
+ */
+migrateRouter.get("/fix-uploaded-files", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Drop the uploadedFiles table and recreate without foreign key
+    await db.execute(`DROP TABLE IF EXISTS uploadedFiles`);
+    
+    await db.execute(`
+      CREATE TABLE uploadedFiles (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        filename varchar(255) NOT NULL,
+        originalFilename varchar(255) NOT NULL,
+        fileType varchar(100) NOT NULL,
+        fileSize int NOT NULL,
+        s3Key varchar(512) NOT NULL,
+        s3Url varchar(1024) NOT NULL,
+        uploadedBy int,
+        uploadedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        description text
+      )
+    `);
+
+    res.json({
+      success: true,
+      message: "uploadedFiles table fixed successfully (foreign key constraint removed)"
+    });
+  } catch (error: any) {
+    console.error("Fix uploadedFiles error:", error);
+    res.status(500).json({
+      error: "Failed to fix uploadedFiles table",
       details: error.message
     });
   }
