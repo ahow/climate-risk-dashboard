@@ -427,3 +427,49 @@ migrateRouter.get("/debug-isins", async (req, res) => {
     });
   }
 });
+
+
+/**
+ * Debug endpoint to check asset count in database
+ * Access: GET /migrate/debug-assets
+ */
+migrateRouter.get("/debug-assets", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    const { assets } = await import("../../drizzle/schema");
+    const allAssets = await db.select().from(assets);
+    
+    // Group by company
+    const assetsByCompany = new Map<number, number>();
+    allAssets.forEach((asset: any) => {
+      const count = assetsByCompany.get(asset.companyId) || 0;
+      assetsByCompany.set(asset.companyId, count + 1);
+    });
+
+    res.json({
+      totalAssets: allAssets.length,
+      companiesWithAssets: assetsByCompany.size,
+      sampleAssets: allAssets.slice(0, 5).map((a: any) => ({
+        id: a.id,
+        companyId: a.companyId,
+        assetName: a.assetName,
+        city: a.city,
+        country: a.country
+      })),
+      assetsByCompany: Array.from(assetsByCompany.entries()).map(([companyId, count]) => ({
+        companyId,
+        assetCount: count
+      })).slice(0, 10)
+    });
+  } catch (error: any) {
+    console.error("Debug assets error:", error);
+    res.status(500).json({
+      error: "Failed to debug assets",
+      details: error.message
+    });
+  }
+});
