@@ -910,3 +910,10 @@
 - [x] Verified file upload working: 2 files successfully uploaded to Heroku
 - [x] Fixed hazard breakdown display: extract annual_loss from risk objects
 - [x] Deployed all fixes to Heroku (v21)
+
+
+## Asset Fetch Investigation - 100 Companies
+- [ ] Verify if "Fetch All Assets" is calling the API or using cached data (completed too quickly)
+- [ ] Check why only 876 assets returned for 100 companies (expected more based on 20-company ratio)
+- [ ] Test Asset Discovery API directly to verify coverage for 100 companies
+- [ ] Compare asset count: API response vs. database records

@@ -27,6 +27,7 @@ migrateRouter.get("/schema", async (req, res) => {
         geography varchar(255),
         tangibleAssets varchar(50),
         enterpriseValue varchar(50),
+        supplierCosts varchar(50),
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -82,7 +83,24 @@ migrateRouter.get("/schema", async (req, res) => {
       )
     `);
     
-    // 5. Create uploadedFiles table (without foreign key constraint to allow anonymous uploads)
+    // 5. Create supplyChainRisks table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS supplyChainRisks (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        companyId int NOT NULL,
+        countryCode varchar(3) NOT NULL,
+        sectorCode varchar(20) NOT NULL,
+        expectedAnnualLossPct varchar(50),
+        expectedAnnualLoss varchar(50),
+        presentValue varchar(50),
+        topSuppliers json,
+        assessmentData json NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 6. Create uploadedFiles table (without foreign key constraint to allow anonymous uploads)
     await db.execute(`
       CREATE TABLE IF NOT EXISTS uploadedFiles (
         id int AUTO_INCREMENT PRIMARY KEY,
@@ -113,6 +131,36 @@ migrateRouter.get("/schema", async (req, res) => {
     console.error("Migration error:", error);
     res.status(500).json({
       error: "Migration failed",
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Add supplierCosts column to companies table for existing Heroku deployments
+ * Access: GET /migrate/add-supplier-costs
+ */
+migrateRouter.get("/add-supplier-costs", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Add supplierCosts column if it doesn't exist
+    await db.execute(`
+      ALTER TABLE companies 
+      ADD COLUMN IF NOT EXISTS supplierCosts varchar(50)
+    `);
+
+    res.json({
+      success: true,
+      message: "supplierCosts column added to companies table successfully"
+    });
+  } catch (error: any) {
+    console.error("Add supplierCosts error:", error);
+    res.status(500).json({
+      error: "Failed to add supplierCosts column",
       details: error.message
     });
   }
