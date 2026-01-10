@@ -376,27 +376,24 @@ migrateRouter.get("/reset-database", async (req, res) => {
  */
 migrateRouter.get("/debug-isins", async (req, res) => {
   try {
-    const db = await getDb();
-    if (!db) {
-      return res.status(500).json({ error: "Database not available" });
-    }
-
-    // Get ISINs from database
-    const { companies } = await import("../../drizzle/schema");
-    const companyRecords = await db.select().from(companies);
-    const dbIsins = companyRecords.map((c: any) => c.isin).sort();
+    // Get ISINs from database using db helper
+    const { getAllCompanies } = await import("../db");
+    const companies = await getAllCompanies();
+    const dbIsins = companies.map(c => c.isin).sort();
 
     // Get ISINs from Asset API
     const apiResponse = await fetch("https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc/assets.getAll");
     const apiData = await apiResponse.json();
     const assets = apiData?.result?.data?.json?.assets || [];
-    const apiIsinSet = new Set(assets.map((a: any) => a.isin));
-    const apiIsins = Array.from(apiIsinSet).sort();
+    const apiIsinMap = new Map();
+    assets.forEach((a: any) => apiIsinMap.set(a.isin, true));
+    const apiIsins = Array.from(apiIsinMap.keys()).sort();
 
     // Find matches and mismatches
-    const matches = dbIsins.filter(isin => apiIsins.includes(isin));
-    const inDbNotInApi = dbIsins.filter(isin => !apiIsins.includes(isin));
-    const inApiNotInDb = apiIsins.filter(isin => !dbIsins.includes(isin));
+    const matches = dbIsins.filter(isin => apiIsinMap.has(isin));
+    const inDbNotInApi = dbIsins.filter(isin => !apiIsinMap.has(isin));
+    const dbIsinMap = new Map(dbIsins.map(isin => [isin, true]));
+    const inApiNotInDb = apiIsins.filter(isin => !dbIsinMap.has(isin));
 
     res.json({
       database: {
