@@ -925,3 +925,12 @@
 - [x] Added supplyChainRisks table to migration script
 - [ ] Migration endpoint failing - need to investigate database connection/permissions issue
 - [ ] Alternative: Recreate Heroku database from scratch using /migrate/schema endpoint
+
+
+## Database Reset - January 10, 2026 (Evening)
+- [x] Created /migrate/reset-database endpoint to drop and recreate all tables
+- [x] Successfully reset Heroku database with correct schema
+- [x] Verified dashboard is now loading without 500 errors
+- [x] All tables recreated including supplierCosts column and supplyChainRisks table
+- [ ] User needs to upload 100-company file to populate database
+- [ ] Run complete data pipeline after upload: Fetch Assets → Calculate Geographic Risks → Fetch Supply Chain Risks → Fetch Risk Management Data
