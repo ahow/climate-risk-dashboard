@@ -893,3 +893,11 @@
 - [x] Add proper 404 error handling with descriptive message
 - [ ] Deploy fixes to Heroku
 - [ ] Test geographic risk calculation with real data
+
+
+## File Upload Issue on Heroku (Current)
+- [ ] Fix file upload button not responding on https://climate-risk-unified-aa97b51f74e7.herokuapp.com/upload
+- [ ] Investigate why clicking "Upload Files" button does nothing
+- [ ] Check browser console for JavaScript errors
+- [ ] Verify upload endpoint is working on Heroku
+- [ ] Test file upload functionality end-to-end
