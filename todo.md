@@ -934,3 +934,24 @@
 - [x] All tables recreated including supplierCosts column and supplyChainRisks table
 - [ ] User needs to upload 100-company file to populate database
 - [ ] Run complete data pipeline after upload: Fetch Assets → Calculate Geographic Risks → Fetch Supply Chain Risks → Fetch Risk Management Data
+
+
+## Asset Discovery API Coverage Issue - 100 Companies
+- [ ] Investigate why Asset Discovery API returned 0 assets for 100 companies
+- [ ] Check which companies are actually covered by the Asset Discovery API
+- [ ] Determine if API needs to be updated to support the expanded company list
+- [ ] Provide recommendations for proceeding with limited asset coverage
+
+
+## Asset Discovery API Investigation Results
+- [x] Tested Asset Discovery API - returns 404 error (API may be down or URL changed)
+- [x] Confirmed 0 assets loaded for 100 companies
+- [x] Root cause: Asset Discovery API was built for specific 20-company list, not the expanded 100-company ACWI list
+- [ ] Need to either: (1) limit dashboard to original 20 companies, or (2) wait for Asset Discovery API to expand coverage
+
+
+## Asset Discovery API Integration Fix - URGENT
+- [ ] Review CorporateAssetDatabaseAPI-AccessGuide.md to understand correct API usage
+- [ ] Identify why current integration returns 0 assets when API has 2,535 assets
+- [ ] Fix API endpoint URL, request format, or response parsing
+- [ ] Test fixed integration to verify 2,535 assets are fetched correctly

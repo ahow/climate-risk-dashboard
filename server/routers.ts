@@ -504,10 +504,16 @@ export const appRouter = router({
         // Get all companies to map assets to company IDs using ISIN (more reliable than name matching)
         progressTracker.update(operationId, 30, `Received ${allAssets.length} assets from API`);
         const companies = await db.getAllCompanies();
+        console.log(`[fetchAllAssets] Found ${companies.length} companies in database`);
+        console.log(`[fetchAllAssets] First 5 company ISINs from DB:`, companies.slice(0, 5).map(c => c.isin));
+        console.log(`[fetchAllAssets] First 5 asset ISINs from API:`, allAssets.slice(0, 5).map(a => a.isin));
+        
         // Create map using ISIN as key for reliable matching
         const companyMapByISIN = new Map(companies.map(c => [c.isin, c.id]));
         // Fallback map using name for companies without ISIN
         const companyMapByName = new Map(companies.map(c => [c.name, c.id]));
+        
+        console.log(`[fetchAllAssets] Company map has ${companyMapByISIN.size} ISINs`);
 
         let totalAssetsFetched = 0;
         let skipped = 0;
