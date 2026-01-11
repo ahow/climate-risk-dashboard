@@ -276,6 +276,7 @@ export async function fetchGeographicRisk(
           latitude,
           longitude,
           asset_value: assetValue,
+          building_type: 'wood_frame', // Default building type
         }),
       },
       {
@@ -298,6 +299,54 @@ export async function fetchGeographicRisk(
     return await response.json() as any;
   } catch (error) {
     console.error(`Error fetching geographic risk for (${latitude}, ${longitude}):`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch country-level geographic risk assessment (population-weighted)
+ * Used for supply chain analysis where specific coordinates are not available
+ */
+export async function fetchGeographicRiskByCountry(
+  countryCode: string,
+  assetValue: number
+): Promise<GeographicRiskData> {
+  try {
+    // Use retry logic to handle API hibernation and temporary failures
+    // API requires 35+ second timeout to wake from hibernation
+    const response = await fetchWithRetry(
+      `${GEOGRAPHIC_RISKS_API}/assess/country`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          country: countryCode, // ISO-3 country code (e.g., 'USA', 'GBR', 'JPN')
+          asset_value: assetValue,
+        }),
+      },
+      {
+        maxRetries: 5,
+        initialDelay: 2000,
+        maxDelay: 30000,
+        timeout: 40000, // 40 seconds to allow API to wake up
+        retryableStatuses: [502, 503, 504, 408, 429, 404], // Include 404 as retryable
+      }
+    );
+
+    if (!response.ok) {
+      // Handle 404 errors specifically
+      if (response.status === 404) {
+        const errorData = await response.json().catch(() => ({})) as { message?: string };
+        throw new Error(`Country not found: ${countryCode}. ${errorData.message || 'Use ISO-3 country code'}`);
+      }
+      throw new Error(`Failed to fetch country-level geographic risk: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json() as any;
+  } catch (error) {
+    console.error(`Error fetching country-level geographic risk for ${countryCode}:`, error);
     throw error;
   }
 }

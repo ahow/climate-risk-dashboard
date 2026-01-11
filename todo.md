@@ -994,3 +994,13 @@
 - [x] Confirmed correct parameters: latitude, longitude, asset_value, building_type
 - [x] Timeout already set to 40 seconds (meets ≥35 second requirement)
 - [x] Ready to retry geographic risk calculation on Heroku
+
+
+## Dual Geographic Risk API Implementation (January 11, 2026) - COMPLETE ✅
+- [x] Implement coordinate-based assessment (/assess) for asset-level geographic risks
+- [x] Implement country-based assessment (/assess/country) for supply chain analysis
+- [x] Ensure asset risk calculation uses latitude/longitude coordinates + building_type
+- [x] Ensure supply chain risk uses ISO-3 country codes (population-weighted)
+- [x] Modified supply chain API to use Geographic Risk API instead of built-in climate data
+- [ ] Test both methods work correctly in their respective contexts
+- [ ] Deploy to Heroku and verify complete data pipeline
