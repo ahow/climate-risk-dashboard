@@ -218,15 +218,17 @@ migrateRouter.get("/fix-uploaded-files", async (req, res) => {
  * Reset database - DROP and recreate all tables with correct schema
  * WARNING: This will delete ALL data!
  * Access: GET /migrate/reset-database
- */
-migrateRouter.get("/reset-database", async (req, res) => {
+ migrateRouter.get("/reset-database", async (req, res) => {
   try {
     const db = await getDb();
     if (!db) {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Drop all tables in reverse order (to handle foreign keys)
+    // Disable foreign key checks to allow dropping tables
+    await db.execute(`SET FOREIGN_KEY_CHECKS = 0`);
+
+    // Drop all tables in correct order (reverse of creation) keys)
     const tablesToDrop = [
       'uploadedFiles',
       'supplyChainRisks',
@@ -360,11 +362,10 @@ migrateRouter.get("/reset-database", async (req, res) => {
       )
     `);
 
-    res.json({
-      success: true,
-      message: "Database reset successfully - all tables recreated with correct schema",
-      tables_created: tablesToDrop.length
-    });
+    // Re-enable foreign key checks
+    await db.execute(`SET FOREIGN_KEY_CHECKS = 1`);
+
+    res.json({ message: "Database reset successfully - all tables recreated with correct schema" });
   } catch (error: any) {
     console.error("Reset database error:", error);
     res.status(500).json({
