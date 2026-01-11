@@ -490,9 +490,9 @@ migrateRouter.get("/debug-geo-risks-table", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Get table structure
+    // Get table structure - try SHOW COLUMNS instead of DESCRIBE
     const [columns]: any = await db.execute(`
-      DESCRIBE geographicRisks
+      SHOW COLUMNS FROM geographicRisks
     `);
 
     // Try to count rows
