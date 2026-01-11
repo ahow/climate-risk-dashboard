@@ -513,3 +513,43 @@ migrateRouter.get("/debug-geo-risks-table", async (req, res) => {
     });
   }
 });
+
+
+/**
+ * Create geographicRisks table if it doesn't exist
+ * Access: GET /migrate/create-geo-risks-table
+ */
+migrateRouter.get("/create-geo-risks-table", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Create geographicRisks table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS geographicRisks (
+        id int AUTO_INCREMENT PRIMARY KEY,
+        assetId int NOT NULL,
+        latitude varchar(50) NOT NULL,
+        longitude varchar(50) NOT NULL,
+        assetValue varchar(50) NOT NULL,
+        riskData json NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    res.json({
+      success: true,
+      message: "geographicRisks table created successfully"
+    });
+  } catch (error: any) {
+    console.error("Create geographicRisks table error:", error);
+    res.status(500).json({
+      error: "Failed to create geographicRisks table",
+      details: error.message,
+      sqlMessage: (error as any).sqlMessage || "No SQL error details"
+    });
+  }
+});
