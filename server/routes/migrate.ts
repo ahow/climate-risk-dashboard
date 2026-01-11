@@ -560,3 +560,39 @@ migrateRouter.get("/create-geo-risks-table", async (req, res) => {
     });
   }
 });
+
+
+/**
+ * Check database type and configuration
+ * Access: GET /migrate/check-db-type
+ */
+migrateRouter.get("/check-db-type", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Try to get database version and type
+    const [versionResult]: any = await db.execute(`SELECT VERSION() as version`);
+    
+    // Get current database name
+    const [dbNameResult]: any = await db.execute(`SELECT DATABASE() as dbname`);
+    
+    // List all tables
+    const [tablesResult]: any = await db.execute(`SHOW TABLES`);
+
+    res.json({
+      databaseVersion: versionResult[0]?.version || "Unknown",
+      databaseName: dbNameResult[0]?.dbname || "Unknown",
+      tables: tablesResult.map((row: any) => Object.values(row)[0]),
+      connectionString: process.env.DATABASE_URL ? "Set (hidden for security)" : "Not set"
+    });
+  } catch (error: any) {
+    console.error("Check DB type error:", error);
+    res.status(500).json({
+      error: "Failed to check database type",
+      details: error.message
+    });
+  }
+});

@@ -964,3 +964,14 @@
 - [ ] BLOCKED: Heroku database refusing to create geographicRisks table for unknown reason
 - [ ] Possible causes: database permissions, connection timeout, or database corruption
 - [ ] Recommendation: Use Manus built-in hosting instead of Heroku to avoid database issues
+
+
+## Heroku Deployment Investigation (January 11, 2026)
+- [ ] Check Heroku database type and configuration (MySQL vs PostgreSQL)
+- [ ] Verify DATABASE_URL environment variable format
+- [ ] Test using Drizzle's proper migration system (pnpm db:push)
+- [ ] Try creating table with simpler schema first
+- [ ] Check if JSON column type is supported on Heroku database
+- [ ] Test using TEXT column instead of JSON for riskData
+- [ ] Verify database connection pooling settings
+- [ ] Check Heroku database size limits and current usage
