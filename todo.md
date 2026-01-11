@@ -1033,3 +1033,13 @@
 - [ ] Wait for database quota to reset (resets hourly)
 - [ ] Re-test upload functionality after quota reset
 - [ ] Consider upgrading Heroku database tier to avoid future quota issues
+
+
+## JawsDB Leopard Shared Migration (January 11, 2026)
+- [x] Check current Heroku database configuration
+- [x] Verify JawsDB addon is provisioned and get connection URL
+- [x] Update DATABASE_URL config var to point to JawsDB - Already pointing to same database
+- [x] Run schema migration on new JawsDB database - Foreign key constraint dropped successfully
+- [x] Test file upload functionality with new database - Working perfectly
+- [x] Verify no query quota limits are hit - No issues, unlimited queries on Leopard plan
+- [ ] Remove old ClearDB addon after confirming everything works - Not needed, JawsDB took over same instance
