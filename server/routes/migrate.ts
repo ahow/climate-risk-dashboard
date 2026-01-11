@@ -526,9 +526,16 @@ migrateRouter.get("/create-geo-risks-table", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
+    // Drop table first if it exists
+    try {
+      await db.execute(`DROP TABLE IF EXISTS geographicRisks`);
+    } catch (err) {
+      console.warn('Could not drop geographicRisks:', err);
+    }
+
     // Create geographicRisks table
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS geographicRisks (
+      CREATE TABLE geographicRisks (
         id int AUTO_INCREMENT PRIMARY KEY,
         assetId int NOT NULL,
         latitude varchar(50) NOT NULL,
