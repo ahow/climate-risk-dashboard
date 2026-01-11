@@ -985,3 +985,12 @@
 - [x] Database tables confirmed: assets (17 cols), companies (10 cols), geographicRisks (8 cols), etc.
 - [ ] SOLUTION: Wait for query limit reset (resets hourly), then reload company data and test complete pipeline
 - [ ] ALTERNATIVE: Switch to Manus built-in hosting (no query limits)
+
+
+## Geographic Risk API Error - HTML Response (January 11, 2026) - RESOLVED ✅
+- [x] Error: "Unexpected token '<', '<!DOCTYPE'... is not valid JSON"
+- [x] Root cause: API was temporarily returning 503 errors (application error)
+- [x] Verified API is now working: /assess endpoint returns proper JSON
+- [x] Confirmed correct parameters: latitude, longitude, asset_value, building_type
+- [x] Timeout already set to 40 seconds (meets ≥35 second requirement)
+- [x] Ready to retry geographic risk calculation on Heroku
