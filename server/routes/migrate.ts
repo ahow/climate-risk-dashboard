@@ -218,7 +218,8 @@ migrateRouter.get("/fix-uploaded-files", async (req, res) => {
  * Reset database - DROP and recreate all tables with correct schema
  * WARNING: This will delete ALL data!
  * Access: GET /migrate/reset-database
- migrateRouter.get("/reset-database", async (req, res) => {
+ */
+migrateRouter.get("/reset-database", async (req, res) => {
   try {
     const db = await getDb();
     if (!db) {

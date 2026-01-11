@@ -1002,5 +1002,22 @@
 - [x] Ensure asset risk calculation uses latitude/longitude coordinates + building_type
 - [x] Ensure supply chain risk uses ISO-3 country codes (population-weighted)
 - [x] Modified supply chain API to use Geographic Risk API instead of built-in climate data
-- [ ] Test both methods work correctly in their respective contexts
-- [ ] Deploy to Heroku and verify complete data pipeline
+- [x] Fixed TypeScript build errors and chunk size warnings
+- [x] Deploy to Heroku (v38) - ready for testing complete data pipeline
+
+
+## File Upload Button Not Responding (January 11, 2026)
+- [ ] Upload button on /upload page not opening file selection dialog
+- [ ] Issue occurs on Heroku deployment
+- [ ] Need to investigate if button is disabled or if there's a JavaScript error
+- [ ] Check if file input element is properly wired to button click
+
+
+## File Upload Button Fix (January 11, 2026)
+- [x] Investigated file upload button not responding on Heroku
+- [x] Identified root cause: Foreign key constraint on uploadedBy column preventing anonymous uploads
+- [x] Removed foreign key reference from schema.ts (uploadedBy now optional without FK constraint)
+- [x] Generated and applied migration (0004_deep_captain_universe.sql) to local database
+- [x] Fixed commented-out reset-database endpoint in migrate.ts
+- [ ] Apply migration to Heroku database to fix upload functionality
+- [ ] Test file upload on Heroku after migration

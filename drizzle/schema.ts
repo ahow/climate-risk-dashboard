@@ -29,7 +29,7 @@ export const uploadedFiles = mysqlTable("uploadedFiles", {
   fileSize: int("fileSize").notNull(),
   s3Key: varchar("s3Key", { length: 512 }).notNull(),
   s3Url: varchar("s3Url", { length: 1024 }).notNull(),
-  uploadedBy: int("uploadedBy").references(() => users.id),
+  uploadedBy: int("uploadedBy"), // No foreign key - allows anonymous uploads
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   description: text("description"),
 });
