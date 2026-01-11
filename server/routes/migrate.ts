@@ -596,3 +596,35 @@ migrateRouter.get("/check-db-type", async (req, res) => {
     });
   }
 });
+
+
+migrateRouter.get("/debug-companies-table", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Get table structure
+    const [columns]: any = await db.execute(`
+      SHOW COLUMNS FROM companies
+    `);
+
+    // Try to count rows
+    const [countResult]: any = await db.execute(`
+      SELECT COUNT(*) as count FROM companies
+    `);
+
+    res.json({
+      tableExists: true,
+      columns,
+      rowCount: countResult[0]?.count || 0,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: "Failed to check companies table",
+      message: error.message,
+      query: error.sql,
+    });
+  }
+});
