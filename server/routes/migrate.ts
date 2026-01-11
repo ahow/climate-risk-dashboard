@@ -477,3 +477,39 @@ migrateRouter.get("/debug-assets", async (req, res) => {
     });
   }
 });
+
+
+/**
+ * Debug endpoint to check geographicRisks table structure
+ * Access: GET /migrate/debug-geo-risks-table
+ */
+migrateRouter.get("/debug-geo-risks-table", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    // Get table structure
+    const [columns]: any = await db.execute(`
+      DESCRIBE geographicRisks
+    `);
+
+    // Try to count rows
+    const [countResult]: any = await db.execute(`
+      SELECT COUNT(*) as count FROM geographicRisks
+    `);
+
+    res.json({
+      tableExists: true,
+      columns: columns,
+      rowCount: countResult[0]?.count || 0
+    });
+  } catch (error: any) {
+    console.error("Debug geo risks table error:", error);
+    res.status(500).json({
+      error: "Failed to check table structure",
+      details: error.message
+    });
+  }
+});

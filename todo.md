@@ -955,3 +955,9 @@
 - [ ] Identify why current integration returns 0 assets when API has 2,535 assets
 - [ ] Fix API endpoint URL, request format, or response parsing
 - [ ] Test fixed integration to verify 2,535 assets are fetched correctly
+
+
+## Geographic Risks Table Schema Bug (January 10, 2026)
+- [ ] geographicRisks table missing assetValue column in reset-database migration
+- [ ] Error when calculating geographic risks: "Failed query: select `id`, `assetId`, `latitude`, `longitude`, `assetValue`, `riskData`, `createdAt`, `updatedAt` from `geographicRisks`"
+- [ ] Need to update reset-database migration to match drizzle/schema.ts definition
