@@ -957,7 +957,10 @@
 - [ ] Test fixed integration to verify 2,535 assets are fetched correctly
 
 
-## Geographic Risks Table Schema Bug (January 10, 2026)
-- [ ] geographicRisks table missing assetValue column in reset-database migration
-- [ ] Error when calculating geographic risks: "Failed query: select `id`, `assetId`, `latitude`, `longitude`, `assetValue`, `riskData`, `createdAt`, `updatedAt` from `geographicRisks`"
-- [ ] Need to update reset-database migration to match drizzle/schema.ts definition
+## Geographic Risks Table Schema Bug (January 10, 2026) - BLOCKED
+- [x] Identified: geographicRisks table cannot be created on Heroku database
+- [x] Error: "Failed query: CREATE TABLE geographicRisks..." with no SQL error details
+- [x] Verified SQL syntax is correct (works on local database)
+- [ ] BLOCKED: Heroku database refusing to create geographicRisks table for unknown reason
+- [ ] Possible causes: database permissions, connection timeout, or database corruption
+- [ ] Recommendation: Use Manus built-in hosting instead of Heroku to avoid database issues
