@@ -283,7 +283,7 @@ migrateRouter.get("/reset-database", async (req, res) => {
       CREATE TABLE assets (
         id int AUTO_INCREMENT PRIMARY KEY,
         companyId int NOT NULL,
-        assetName varchar(500),
+        assetName varchar(500) NOT NULL,
         address text,
         latitude varchar(50),
         longitude varchar(50),
@@ -291,7 +291,11 @@ migrateRouter.get("/reset-database", async (req, res) => {
         stateProvince varchar(255),
         country varchar(255),
         assetType varchar(255),
-        assetValue varchar(50),
+        assetSubtype varchar(255),
+        estimatedValueUsd varchar(50),
+        ownershipShare varchar(50),
+        dataSources text,
+        confidenceLevel varchar(50),
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
