@@ -1021,3 +1021,12 @@
 - [x] Fixed commented-out reset-database endpoint in migrate.ts
 - [ ] Apply migration to Heroku database to fix upload functionality
 - [ ] Test file upload on Heroku after migration
+
+
+## Upload File Button Not Working on Heroku (User Report - January 11, 2026)
+- [ ] User reports clicking "Upload File" button does nothing on Heroku
+- [ ] Need to distinguish between "Choose File" (file selection) and "Upload File" (submit) buttons
+- [ ] Test if file selection dialog opens when clicking "Choose File"
+- [ ] Test if "Upload File" button triggers the upload mutation
+- [ ] Check for JavaScript errors or network failures during upload
+- [ ] Verify database migration was applied to Heroku

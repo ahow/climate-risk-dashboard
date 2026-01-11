@@ -184,21 +184,17 @@ migrateRouter.get("/fix-uploaded-files", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Create uploadedFiles table without foreign key constraint
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS uploadedFiles (
-        id int AUTO_INCREMENT PRIMARY KEY,
-        filename varchar(255) NOT NULL,
-        originalFilename varchar(255) NOT NULL,
-        fileType varchar(100) NOT NULL,
-        fileSize int NOT NULL,
-        s3Key varchar(512) NOT NULL,
-        s3Url varchar(1024) NOT NULL,
-        uploadedBy int,
-        uploadedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        description text
-      )
-    `);
+    // Drop the foreign key constraint if it exists
+    try {
+      await db.execute(`
+        ALTER TABLE uploadedFiles DROP FOREIGN KEY uploadedFiles_uploadedBy_users_id_fk
+      `);
+    } catch (err: any) {
+      // Ignore if constraint doesn't exist
+      if (!err.message?.includes('check that column/key exists')) {
+        console.warn("Foreign key might not exist:", err.message);
+      }
+    }
 
     res.json({
       success: true,
