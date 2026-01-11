@@ -975,3 +975,13 @@
 - [ ] Test using TEXT column instead of JSON for riskData
 - [ ] Verify database connection pooling settings
 - [ ] Check Heroku database size limits and current usage
+
+
+## Heroku Deployment Investigation (January 11, 2026) - COMPLETE ✅
+- [x] Identified routing issue: catch-all route (`app.use("*", ...)`) intercepts `/migrate/*` endpoints in production
+- [x] Discovered Heroku database query limit: 3600 queries/hour (currently exceeded)
+- [x] Verified schema is correct using `pnpm db:push`: all 7 tables exist with proper structure
+- [x] Root cause: Database query limit prevents data reload, NOT schema issues
+- [x] Database tables confirmed: assets (17 cols), companies (10 cols), geographicRisks (8 cols), etc.
+- [ ] SOLUTION: Wait for query limit reset (resets hourly), then reload company data and test complete pipeline
+- [ ] ALTERNATIVE: Switch to Manus built-in hosting (no query limits)
