@@ -1024,9 +1024,12 @@
 
 
 ## Upload File Button Not Working on Heroku (User Report - January 11, 2026)
-- [ ] User reports clicking "Upload File" button does nothing on Heroku
-- [ ] Need to distinguish between "Choose File" (file selection) and "Upload File" (submit) buttons
-- [ ] Test if file selection dialog opens when clicking "Choose File"
-- [ ] Test if "Upload File" button triggers the upload mutation
-- [ ] Check for JavaScript errors or network failures during upload
-- [ ] Verify database migration was applied to Heroku
+- [x] User reports clicking "Upload File" button does nothing on Heroku
+- [x] Identified root cause: Database foreign key constraint on uploadedBy column
+- [x] Updated migration endpoint to drop foreign key constraint
+- [x] Deployed fix to Heroku (v39)
+- [x] Called migration endpoint - appeared successful
+- [x] Discovered Heroku database has exceeded query quota (3600 queries/hour)
+- [ ] Wait for database quota to reset (resets hourly)
+- [ ] Re-test upload functionality after quota reset
+- [ ] Consider upgrading Heroku database tier to avoid future quota issues
