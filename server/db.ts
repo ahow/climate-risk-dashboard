@@ -288,35 +288,49 @@ export async function deleteGeographicRiskByAssetId(assetId: number): Promise<vo
 
 
 // Uploaded Files
+// Get or create a system user for anonymous uploads
+async function getSystemUserId(): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Try to find existing system user
+  const systemUser = await db.select().from(users).where(eq(users.openId, 'system-anonymous')).limit(1);
+  
+  if (systemUser.length > 0) {
+    return systemUser[0].id;
+  }
+  
+  // Create system user if it doesn't exist
+  const result = await db.insert(users).values({
+    openId: 'system-anonymous',
+    name: 'Anonymous User',
+    email: null,
+    loginMethod: 'system',
+    role: 'user',
+  });
+  
+  return Number((result as any).insertId);
+}
+
 export async function createUploadedFile(file: InsertUploadedFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Filter out null/undefined uploadedBy to avoid foreign key constraint issues
-  // If uploadedBy is null, don't include it in the insert - let the database use its default
-  const insertData: any = {
+  // Use system user ID if no user is provided
+  const uploadedBy = file.uploadedBy ?? await getSystemUserId();
+  
+  const result = await db.insert(uploadedFiles).values({
     filename: file.filename,
     originalFilename: file.originalFilename,
     fileType: file.fileType,
     fileSize: file.fileSize,
     s3Key: file.s3Key,
     s3Url: file.s3Url,
-  };
+    uploadedBy,
+    description: file.description,
+  });
   
-  // Only include uploadedBy if it's a valid number
-  if (file.uploadedBy !== null && file.uploadedBy !== undefined) {
-    insertData.uploadedBy = file.uploadedBy;
-  }
-  
-  // Only include description if provided
-  if (file.description) {
-    insertData.description = file.description;
-  }
-  
-  const result = await db.insert(uploadedFiles).values(insertData);
-  // Get the inserted file ID
-  const insertId = (result as any).insertId;
-  return { id: insertId };
+  return result;
 }
 
 export async function getAllUploadedFiles() {

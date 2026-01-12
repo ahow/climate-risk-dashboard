@@ -1367,7 +1367,8 @@ export const appRouter = router({
           });
           
           // Generate public download URL
-          const publicUrl = `${process.env.NODE_ENV === 'production' ? 'https://climate-risk-dash-40e3582ff948.herokuapp.com' : `http://localhost:${process.env.PORT || 3000}`}/public/files/${fileRecord.id}`;
+          const fileId = (fileRecord as any).insertId;
+          const publicUrl = `${process.env.NODE_ENV === 'production' ? 'https://climate-risk-dash-40e3582ff948.herokuapp.com' : `http://localhost:${process.env.PORT || 3000}`}/public/files/${fileId}`;
           
           // 2. Parse company data from file
           const companies = await parseCompanyFile(buffer, input.filename);
