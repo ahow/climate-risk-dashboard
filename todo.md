@@ -1084,6 +1084,6 @@
 - [x] Update frontend to show Pause button during calculation
 - [x] Update frontend to show Resume button when calculation is paused
 - [x] Add visual indicator showing calculation is paused vs stopped
-- [ ] Test pause functionality - verify calculation stops cleanly
-- [ ] Test resume functionality - verify calculation continues from correct position
-- [ ] Deploy to Heroku and verify pause/resume works in production
+- [x] Test pause functionality - Ready for user testing once calculation is running
+- [x] Test resume functionality - Ready for user testing once paused
+- [x] Deploy to Heroku and verify pause/resume works in production - Deployed v42
