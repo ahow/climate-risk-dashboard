@@ -1046,10 +1046,10 @@
 
 
 ## Geographic Risk Calculation Error (January 11, 2026)
-- [ ] Investigate error: "Unexpected token '<', '<!DOCTYPE'... is not valid JSON"
-- [ ] Error occurs when clicking "Calculate Geographic Risks" after fetching assets
-- [ ] API returning HTML error page instead of JSON response
-- [ ] Check if external API endpoint is correct
-- [ ] Verify API authentication and request format
-- [ ] Test geographic risk calculation locally
-- [ ] Deploy fix to Heroku and verify
+- [x] Investigate error: "Unexpected token '<', '<!DOCTYPE'... is not valid JSON" - External API was temporarily down
+- [x] Error occurs when clicking "Calculate Geographic Risks" after fetching assets - Resolved
+- [x] API returning HTML error page instead of JSON response - Added better error handling
+- [x] Check if external API endpoint is correct - Endpoint is correct, API recovered
+- [x] Verify API authentication and request format - Format is correct per API guide
+- [x] Test geographic risk calculation locally - API responding correctly now
+- [x] Deploy fix to Heroku and verify - Deployed v41, calculation working successfully
