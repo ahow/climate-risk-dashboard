@@ -1043,3 +1043,13 @@
 - [x] Test file upload functionality with new database - Working perfectly
 - [x] Verify no query quota limits are hit - No issues, unlimited queries on Leopard plan
 - [ ] Remove old ClearDB addon after confirming everything works - Not needed, JawsDB took over same instance
+
+
+## Geographic Risk Calculation Error (January 11, 2026)
+- [ ] Investigate error: "Unexpected token '<', '<!DOCTYPE'... is not valid JSON"
+- [ ] Error occurs when clicking "Calculate Geographic Risks" after fetching assets
+- [ ] API returning HTML error page instead of JSON response
+- [ ] Check if external API endpoint is correct
+- [ ] Verify API authentication and request format
+- [ ] Test geographic risk calculation locally
+- [ ] Deploy fix to Heroku and verify

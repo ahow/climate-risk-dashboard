@@ -296,6 +296,12 @@ export async function fetchGeographicRisk(
       throw new Error(`Failed to fetch geographic risk: ${response.status} ${response.statusText}`);
     }
 
+    // Check if response is HTML (error page) instead of JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      throw new Error('Geographic risk API returned an error page. The external API service may be down or experiencing issues. Please try again later or contact support.');
+    }
+
     return await response.json() as any;
   } catch (error) {
     console.error(`Error fetching geographic risk for (${latitude}, ${longitude}):`, error);
@@ -342,6 +348,12 @@ export async function fetchGeographicRiskByCountry(
         throw new Error(`Country not found: ${countryCode}. ${errorData.message || 'Use ISO-3 country code'}`);
       }
       throw new Error(`Failed to fetch country-level geographic risk: ${response.status} ${response.statusText}`);
+    }
+
+    // Check if response is HTML (error page) instead of JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      throw new Error('Geographic risk API returned an error page. The external API service may be down or experiencing issues. Please try again later or contact support.');
     }
 
     return await response.json() as any;
