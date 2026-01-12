@@ -1074,3 +1074,16 @@
 - [x] Test background job processing locally - Server running without errors
 - [x] Deploy to Heroku and verify no timeout issues - Deployed v42, calculation running past 30s threshold
 - [x] Document usage for user - Calculation continues processing 2,499 remaining assets
+
+
+## Pause/Resume Functionality for Geographic Risk Calculation (January 12, 2026)
+- [x] Design pause/resume architecture - Use progress tracker cancellation + database state
+- [x] Update progressTracker to support pause state (distinct from cancel)
+- [x] Modify geoRiskWorker to check for pause signal during processing
+- [x] Implement resume logic to continue from last processed asset
+- [x] Update frontend to show Pause button during calculation
+- [x] Update frontend to show Resume button when calculation is paused
+- [x] Add visual indicator showing calculation is paused vs stopped
+- [ ] Test pause functionality - verify calculation stops cleanly
+- [ ] Test resume functionality - verify calculation continues from correct position
+- [ ] Deploy to Heroku and verify pause/resume works in production

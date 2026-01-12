@@ -6,7 +6,7 @@
 export interface ProgressState {
   operationId: string;
   operation: string;
-  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  status: 'running' | 'completed' | 'failed' | 'cancelled' | 'paused';
   current: number;
   total: number;
   message: string;
@@ -14,6 +14,7 @@ export interface ProgressState {
   completedAt?: Date;
   error?: string;
   cancelled?: boolean;
+  paused?: boolean;
 }
 
 class ProgressTracker {
@@ -89,11 +90,43 @@ class ProgressTracker {
   }
 
   /**
+   * Pause an operation
+   */
+  pause(operationId: string): void {
+    const progress = this.progressMap.get(operationId);
+    if (progress && progress.status === 'running') {
+      progress.paused = true;
+      progress.status = 'paused';
+      progress.message = 'Operation paused by user';
+    }
+  }
+
+  /**
+   * Resume a paused operation
+   */
+  resume(operationId: string): void {
+    const progress = this.progressMap.get(operationId);
+    if (progress && progress.status === 'paused') {
+      progress.paused = false;
+      progress.status = 'running';
+      progress.message = 'Operation resumed';
+    }
+  }
+
+  /**
    * Check if an operation is cancelled
    */
   isCancelled(operationId: string): boolean {
     const progress = this.progressMap.get(operationId);
     return progress?.cancelled === true;
+  }
+
+  /**
+   * Check if an operation is paused
+   */
+  isPaused(operationId: string): boolean {
+    const progress = this.progressMap.get(operationId);
+    return progress?.paused === true;
   }
 
   /**

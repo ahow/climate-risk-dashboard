@@ -1540,6 +1540,54 @@ export const appRouter = router({
       }),
 
     /**
+     * Pause an operation
+     */
+    pause: publicProcedure
+      .input(z.object({ operationId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { progressTracker } = await import('./utils/progressTracker');
+        progressTracker.pause(input.operationId);
+        return { success: true, message: 'Operation paused' };
+      }),
+
+    /**
+     * Resume a paused operation
+     */
+    resume: publicProcedure
+      .input(z.object({ operationId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { progressTracker } = await import('./utils/progressTracker');
+        const progress = progressTracker.get(input.operationId);
+        
+        if (!progress) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Operation not found'
+          });
+        }
+        
+        if (progress.status !== 'paused') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Operation is not paused'
+          });
+        }
+        
+        // Resume the progress tracker state
+        progressTracker.resume(input.operationId);
+        
+        // Restart the background worker
+        const { calculateGeographicRisksBackground } = await import('./workers/geoRiskWorker');
+        setImmediate(() => {
+          calculateGeographicRisksBackground(input.operationId).catch(error => {
+            console.error(`[Geographic Risks] Resume worker error:`, error);
+          });
+        });
+        
+        return { success: true, message: 'Operation resumed' };
+      }),
+
+    /**
      * Clear all progress entries (debug endpoint)
      */
     clearAll: publicProcedure.mutation(async () => {

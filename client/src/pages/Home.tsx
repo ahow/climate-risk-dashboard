@@ -72,6 +72,23 @@ export default function Home() {
     },
   });
   
+  const pauseMutation = trpc.progress.pause.useMutation({
+    onSuccess: () => {
+      window.location.reload();
+    },
+  });
+  
+  const resumeMutation = trpc.progress.resume.useMutation({
+    onSuccess: (data) => {
+      console.log('[Frontend] Resume succeeded:', data);
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error('[Frontend] Resume failed:', error);
+      alert(`Failed to resume operation: ${error.message}`);
+    },
+  });
+  
   // Track progress for long-running operations
   const progress = useProgressTracking(currentOperationId);
 
@@ -543,20 +560,37 @@ export default function Home() {
                     "Calculate Geographic Risks"
                   )}
                 </Button>
-                {(calculateRisksMutation.isPending || progress?.status === 'running') && currentOperationId && (
+                {progress?.status === 'running' && currentOperationId && (
                   <Button
-                    onClick={() => cancelMutation.mutate({ operationId: currentOperationId })}
-                    disabled={cancelMutation.isPending}
-                    variant="destructive"
+                    onClick={() => pauseMutation.mutate({ operationId: currentOperationId })}
+                    disabled={pauseMutation.isPending}
+                    variant="outline"
                     size="sm"
                   >
-                    {cancelMutation.isPending ? (
+                    {pauseMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Stopping...
+                        Pausing...
                       </>
                     ) : (
-                      "Stop"
+                      "Pause"
+                    )}
+                  </Button>
+                )}
+                {progress?.status === 'paused' && currentOperationId && (
+                  <Button
+                    onClick={() => resumeMutation.mutate({ operationId: currentOperationId })}
+                    disabled={resumeMutation.isPending}
+                    variant="default"
+                    size="sm"
+                  >
+                    {resumeMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Resuming...
+                      </>
+                    ) : (
+                      "Resume"
                     )}
                   </Button>
                 )}
@@ -564,6 +598,11 @@ export default function Home() {
               {progress && progress.status === 'running' && (
                 <div className="text-sm text-blue-600 mt-2">
                   {progress.message}
+                </div>
+              )}
+              {progress && progress.status === 'paused' && (
+                <div className="text-sm text-amber-600 mt-2">
+                  ⏸️ {progress.message} - Click Resume to continue
                 </div>
               )}
               {calculateRisksMutation.isSuccess && (

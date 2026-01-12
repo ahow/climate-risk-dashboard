@@ -64,6 +64,20 @@ export async function calculateGeographicRisksBackground(operationId: string) {
         };
       }
       
+      // Check for pause
+      if (progressTracker.isPaused(operationId)) {
+        console.log(`[GeoRisk Worker] Operation paused after ${risksCalculated} assets`);
+        progressTracker.pause(operationId);
+        return {
+          success: true,
+          risksCalculated,
+          skipped,
+          errors,
+          operationId,
+          paused: true
+        };
+      }
+      
       const batch = assetsToProcess.slice(i, i + BATCH_SIZE);
       
       await Promise.all(batch.map(async ({ asset, company }) => {
