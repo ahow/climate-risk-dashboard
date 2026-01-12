@@ -292,7 +292,28 @@ export async function createUploadedFile(file: InsertUploadedFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(uploadedFiles).values(file);
+  // Filter out null/undefined uploadedBy to avoid foreign key constraint issues
+  // If uploadedBy is null, don't include it in the insert - let the database use its default
+  const insertData: any = {
+    filename: file.filename,
+    originalFilename: file.originalFilename,
+    fileType: file.fileType,
+    fileSize: file.fileSize,
+    s3Key: file.s3Key,
+    s3Url: file.s3Url,
+  };
+  
+  // Only include uploadedBy if it's a valid number
+  if (file.uploadedBy !== null && file.uploadedBy !== undefined) {
+    insertData.uploadedBy = file.uploadedBy;
+  }
+  
+  // Only include description if provided
+  if (file.description) {
+    insertData.description = file.description;
+  }
+  
+  const result = await db.insert(uploadedFiles).values(insertData);
   // Get the inserted file ID
   const insertId = (result as any).insertId;
   return { id: insertId };

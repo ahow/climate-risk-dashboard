@@ -1092,3 +1092,18 @@
 ## Calculate Geographic Risks Button Styling (January 12, 2026)
 - [x] Change Calculate Geographic Risks button from grey (secondary) to blue (default) to match other buttons
 - [x] Deploy fix to Heroku - Deployed v44
+
+
+## Recurring File Upload Button Issue (January 12, 2026) - CRITICAL
+- [x] Investigate why "Upload File" button does nothing when clicked on Heroku - Button works, database insert fails
+- [x] Check browser console for JavaScript errors during upload attempt - Found database constraint error
+- [x] Verify file input is properly populated before upload - Working correctly
+- [x] Check if mutation is being triggered correctly - Mutation triggers, S3 upload succeeds
+- [x] Verify backend endpoint is receiving the request - Endpoint receives request
+- [x] Check for CORS or network issues - No CORS issues
+- [x] Implement comprehensive error handling with user-visible feedback - Added specific error messages
+- [x] Add loading states and progress indicators - Already implemented
+- [x] Add file validation before upload attempt - Added 16MB size limit validation
+- [x] Fixed createUploadedFile to filter out null uploadedBy values - Permanent fix
+- [ ] Test on both local and Heroku environments
+- [ ] Deploy permanent solution with robust error recovery

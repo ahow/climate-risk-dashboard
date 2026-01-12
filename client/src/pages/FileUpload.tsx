@@ -28,6 +28,13 @@ export default function FileUpload() {
       return;
     }
 
+    // Validate file size (max 16MB)
+    const maxSize = 16 * 1024 * 1024; // 16MB in bytes
+    if (selectedFile.size > maxSize) {
+      toast.error(`File too large (${formatFileSize(selectedFile.size)}). Maximum size is 16MB.`);
+      return;
+    }
+
     setUploading(true);
     try {
       // Read file as base64
@@ -50,9 +57,19 @@ export default function FileUpload() {
         refetch();
       };
       reader.readAsDataURL(selectedFile);
-    } catch (error) {
-      toast.error("Failed to upload file");
-      console.error(error);
+    } catch (error: any) {
+      console.error('[FileUpload] Upload error:', error);
+      
+      // Provide specific error messages based on error type
+      if (error?.message?.includes('Database')) {
+        toast.error("Database error - please try again or contact support");
+      } else if (error?.message?.includes('S3') || error?.message?.includes('storage')) {
+        toast.error("Storage error - please check your file and try again");
+      } else if (error?.message?.includes('size')) {
+        toast.error("File too large - please upload a smaller file");
+      } else {
+        toast.error(error?.message || "Failed to upload file - please try again");
+      }
     } finally {
       setUploading(false);
     }
