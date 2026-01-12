@@ -1087,3 +1087,8 @@
 - [x] Test pause functionality - Ready for user testing once calculation is running
 - [x] Test resume functionality - Ready for user testing once paused
 - [x] Deploy to Heroku and verify pause/resume works in production - Deployed v42
+
+
+## Calculate Geographic Risks Button Styling (January 12, 2026)
+- [x] Change Calculate Geographic Risks button from grey (secondary) to blue (default) to match other buttons
+- [ ] Deploy fix to Heroku

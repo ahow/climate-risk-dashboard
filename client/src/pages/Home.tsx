@@ -549,7 +549,7 @@ export default function Home() {
                     calculateRisksMutation.mutate();
                   }}
                   disabled={calculateRisksMutation.isPending || progress?.status === 'running'}
-                  variant="secondary"
+                  variant="default"
                 >
                   {calculateRisksMutation.isPending || progress?.status === 'running' ? (
                     <>
