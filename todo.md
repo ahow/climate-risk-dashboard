@@ -1107,3 +1107,15 @@
 - [x] Fixed createUploadedFile to filter out null uploadedBy values - Permanent fix
 - [ ] Test on both local and Heroku environments
 - [ ] Deploy permanent solution with robust error recovery
+
+
+## Database Query Optimization (January 12, 2026) - CRITICAL
+- [ ] Analyze current database query patterns to identify high-frequency queries
+- [ ] Implement query result caching for company list and asset data
+- [ ] Batch geographic risk inserts (insert 100 risks at once instead of individually)
+- [ ] Reduce progress tracking polling frequency from every 1s to every 5s
+- [ ] Add database connection pooling to reuse connections
+- [ ] Implement lazy loading for uploaded files list
+- [ ] Test query count reduction locally
+- [ ] Deploy optimizations to Heroku
+- [ ] Monitor query usage to verify staying under 18,000/hour limit
