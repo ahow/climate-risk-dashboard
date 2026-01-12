@@ -858,45 +858,52 @@ export const appRouter = router({
      * Calculate geographic risks for all assets with coordinates
      */
     calculateAllGeographicRisks: publicProcedure.mutation(async () => {
-      console.log('[Geographic Risks] ========== MUTATION CALLED ==========');
-      const { progressTracker } = await import('./utils/progressTracker');
+      console.log('[Geographic Risks] ========== MUTATION CALLED (BACKGROUND MODE) ==========');
       const operationId = `geo-risks-${Date.now()}`;
       console.log(`[Geographic Risks] Operation ID: ${operationId}`);
       
-      // Health check temporarily disabled for faster startup
-      // The retry logic will handle any API issues during calculation
-      // console.log('[Geographic Risks] Checking Climate Risk API health...');
-      // const healthCheck = await externalApis.checkClimateRiskApiHealth();
-      // 
-      // if (!healthCheck.healthy) {
-      //   const errorMsg = `Climate Risk API is not available: ${healthCheck.message}. Please wake up the API and try again.`;
-      //   console.error(`[Geographic Risks] ${errorMsg}`);
-      //   throw new Error(errorMsg);
-      // }
-      // 
-      // console.log('[Geographic Risks] API health check passed');
+      // Start background worker (non-blocking)
+      const { calculateGeographicRisksBackground } = await import('./workers/geoRiskWorker');
+      
+      // Run in background without awaiting
+      setImmediate(() => {
+        calculateGeographicRisksBackground(operationId).catch(error => {
+          console.error(`[Geographic Risks] Background worker error:`, error);
+        });
+      });
+      
+      // Return immediately with operation ID
+      console.log(`[Geographic Risks] Background job started, returning immediately`);
+      return {
+        success: true,
+        operationId,
+        message: 'Geographic risk calculation started in background'
+      };
+    }),
+
+    /**
+     * DEPRECATED: Old synchronous calculation (kept for reference)
+     * Use calculateAllGeographicRisks instead
+     */
+    _calculateAllGeographicRisksSync: publicProcedure.mutation(async () => {
+      console.log('[Geographic Risks] ========== SYNC MUTATION (DEPRECATED) ==========');
+      const { progressTracker } = await import('./utils/progressTracker');
+      const operationId = `geo-risks-${Date.now()}`;
       
       const companies = await db.getAllCompanies();
-      console.log(`[Geographic Risks] Loaded ${companies.length} companies`);
       let risksCalculated = 0;
       let skipped = 0;
       const errors: string[] = [];
       
-      // Count total assets to calculate
       let totalAssets = 0;
       for (const company of companies) {
         const assets = await db.getAssetsByCompanyId(company.id);
         totalAssets += assets.filter(a => a.latitude && a.longitude && a.estimatedValueUsd).length;
       }
       
-      console.log(`[Geographic Risks] Total assets to process: ${totalAssets}`);
       progressTracker.start(operationId, 'Calculating geographic risks', totalAssets, `Found ${totalAssets} assets to process`);
-      console.log(`[Geographic Risks] Progress tracker started`);
       let processedAssets = 0;
 
-      console.log(`[Geographic Risks] Starting calculation for ${companies.length} companies`);
-
-      // Collect all assets to process
       const assetsToProcess: Array<{ asset: any; company: any }> = [];
       for (const company of companies) {
         const assets = await db.getAssetsByCompanyId(company.id);

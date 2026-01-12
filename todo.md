@@ -1053,3 +1053,24 @@
 - [x] Verify API authentication and request format - Format is correct per API guide
 - [x] Test geographic risk calculation locally - API responding correctly now
 - [x] Deploy fix to Heroku and verify - Deployed v41, calculation working successfully
+
+
+## Geographic Risk Calculation Stopped Prematurely (January 12, 2026)
+- [x] Investigation: Calculation showed 130 assets completed (5%) but then stopped - Heroku 30s timeout
+- [x] Progress indicator disappeared from dashboard - Request was terminated
+- [x] Only 4 companies have risk data instead of expected full dataset - Only 28 assets saved
+- [x] Check Heroku logs for errors or timeouts - Confirmed timeout issue
+- [x] Verify if calculation completed or failed silently - Failed due to timeout
+- [x] Investigate if database connection was lost - No, timeout is the issue
+- [x] Check if API rate limits were hit - No, timeout happened first
+- [x] Determine if calculation needs to be restarted - Needs background job implementation
+
+## Background Job System Implementation (January 12, 2026)
+- [x] Create background job processor that runs outside HTTP request cycle
+- [x] Implement job queue system for long-running operations - Using setImmediate for async execution
+- [x] Update geographic risk calculation to use background jobs
+- [x] Add job status tracking and progress updates - Using existing progressTracker
+- [x] Update frontend to handle background job responses
+- [x] Test background job processing locally - Server running without errors
+- [ ] Deploy to Heroku and verify no timeout issues
+- [ ] Document usage for user

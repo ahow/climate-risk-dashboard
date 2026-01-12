@@ -568,10 +568,7 @@ export default function Home() {
               )}
               {calculateRisksMutation.isSuccess && (
                 <div className="text-sm text-green-600 flex items-center">
-                  ✓ Geographic risks: {calculateRisksMutation.data.risksCalculated} calculated, {calculateRisksMutation.data.skipped} skipped
-                  {calculateRisksMutation.data.errors && calculateRisksMutation.data.errors.length > 0 && (
-                    <span className="text-red-600 ml-2">({calculateRisksMutation.data.errors.length} errors)</span>
-                  )}
+                  ✓ {calculateRisksMutation.data.message || 'Geographic risk calculation started'}
                 </div>
               )}
             </CardContent>
