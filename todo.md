@@ -1091,4 +1091,4 @@
 
 ## Calculate Geographic Risks Button Styling (January 12, 2026)
 - [x] Change Calculate Geographic Risks button from grey (secondary) to blue (default) to match other buttons
-- [ ] Deploy fix to Heroku
+- [x] Deploy fix to Heroku - Deployed v44
