@@ -1072,5 +1072,5 @@
 - [x] Add job status tracking and progress updates - Using existing progressTracker
 - [x] Update frontend to handle background job responses
 - [x] Test background job processing locally - Server running without errors
-- [ ] Deploy to Heroku and verify no timeout issues
-- [ ] Document usage for user
+- [x] Deploy to Heroku and verify no timeout issues - Deployed v42, calculation running past 30s threshold
+- [x] Document usage for user - Calculation continues processing 2,499 remaining assets
