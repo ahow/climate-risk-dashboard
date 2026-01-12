@@ -22,6 +22,7 @@ import {
   InsertSupplyChainRisk
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { queryCache, CACHE_TTL } from './utils/queryCache';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -111,10 +112,21 @@ export async function getUserByOpenId(openId: string) {
 // ========== Company Queries ==========
 
 export async function getAllCompanies(): Promise<Company[]> {
+  // Check cache first
+  const cached = queryCache.get<Company[]>('companies:all');
+  if (cached) {
+    return cached;
+  }
+
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(companies);
+  const result = await db.select().from(companies);
+  
+  // Cache the result
+  queryCache.set('companies:all', result, CACHE_TTL.COMPANIES_LIST);
+  
+  return result;
 }
 
 export async function getCompanyByIsin(isin: string): Promise<Company | undefined> {
@@ -152,10 +164,22 @@ export async function bulkInsertCompanies(companyList: InsertCompany[]): Promise
 // ========== Asset Queries ==========
 
 export async function getAssetsByCompanyId(companyId: number): Promise<Asset[]> {
+  // Check cache first
+  const cacheKey = `assets:company:${companyId}`;
+  const cached = queryCache.get<Asset[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(assets).where(eq(assets.companyId, companyId));
+  const result = await db.select().from(assets).where(eq(assets.companyId, companyId));
+  
+  // Cache the result
+  queryCache.set(cacheKey, result, CACHE_TTL.ASSETS);
+  
+  return result;
 }
 
 export async function insertAsset(asset: InsertAsset): Promise<void> {
@@ -216,6 +240,20 @@ export async function insertGeographicRisk(risk: InsertGeographicRisk): Promise<
   if (!db) return;
   
   await db.insert(geographicRisks).values(risk);
+}
+
+export async function bulkInsertGeographicRisks(risks: InsertGeographicRisk[]): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  if (risks.length === 0) return;
+  
+  // Insert in batches of 100 to avoid query size limits
+  const batchSize = 100;
+  for (let i = 0; i < risks.length; i += batchSize) {
+    const batch = risks.slice(i, i + batchSize);
+    await db.insert(geographicRisks).values(batch);
+  }
 }
 
 // ========== Risk Management Queries ==========

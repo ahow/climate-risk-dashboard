@@ -49,6 +49,8 @@ export async function calculateGeographicRisksBackground(operationId: string) {
 
     // Process assets in parallel batches of 10
     const BATCH_SIZE = 10;
+    const risksToInsert: any[] = []; // Collect risks for batch insertion
+    
     for (let i = 0; i < assetsToProcess.length; i += BATCH_SIZE) {
       // Check for cancellation
       if (progressTracker.isCancelled(operationId)) {
@@ -98,7 +100,8 @@ export async function calculateGeographicRisksBackground(operationId: string) {
             
             const riskData = await externalApis.fetchGeographicRisk(lat, lon, value);
             
-            await db.insertGeographicRisk({
+            // Collect risk for batch insertion
+            risksToInsert.push({
               assetId: asset.id,
               latitude: lat.toString(),
               longitude: lon.toString(),
@@ -120,8 +123,18 @@ export async function calculateGeographicRisksBackground(operationId: string) {
         }
       }));
       
+      // Insert collected risks in batch every 100 items
+      if (risksToInsert.length >= 100) {
+        await db.bulkInsertGeographicRisks(risksToInsert.splice(0, 100));
+      }
+      
       // Small delay between batches
       await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Insert any remaining risks
+    if (risksToInsert.length > 0) {
+      await db.bulkInsertGeographicRisks(risksToInsert);
     }
 
     console.log(`[GeoRisk Worker] Completed: ${risksCalculated} calculated, ${skipped} skipped, ${errors.length} errors`);

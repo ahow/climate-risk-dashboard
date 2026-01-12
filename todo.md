@@ -1110,10 +1110,10 @@
 
 
 ## Database Query Optimization (January 12, 2026) - CRITICAL
-- [ ] Analyze current database query patterns to identify high-frequency queries
-- [ ] Implement query result caching for company list and asset data
-- [ ] Batch geographic risk inserts (insert 100 risks at once instead of individually)
-- [ ] Reduce progress tracking polling frequency from every 1s to every 5s
+- [x] Analyze current database query patterns to identify high-frequency queries
+- [x] Implement query result caching for company list and asset data - Completed (5min TTL)
+- [x] Batch geographic risk inserts (insert 100 risks at once instead of individually) - Completed
+- [x] Reduce progress tracking polling frequency from every 1s to every 5s - Completed
 - [ ] Add database connection pooling to reuse connections
 - [ ] Implement lazy loading for uploaded files list
 - [ ] Test query count reduction locally

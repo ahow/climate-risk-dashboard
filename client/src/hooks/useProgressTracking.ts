@@ -19,8 +19,8 @@ export function useProgressTracking(operationId: string | null | undefined) {
     {
       enabled: !!operationId,
       refetchInterval: (query) => {
-        // Poll every second while running, stop when completed/failed
-        return query.state.data?.status === 'running' ? 1000 : false;
+        // Poll every 5 seconds while running (reduced from 1s to save database queries)
+        return query.state.data?.status === 'running' ? 5000 : false;
       },
     }
   );
