@@ -431,9 +431,14 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <Button onClick={() => setLocation("/rankings")} variant="outline">
-              View Rankings
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setLocation("/monitor")} variant="outline">
+                Calculation Monitor
+              </Button>
+              <Button onClick={() => setLocation("/rankings")} variant="outline">
+                View Rankings
+              </Button>
+            </div>
           </div>
         </div>
       </header>

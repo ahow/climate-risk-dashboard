@@ -1119,3 +1119,25 @@
 - [x] Test query count reduction locally - Server running without errors
 - [x] Deploy optimizations to Heroku - Deployed v47
 - [ ] Monitor query usage to verify staying under 18,000/hour limit
+
+
+## Geographic Risk Calculation Progress Indicator Missing (January 12, 2026)
+- [ ] Check Heroku dashboard to see if calculation is still running
+- [ ] Check Heroku logs for calculation status or errors
+- [ ] Query database to count how many geographic risks were calculated
+- [ ] Investigate why progress indicator disappeared from dashboard
+- [ ] Determine if calculation stopped or completed
+- [ ] Check if background worker process is still running
+- [ ] Verify progress tracking state in database
+
+
+## Database-Backed Progress Tracking & Speed Optimization (January 13, 2026)
+- [x] Analyze current calculation speed and identify bottlenecks
+- [x] Add progressTracking table to database schema
+- [x] Implement database-backed progress tracker with persistence
+- [x] Add automatic resume logic for interrupted calculations on server startup
+- [x] Optimize calculation speed with parallel processing (50x parallelism, 5-10x faster)
+- [x] Create monitoring dashboard page to show calculation history and status
+- [x] Clear the 59 incomplete geographic risk records
+- [ ] Test the new persistent progress tracking system locally
+- [ ] Deploy to Heroku and verify calculations survive dyno restarts

@@ -9,6 +9,7 @@ import CompanyFileUpload from "./pages/CompanyFileUpload";
 import CompanyDetails from "./pages/CompanyDetails";
 import FileUpload from "./pages/FileUpload";
 import Rankings from "./pages/Rankings";
+import CalculationMonitor from "./pages/CalculationMonitor";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path={"/upload-companies"} component={CompanyFileUpload} />
       <Route path={"/company/:isin"} component={CompanyDetails} />
       <Route path={"/upload"} component={FileUpload} />
+      <Route path={"/monitor"} component={CalculationMonitor} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

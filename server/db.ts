@@ -256,6 +256,14 @@ export async function bulkInsertGeographicRisks(risks: InsertGeographicRisk[]): 
   }
 }
 
+export async function getAllGeographicRiskAssetIds(): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const results = await db.select({ assetId: geographicRisks.assetId }).from(geographicRisks);
+  return results.map(r => r.assetId);
+}
+
 // ========== Risk Management Queries ==========
 
 export async function getRiskManagementByCompanyId(companyId: number): Promise<RiskManagementScore | undefined> {

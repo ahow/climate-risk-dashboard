@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { publicFilesRouter } from "../routes/publicFiles";
 import { migrateRouter } from "../routes/migrate";
+import { initializeResumeService } from "../services/resumeService";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -74,6 +75,9 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // Initialize resume service to restart interrupted calculations
+    initializeResumeService();
   });
 }
 

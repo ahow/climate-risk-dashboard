@@ -134,3 +134,24 @@ export const supplyChainRisks = mysqlTable("supplyChainRisks", {
 export type SupplyChainRisk = typeof supplyChainRisks.$inferSelect;
 export type InsertSupplyChainRisk = typeof supplyChainRisks.$inferInsert;
 
+
+/**
+ * Progress tracking table - stores state of long-running operations
+ * Persists progress to survive server restarts and dyno cycling
+ */
+export const progressTracking = mysqlTable("progressTracking", {
+  id: int("id").autoincrement().primaryKey(),
+  operationId: varchar("operationId", { length: 255 }).notNull().unique(),
+  operation: varchar("operation", { length: 255 }).notNull(),
+  status: mysqlEnum("status", ["running", "completed", "failed", "cancelled", "paused"]).notNull(),
+  current: int("current").notNull().default(0),
+  total: int("total").notNull(),
+  message: text("message"),
+  error: text("error"),
+  startedAt: timestamp("startedAt").notNull(),
+  completedAt: timestamp("completedAt"),
+  lastUpdatedAt: timestamp("lastUpdatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProgressTracking = typeof progressTracking.$inferSelect;
+export type InsertProgressTracking = typeof progressTracking.$inferInsert;
