@@ -2,7 +2,9 @@
  * Optimized background worker for calculating geographic risks
  * Features:
  * - Database-backed progress tracking (survives restarts)
- * - Increased parallelism (50 concurrent requests)
+ * - Balanced parallelism (20 concurrent requests)
+ * - Extended timeout (60s to allow hibernating API to wake up)
+ * - Batch delays (500ms between batches to respect rate limits)
  * - Bulk checking for existing risks
  * - Automatic resume from last checkpoint
  * - Request timeout and retry logic
@@ -12,9 +14,10 @@ import * as db from '../db';
 import * as externalApis from '../services/externalApis';
 import { persistentProgressTracker } from '../utils/persistentProgressTracker';
 
-const BATCH_SIZE = 50; // Increased from 10 to 50 for 5x speed improvement
-const REQUEST_TIMEOUT = 10000; // 10 second timeout per request
-const MAX_RETRIES = 2; // Retry failed requests twice
+const BATCH_SIZE = 20; // Balanced parallelism - fast but won't overwhelm hibernating API
+const REQUEST_TIMEOUT = 60000; // 60 second timeout to allow API wake-up time
+const MAX_RETRIES = 3; // Retry failed requests up to 3 times
+const BATCH_DELAY = 500; // 500ms delay between batches for rate limiting
 
 export async function calculateGeographicRisksOptimized(operationId: string) {
   console.log(`[OptimizedGeoRisk] Starting calculation with operation ID: ${operationId}`);
@@ -148,7 +151,10 @@ export async function calculateGeographicRisksOptimized(operationId: string) {
         console.log(`[OptimizedGeoRisk] Checkpoint: ${completedMsg}`);
       }
       
-      // NO DELAY between batches (removed 100ms delay for speed)
+      // Add delay between batches to respect API rate limits
+      if (i + BATCH_SIZE < assetsToProcess.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      }
     }
     
     // Insert any remaining risks

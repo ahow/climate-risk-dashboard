@@ -1141,3 +1141,10 @@
 - [x] Clear the 59 incomplete geographic risk records
 - [ ] Test the new persistent progress tracking system locally
 - [ ] Deploy to Heroku and verify calculations survive dyno restarts
+
+
+## Geographic Risk Performance Optimization (January 14, 2026)
+- [x] Increase batch size from 10 to 20 for better throughput
+- [x] Reduce batch delay from 2000ms to 500ms
+- [ ] Deploy optimizations to Heroku
+- [ ] Monitor calculation completion
