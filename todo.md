@@ -1155,6 +1155,6 @@
 - [x] Check file upload route and tRPC procedures
 - [x] Identify why users table query is failing (getSystemUserId was querying users table)
 - [x] Fix authentication to allow file uploads (removed system user lookup, allow null uploadedBy)
-- [ ] Deploy fix to Heroku via GitHub
-- [ ] Test file upload end-to-end
+- [x] Deploy fix to Heroku via GitHub
+- [ ] Test file upload end-to-end (waiting for user to test)
 - [ ] Complete workflow: load companies → fetch assets → calculate risks
