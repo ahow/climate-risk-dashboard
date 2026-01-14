@@ -14,10 +14,10 @@ import * as db from '../db';
 import * as externalApis from '../services/externalApis';
 import { persistentProgressTracker } from '../utils/persistentProgressTracker';
 
-const BATCH_SIZE = 20; // Balanced parallelism - fast but won't overwhelm hibernating API
-const REQUEST_TIMEOUT = 60000; // 60 second timeout to allow API wake-up time
+const BATCH_SIZE = 5; // Reduced concurrency to avoid overwhelming API
+const REQUEST_TIMEOUT = 90000; // 90 second timeout for hibernating API wake-up
 const MAX_RETRIES = 3; // Retry failed requests up to 3 times
-const BATCH_DELAY = 500; // 500ms delay between batches for rate limiting
+const BATCH_DELAY = 1000; // 1 second delay between batches for rate limiting
 
 export async function calculateGeographicRisksOptimized(operationId: string) {
   console.log(`[OptimizedGeoRisk] Starting calculation with operation ID: ${operationId}`);

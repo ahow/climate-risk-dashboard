@@ -1158,3 +1158,19 @@
 - [x] Deploy fix to Heroku via GitHub
 - [ ] Test file upload end-to-end (waiting for user to test)
 - [ ] Complete workflow: load companies → fetch assets → calculate risks
+
+
+## Geographic Risk Calculation Instant Completion Issue (January 14, 2026)
+- [ ] Check if assets still exist in database
+- [ ] Check if geographic risks already exist (causing skip)
+- [ ] Review calculation worker logic for why it found 0 assets to process
+- [ ] Check Heroku logs for error messages
+- [ ] Fix issue and restart calculation
+
+
+## Batch Settings Optimization (January 14, 2026)
+- [ ] Check current BATCH_SIZE and BATCH_DELAY settings
+- [ ] Analyze actual API response times
+- [ ] Calculate optimal batch size for 2-3 hour completion
+- [ ] Update batch settings
+- [ ] Deploy and restart calculation
