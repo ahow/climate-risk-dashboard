@@ -362,8 +362,8 @@ export async function createUploadedFile(file: InsertUploadedFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Use system user ID if no user is provided
-  const uploadedBy = file.uploadedBy ?? await getSystemUserId();
+  // Allow truly anonymous uploads - no user lookup required
+  const uploadedBy = file.uploadedBy ?? null;
   
   const result = await db.insert(uploadedFiles).values({
     filename: file.filename,

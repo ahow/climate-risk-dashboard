@@ -1148,3 +1148,13 @@
 - [x] Reduce batch delay from 2000ms to 500ms
 - [ ] Deploy optimizations to Heroku
 - [ ] Monitor calculation completion
+
+
+## Authentication Fix for File Upload (January 14, 2026)
+- [x] Investigate authentication middleware and context creation
+- [x] Check file upload route and tRPC procedures
+- [x] Identify why users table query is failing (getSystemUserId was querying users table)
+- [x] Fix authentication to allow file uploads (removed system user lookup, allow null uploadedBy)
+- [ ] Deploy fix to Heroku via GitHub
+- [ ] Test file upload end-to-end
+- [ ] Complete workflow: load companies → fetch assets → calculate risks
