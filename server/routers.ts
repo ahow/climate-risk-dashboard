@@ -606,25 +606,25 @@ export const appRouter = router({
      * Fetch risk management assessments for all companies
      */
     fetchAllRiskManagement: publicProcedure.mutation(async () => {
-      const { progressTracker } = await import('./utils/progressTracker');
+      const { persistentProgressTracker } = await import('./utils/persistentProgressTracker');
       const operationId = `risk-mgmt-${Date.now()}`;
-      progressTracker.start(operationId, 'Fetching Risk Management Data', 0, 'Starting...');
+      const companies = await db.getAllCompanies();
+      await persistentProgressTracker.start(operationId, 'Fetching risk management data', companies.length, 'Starting risk management fetch...');
 
       try {
-        const companies = await db.getAllCompanies();
         let assessmentsFetched = 0;
         const errors: string[] = [];
         const totalCompanies = companies.length;
+        let processed = 0;
 
-        for (let i = 0; i < companies.length; i++) {
-          const company = companies[i];
-          const progress = Math.floor(((i + 1) / totalCompanies) * 100);
+        for (const company of companies) {
+          processed++;
           
           try {
-            progressTracker.update(
+            await persistentProgressTracker.update(
               operationId, 
-              progress, 
-              `Fetching ${company.name} (${i + 1}/${totalCompanies})`
+              processed, 
+              `Fetching ${company.name} (${processed}/${totalCompanies})`
             );
             
             const managementData = await externalApis.fetchRiskManagement(company.isin);
@@ -639,17 +639,20 @@ export const appRouter = router({
                 assessmentData: managementData as any,
               });
               assessmentsFetched++;
+              await persistentProgressTracker.update(operationId, processed, `${company.name}: Fetched successfully`);
             } else {
               console.log(`[fetchRiskManagement] ${company.name} status: ${managementData.company?.analysisStatus || 'unknown'}`);
+              await persistentProgressTracker.update(operationId, processed, `${company.name}: No data available`);
             }
           } catch (error) {
             const errorMsg = `${company.name}: ${error}`;
             console.error(errorMsg);
             errors.push(errorMsg);
+            await persistentProgressTracker.update(operationId, processed, `${company.name}: Error - ${error}`);
           }
         }
 
-        progressTracker.complete(
+        await persistentProgressTracker.complete(
           operationId, 
           `Successfully fetched ${assessmentsFetched}/${totalCompanies} risk management assessments`
         );
@@ -663,7 +666,7 @@ export const appRouter = router({
         };
       } catch (error) {
         console.error('Error in fetchAllRiskManagement:', error);
-        progressTracker.fail(operationId, error instanceof Error ? error.message : 'Unknown error');
+        await persistentProgressTracker.fail(operationId, error instanceof Error ? error.message : 'Unknown error');
         return {
           success: false,
           assessmentsFetched: 0,
@@ -681,11 +684,19 @@ export const appRouter = router({
       const companies = await db.getAllCompanies();
       const { fetchSupplyChainRisk, calculateSupplyChainLoss } = await import('./services/supplyChainApi');
       
+      // Initialize progress tracking
+      const operationId = `supply-chain-${Date.now()}`;
+      const { persistentProgressTracker } = await import('./utils/persistentProgressTracker');
+      await persistentProgressTracker.start(operationId, 'Fetching supply chain risks', companies.length, 'Starting supply chain risk fetch...');
+      
       let risksFetched = 0;
       const errors: string[] = [];
+      let processed = 0;
 
       for (const company of companies) {
         try {
+          processed++;
+          await persistentProgressTracker.update(operationId, processed, `Processing ${company.name}...`);
           console.log(`[fetchSupplyChainRisks] Processing ${company.name}...`);
           
           // Fetch supply chain risk assessment from API
@@ -694,6 +705,7 @@ export const appRouter = router({
           // Skip if API returned error or no data available
           if (!assessment) {
             console.log(`[fetchSupplyChainRisks] ${company.name}: No data available, skipping`);
+            await persistentProgressTracker.update(operationId, processed, `${company.name}: No data available, skipped`);
             continue;
           }
           
@@ -722,17 +734,23 @@ export const appRouter = router({
           
           console.log(`[fetchSupplyChainRisks] ${company.name}: Annual Loss = $${annualLoss.toFixed(2)} (${expectedAnnualLossPct}%)`);
           risksFetched++;
+          await persistentProgressTracker.update(operationId, processed, `${company.name}: Fetched successfully`);
         } catch (error) {
           console.error(`[fetchSupplyChainRisks] Error for ${company.name}:`, error);
           errors.push(`${company.name}: ${error}`);
+          await persistentProgressTracker.update(operationId, processed, `${company.name}: Error - ${error}`);
         }
       }
+
+      // Mark operation as complete
+      await persistentProgressTracker.complete(operationId, `Fetched ${risksFetched} supply chain risks from ${companies.length} companies`);
 
       return {
         success: true,
         risksFetched,
         companiesProcessed: companies.length,
         errors,
+        operationId,
       };
     }),
   }),
