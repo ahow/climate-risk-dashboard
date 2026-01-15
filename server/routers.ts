@@ -1590,6 +1590,23 @@ export const appRouter = router({
       }),
 
     /**
+     * Cancel all running calculations
+     */
+    cancelAllRunning: publicProcedure.mutation(async () => {
+      const { persistentProgressTracker } = await import('./utils/persistentProgressTracker');
+      const all = await persistentProgressTracker.getAll();
+      const running = all.filter(p => p.status === 'running');
+      
+      console.log(`[Progress] Cancelling ${running.length} running operations`);
+      
+      for (const progress of running) {
+        await persistentProgressTracker.cancel(progress.operationId);
+      }
+      
+      return { success: true, cancelled: running.length };
+    }),
+
+    /**
      * Clear all progress entries (debug endpoint)
      */
     clearAll: publicProcedure.mutation(async () => {

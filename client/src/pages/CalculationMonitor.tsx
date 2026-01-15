@@ -31,6 +31,16 @@ export default function CalculationMonitor() {
     },
   });
 
+  const cancelAllRunningMutation = trpc.progress.cancelAllRunning.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Cancelled ${data.cancelled} running calculation(s)`);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to cancel: ${error.message}`);
+    },
+  });
+
   const clearAllMutation = trpc.progress.clearAll.useMutation({
     onSuccess: () => {
       toast.success('All progress entries cleared');
@@ -126,6 +136,17 @@ export default function CalculationMonitor() {
           </Button>
           <Button
             variant="destructive"
+            onClick={() => cancelAllRunningMutation.mutate()}
+            disabled={cancelAllRunningMutation.isPending || !operations || operations.filter(op => op.status === 'running').length === 0}
+          >
+            {cancelAllRunningMutation.isPending ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelling...</>
+            ) : (
+              'Cancel All Running'
+            )}
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => clearAllMutation.mutate()}
             disabled={clearAllMutation.isPending || !operations || operations.length === 0}
           >

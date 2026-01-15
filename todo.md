@@ -1189,5 +1189,13 @@
 - [x] Investigate why uploadedBy parameter is empty in insert query (Drizzle not handling null properly)
 - [x] Check createUploadedFile function handling of null values
 - [x] Fix database insert to conditionally include uploadedBy only when not null
-- [ ] Deploy fix to Heroku
-- [ ] Test upload functionality end-to-end
+- [x] Deploy fix to Heroku
+- [ ] Test upload functionality end-to-end (waiting for user to test)
+
+
+## Cancel All Running Calculations Feature (January 14, 2026)
+- [x] Add tRPC procedure to cancel all running geographic risk calculations
+- [x] Add "Cancel All Running" button to Calculation Monitor page
+- [x] Update UI to show cancellation status
+- [ ] Deploy to Heroku
+- [ ] Test cancellation functionality
