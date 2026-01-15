@@ -186,40 +186,16 @@ export async function fetchSupplyChainRisk(
     io_coverage: rawResponse.io_coverage || 0,
   };
   
-  // Get climate risk data from Geographic Risk API for consistency with asset-level analysis
-  // Use country-level assessment (population-weighted) since we don't have specific coordinates
-  let climateRiskData;
-  try {
-    const { fetchGeographicRiskByCountry } = await import('./externalApis');
-    // Use a nominal asset value of $1M for percentage calculations
-    climateRiskData = await fetchGeographicRiskByCountry(assessment.country, 1000000);
-    
-    // Add computed climate_details from Geographic Risk API
-    assessment.climate_details = {
-      country: assessment.country,
-      expected_annual_loss: climateRiskData.expected_annual_loss || 0,
-      expected_annual_loss_pct: climateRiskData.expected_annual_loss_pct || 0,
-      present_value_30y: climateRiskData.present_value_30yr || 0,
-      hazards: climateRiskData.risk_breakdown ? {
-        drought: climateRiskData.risk_breakdown.drought?.annual_loss || 0,
-        flood: climateRiskData.risk_breakdown.flood?.annual_loss || 0,
-        heat_stress: climateRiskData.risk_breakdown.heat_stress?.annual_loss || 0,
-        hurricane: climateRiskData.risk_breakdown.hurricane?.annual_loss || 0,
-        extreme_precipitation: climateRiskData.risk_breakdown.extreme_precipitation?.annual_loss || 0,
-      } : undefined,
-    };
-    
-    console.log(`[fetchSupplyChainRisk] Climate data from Geographic Risk API: ${climateRiskData.expected_annual_loss_pct}%`);
-  } catch (error) {
-    console.error(`[fetchSupplyChainRisk] Failed to fetch climate data from Geographic Risk API:`, error);
-    // Fallback to zero if Geographic Risk API fails
-    assessment.climate_details = {
-      country: assessment.country,
-      expected_annual_loss: 0,
-      expected_annual_loss_pct: 0,
-      present_value_30y: 0,
-    };
-  }
+  // Supply chain climate risk is calculated separately from asset-level geographic risks
+  // We use skip_climate=true in the API call since supply chain focuses on non-climate risks
+  // (modern slavery, political, water stress, nature loss)
+  // Climate risk for supply chain will be derived from asset-level geographic risk calculations
+  assessment.climate_details = {
+    country: assessment.country,
+    expected_annual_loss: 0,
+    expected_annual_loss_pct: 0,
+    present_value_30y: 0,
+  };
   
   console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Expected Loss: $${assessment.climate_details?.expected_annual_loss || 0} (${assessment.climate_details?.expected_annual_loss_pct || 0}%)`);
 

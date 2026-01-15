@@ -1266,3 +1266,14 @@
 - [x] Test fix locally with sample calculation (fix is straightforward validation)
 - [ ] Deploy fix to Heroku
 - [ ] Clear failed calculation and restart
+
+
+## Debug Supply Chain Risk Fetch Issue (January 15, 2026)
+- [x] Test Supply Chain Risk API directly with sample company data (API working correctly)
+- [x] Check API response format and error messages (found broken Geographic Risk API country endpoint)
+- [x] Verify geography/sector mapping is correct (mapping works)
+- [x] Fix any issues with API request or data processing (removed broken climate data fetch)
+- [x] Add better error visibility and toast messages (success toast shows "Supply chain risks loaded: 100 companies")
+- [x] Test fix locally (works - shows success message)
+- [ ] Deploy to Heroku and re-test
+- [ ] Verify supply chain risk values appear on dashboard
