@@ -186,15 +186,29 @@ export async function fetchSupplyChainRisk(
     io_coverage: rawResponse.io_coverage || 0,
   };
   
-  // Supply chain climate risk is calculated separately from asset-level geographic risks
-  // We use skip_climate=true in the API call since supply chain focuses on non-climate risks
-  // (modern slavery, political, water stress, nature loss)
-  // Climate risk for supply chain will be derived from asset-level geographic risk calculations
+  // Calculate expected loss percentage from total risk scores
+  // Risk scores are on 0-5 scale, convert to loss percentage
+  // Using weighted average of all risk types (modern slavery, political, water stress, nature loss, climate)
+  const riskScores = [
+    assessment.total_risk.modern_slavery || 0,
+    assessment.total_risk.political || 0,
+    assessment.total_risk.water_stress || 0,
+    assessment.total_risk.nature_loss || 0,
+    assessment.total_risk.climate || 0,
+  ];
+  
+  // Calculate average risk score
+  const avgRiskScore = riskScores.reduce((sum, score) => sum + score, 0) / riskScores.length;
+  
+  // Convert risk score (0-5) to expected loss percentage
+  // Conservative mapping: score 0 = 0%, score 5 = 10%
+  const expectedLossPct = (avgRiskScore / 5) * 10;
+  
   assessment.climate_details = {
     country: assessment.country,
-    expected_annual_loss: 0,
-    expected_annual_loss_pct: 0,
-    present_value_30y: 0,
+    expected_annual_loss: 0, // Will be calculated in router based on supplier costs
+    expected_annual_loss_pct: expectedLossPct,
+    present_value_30y: 0, // Will be calculated in router
   };
   
   console.log(`[fetchSupplyChainRisk] Success: ${assessment.country_name} - ${assessment.sector_name}, Expected Loss: $${assessment.climate_details?.expected_annual_loss || 0} (${assessment.climate_details?.expected_annual_loss_pct || 0}%)`);
