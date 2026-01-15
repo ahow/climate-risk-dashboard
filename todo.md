@@ -1197,5 +1197,35 @@
 - [x] Add tRPC procedure to cancel all running geographic risk calculations
 - [x] Add "Cancel All Running" button to Calculation Monitor page
 - [x] Update UI to show cancellation status
+- [x] Deploy to Heroku
+- [ ] Test cancellation functionality (waiting for user to test)
+
+
+## Geographic Risk Data Not Displaying (January 15, 2026)
+- [ ] Check if geographic risks were actually saved to database
+- [ ] Verify count of geographic risk records
+- [ ] Check company risk aggregation logic in companies.list query
+- [ ] Test if risk data is being joined correctly
+- [ ] Fix aggregation or display issues
+- [ ] Verify risk values show in dashboard
+
+
+## Auto-Clear Geographic Risks Before Calculation (January 15, 2026)
+- [ ] Add checkbox option "Clear existing risks before calculating" to homepage
+- [ ] Update calculateGeographicRisks mutation to accept clearExisting parameter
+- [ ] Modify optimized worker to clear all geographic risks if clearExisting is true
+- [ ] Update UI to show clearing status
 - [ ] Deploy to Heroku
-- [ ] Test cancellation functionality
+- [ ] Test auto-clear functionality
+
+
+## Data Override and Auto-Clear Features (January 15, 2026)
+- [x] Add checkbox option "Clear existing risks before calculating" to geographic risks calculation
+- [x] Update calculateGeographicRisks mutation to accept clearExisting parameter
+- [x] Modify optimized worker to clear all geographic risks if clearExisting is true
+- [x] Ensure fetchAllAssets deletes existing assets for each company before inserting new data
+- [x] Ensure fetchAllRiskManagement deletes existing risk management scores for each company before inserting new data
+- [x] Ensure fetchSupplyChainRisks deletes existing supply chain data for each company before inserting new data (already implemented)
+- [x] Update UI to show clearing/overriding status messages
+- [ ] Deploy to Heroku
+- [ ] Test all override behaviors (assets, risk management, supply chain, geographic risks)

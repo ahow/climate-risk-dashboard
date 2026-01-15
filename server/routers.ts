@@ -557,8 +557,8 @@ export const appRouter = router({
           });
         }
 
-        // Bulk insert assets for each company
-        progressTracker.update(operationId, 50, `Inserting ${assetsByCompany.size} companies' assets...`);
+        // Delete existing assets and insert new ones for each company (override behavior)
+        progressTracker.update(operationId, 50, `Overriding ${assetsByCompany.size} companies' assets...`);
         const totalCompanies = assetsByCompany.size;
         let processedCompanies = 0;
         
@@ -566,11 +566,14 @@ export const appRouter = router({
           processedCompanies++;
           const progress = 50 + Math.floor((processedCompanies / totalCompanies) * 40);
           try {
+            // Delete existing assets for this company
+            await db.deleteAssetsByCompanyId(companyId);
+            // Insert new assets
             await db.bulkInsertAssets(assets);
             totalAssetsFetched += assets.length;
-            progressTracker.update(operationId, progress, `Inserted ${totalAssetsFetched} assets (${processedCompanies}/${totalCompanies} companies)`);
+            progressTracker.update(operationId, progress, `Overridden ${totalAssetsFetched} assets (${processedCompanies}/${totalCompanies} companies)`);
           } catch (error) {
-            const errorMsg = `Failed to insert assets for company ID ${companyId}: ${error}`;
+            const errorMsg = `Failed to override assets for company ID ${companyId}: ${error}`;
             console.error(errorMsg);
             errors.push(errorMsg);
           }
@@ -627,6 +630,9 @@ export const appRouter = router({
             const managementData = await externalApis.fetchRiskManagement(company.isin);
             
             if (managementData.company && managementData.company.analysisStatus === 'completed' && managementData.company.totalScore !== null) {
+              // Delete existing risk management score for this company (override behavior)
+              await db.deleteRiskManagementByCompanyId(company.id);
+              // Insert new risk management score
               await db.insertRiskManagement({
                 companyId: company.id,
                 overallScore: managementData.company.totalScore,
@@ -858,29 +864,45 @@ export const appRouter = router({
      * Calculate geographic risks for all assets with coordinates
      * Uses optimized worker with database-backed progress tracking
      */
-    calculateAllGeographicRisks: publicProcedure.mutation(async () => {
-      console.log('[Geographic Risks] ========== OPTIMIZED CALCULATION STARTED ==========');
-      const operationId = `geo-risks-${Date.now()}`;
-      console.log(`[Geographic Risks] Operation ID: ${operationId}`);
-      
-      // Start optimized background worker with persistent progress tracking
-      const { calculateGeographicRisksOptimized } = await import('./workers/optimizedGeoRiskWorker');
-      
-      // Run in background without awaiting
-      setImmediate(() => {
-        calculateGeographicRisksOptimized(operationId).catch(error => {
-          console.error(`[Geographic Risks] Optimized worker error:`, error);
+    calculateAllGeographicRisks: publicProcedure
+      .input(z.object({ clearExisting: z.boolean().optional().default(false) }))
+      .mutation(async ({ input }) => {
+        console.log('[Geographic Risks] ========== OPTIMIZED CALCULATION STARTED ==========');
+        console.log(`[Geographic Risks] clearExisting: ${input.clearExisting}`);
+        const operationId = `geo-risks-${Date.now()}`;
+        console.log(`[Geographic Risks] Operation ID: ${operationId}`);
+        
+        // Clear existing geographic risks if requested
+        if (input.clearExisting) {
+          console.log('[Geographic Risks] Clearing existing geographic risks...');
+          const database = await getDb();
+          if (database) {
+            await database.delete(geographicRisks);
+            console.log('[Geographic Risks] All existing geographic risks cleared');
+          }
+        }
+        
+        // Start optimized background worker with persistent progress tracking
+        const { calculateGeographicRisksOptimized } = await import('./workers/optimizedGeoRiskWorker');
+        
+        // Run in background without awaiting
+        setImmediate(() => {
+          calculateGeographicRisksOptimized(operationId).catch(error => {
+            console.error(`[Geographic Risks] Optimized worker error:`, error);
+          });
         });
-      });
-      
-      // Return immediately with operation ID
-      console.log(`[Geographic Risks] Optimized background job started (50x parallelism, database-backed progress)`);
-      return {
-        success: true,
-        operationId,
-        message: 'Geographic risk calculation started with optimized worker (5-10x faster, survives restarts)'
-      };
-    }),
+        
+        // Return immediately with operation ID
+        const message = input.clearExisting 
+          ? 'Cleared existing risks. Geographic risk calculation started with optimized worker (5-10x faster, survives restarts)'
+          : 'Geographic risk calculation started with optimized worker (5-10x faster, survives restarts)';
+        console.log(`[Geographic Risks] ${message}`);
+        return {
+          success: true,
+          operationId,
+          message
+        };
+      }),
 
     /**
      * DEPRECATED: Old synchronous calculation (kept for reference)

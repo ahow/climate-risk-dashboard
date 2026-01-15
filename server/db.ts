@@ -189,33 +189,22 @@ export async function insertAsset(asset: InsertAsset): Promise<void> {
   await db.insert(assets).values(asset);
 }
 
+export async function deleteAssetsByCompanyId(companyId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.delete(assets).where(eq(assets.companyId, companyId));
+}
+
 export async function bulkInsertAssets(assetList: InsertAsset[]): Promise<void> {
   const db = await getDb();
   if (!db) return;
   
   if (assetList.length === 0) return;
   
-  // Prevent duplicates: check if assets with same companyId + assetName already exist
-  const companyIds = Array.from(new Set(assetList.map(a => a.companyId)));
-  const existingAssets = await db.select().from(assets).where(
-    inArray(assets.companyId, companyIds)
-  );
-  
-  const existingKeys = new Set(
-    existingAssets.map(a => `${a.companyId}-${a.assetName}`)
-  );
-  
-  const newAssets = assetList.filter(a => 
-    !existingKeys.has(`${a.companyId}-${a.assetName}`)
-  );
-  
-  if (newAssets.length === 0) {
-    console.log('[Database] All assets already exist, skipping insert');
-    return;
-  }
-  
-  console.log(`[Database] Inserting ${newAssets.length} new assets (${assetList.length - newAssets.length} duplicates skipped)`);
-  await db.insert(assets).values(newAssets);
+  // Simply insert all assets (duplicates should have been deleted before calling this)
+  console.log(`[Database] Inserting ${assetList.length} assets`);
+  await db.insert(assets).values(assetList);
 }
 
 // ========== Geographic Risk Queries ==========
@@ -272,6 +261,13 @@ export async function getRiskManagementByCompanyId(companyId: number): Promise<R
   
   const result = await db.select().from(riskManagementScores).where(eq(riskManagementScores.companyId, companyId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function deleteRiskManagementByCompanyId(companyId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.delete(riskManagementScores).where(eq(riskManagementScores.companyId, companyId));
 }
 
 export async function insertRiskManagement(score: InsertRiskManagementScore): Promise<void> {

@@ -30,6 +30,7 @@ export default function Home() {
   });
 
   const [excelUrl, setExcelUrl] = useState("");
+  const [clearExistingRisks, setClearExistingRisks] = useState(true); // Auto-clear by default
 
   const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
   
@@ -545,26 +546,42 @@ export default function Home() {
                   "Clear All Geographic Risks"
                 )}
               </Button>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => {
-                    console.log('[Frontend] Calculate Geographic Risks button clicked');
-                    console.log('[Frontend] isPending:', calculateRisksMutation.isPending);
-                    console.log('[Frontend] progress:', progress);
-                    calculateRisksMutation.mutate();
-                  }}
-                  disabled={calculateRisksMutation.isPending || progress?.status === 'running'}
-                  variant="default"
-                >
-                  {calculateRisksMutation.isPending || progress?.status === 'running' ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Calculating Geographic Risks...
-                    </>
-                  ) : (
-                    "Calculate Geographic Risks"
-                  )}
-                </Button>
+              <div className="space-y-3">
+                {/* Auto-clear checkbox */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="clearExisting"
+                    checked={clearExistingRisks}
+                    onChange={(e) => setClearExistingRisks(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="clearExisting" className="text-sm text-gray-700">
+                    Clear existing geographic risks before calculating (recommended)
+                  </label>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      console.log('[Frontend] Calculate Geographic Risks button clicked');
+                      console.log('[Frontend] isPending:', calculateRisksMutation.isPending);
+                      console.log('[Frontend] progress:', progress);
+                      console.log('[Frontend] clearExisting:', clearExistingRisks);
+                      calculateRisksMutation.mutate({ clearExisting: clearExistingRisks });
+                    }}
+                    disabled={calculateRisksMutation.isPending || progress?.status === 'running'}
+                    variant="default"
+                  >
+                    {calculateRisksMutation.isPending || progress?.status === 'running' ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {clearExistingRisks ? 'Clearing & Calculating...' : 'Calculating Geographic Risks...'}
+                      </>
+                    ) : (
+                      "Calculate Geographic Risks"
+                    )}
+                  </Button>
                 {progress?.status === 'running' && currentOperationId && (
                   <Button
                     onClick={() => pauseMutation.mutate({ operationId: currentOperationId })}
@@ -599,22 +616,23 @@ export default function Home() {
                     )}
                   </Button>
                 )}
+                </div>
+                {progress && progress.status === 'running' && (
+                  <div className="text-sm text-blue-600 mt-2">
+                    {progress.message}
+                  </div>
+                )}
+                {progress && progress.status === 'paused' && (
+                  <div className="text-sm text-amber-600 mt-2">
+                    ⏸️ {progress.message} - Click Resume to continue
+                  </div>
+                )}
+                {calculateRisksMutation.isSuccess && (
+                  <div className="text-sm text-green-600 flex items-center">
+                    ✓ {calculateRisksMutation.data.message || 'Geographic risk calculation started'}
+                  </div>
+                )}
               </div>
-              {progress && progress.status === 'running' && (
-                <div className="text-sm text-blue-600 mt-2">
-                  {progress.message}
-                </div>
-              )}
-              {progress && progress.status === 'paused' && (
-                <div className="text-sm text-amber-600 mt-2">
-                  ⏸️ {progress.message} - Click Resume to continue
-                </div>
-              )}
-              {calculateRisksMutation.isSuccess && (
-                <div className="text-sm text-green-600 flex items-center">
-                  ✓ {calculateRisksMutation.data.message || 'Geographic risk calculation started'}
-                </div>
-              )}
             </CardContent>
           </Card>
         )}
