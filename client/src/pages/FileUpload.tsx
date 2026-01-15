@@ -37,26 +37,29 @@ export default function FileUpload() {
 
     setUploading(true);
     try {
-      // Read file as base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64Data = e.target?.result as string;
-        const base64Content = base64Data.split(',')[1]; // Remove data:mime;base64, prefix
+      // Read file as base64 - wrap in Promise to properly handle async
+      const base64Content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64Data = e.target?.result as string;
+          resolve(base64Data.split(',')[1]); // Remove data:mime;base64, prefix
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(selectedFile);
+      });
 
-        await uploadMutation.mutateAsync({
-          filename: selectedFile.name,
-          fileType: selectedFile.type || 'application/octet-stream',
-          fileSize: selectedFile.size,
-          base64Data: base64Content,
-          description: description || undefined,
-        });
+      await uploadMutation.mutateAsync({
+        filename: selectedFile.name,
+        fileType: selectedFile.type || 'application/octet-stream',
+        fileSize: selectedFile.size,
+        base64Data: base64Content,
+        description: description || undefined,
+      });
 
-        toast.success("File uploaded successfully!");
-        setSelectedFile(null);
-        setDescription("");
-        refetch();
-      };
-      reader.readAsDataURL(selectedFile);
+      toast.success("File uploaded successfully!");
+      setSelectedFile(null);
+      setDescription("");
+      refetch();
     } catch (error: any) {
       console.error('[FileUpload] Upload error:', error);
       

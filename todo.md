@@ -1174,3 +1174,12 @@
 - [ ] Calculate optimal batch size for 2-3 hour completion
 - [ ] Update batch settings
 - [ ] Deploy and restart calculation
+
+
+## File Upload Button Fix (January 14, 2026)
+- [x] Investigate why upload button at /upload is not working
+- [x] Check browser console for JavaScript errors
+- [x] Verify file input and upload handler are properly wired (async flow issue found)
+- [x] Fix async flow in FileUpload component (wrap FileReader in Promise)
+- [ ] Deploy fix to Heroku
+- [ ] Test upload functionality on Heroku
