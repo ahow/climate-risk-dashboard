@@ -116,14 +116,19 @@ export async function calculateGeographicRisksOptimized(operationId: string) {
             // Fetch risk data with timeout and retry
             const riskData = await fetchWithRetry(lat, lon, value, MAX_RETRIES);
             
-            // Collect risk for batch insertion
-            risksToInsert.push({
-              assetId: asset.id,
-              latitude: lat.toString(),
-              longitude: lon.toString(),
-              assetValue: value.toString(),
-              riskData: riskData as any,
-            });
+            // Only insert if we have valid risk data
+            if (riskData && typeof riskData === 'object') {
+              // Collect risk for batch insertion
+              risksToInsert.push({
+                assetId: asset.id,
+                latitude: lat.toString(),
+                longitude: lon.toString(),
+                assetValue: value.toString(),
+                riskData: riskData as any,
+              });
+            } else {
+              console.warn(`[OptimizedGeoRisk] Skipping asset ${asset.id} - no valid risk data returned`);
+            }
             
             risksCalculated++;
             processedAssets++;
