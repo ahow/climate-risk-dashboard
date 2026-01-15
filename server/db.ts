@@ -362,19 +362,23 @@ export async function createUploadedFile(file: InsertUploadedFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Allow truly anonymous uploads - no user lookup required
-  const uploadedBy = file.uploadedBy ?? null;
-  
-  const result = await db.insert(uploadedFiles).values({
+  // Build values object, only include uploadedBy if it's not null/undefined
+  const values: any = {
     filename: file.filename,
     originalFilename: file.originalFilename,
     fileType: file.fileType,
     fileSize: file.fileSize,
     s3Key: file.s3Key,
     s3Url: file.s3Url,
-    uploadedBy,
     description: file.description,
-  });
+  };
+  
+  // Only include uploadedBy if it has a value
+  if (file.uploadedBy !== null && file.uploadedBy !== undefined) {
+    values.uploadedBy = file.uploadedBy;
+  }
+  
+  const result = await db.insert(uploadedFiles).values(values);
   
   return result;
 }

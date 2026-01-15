@@ -1,0 +1,28 @@
+{
+  "query": "SHOW CREATE TABLE uploadedFiles;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user ovDZf4AdgM1wjio.bac7ad92b374 --database Rur7xAEUjvByHVg3PaP3cz --execute SHOW CREATE TABLE uploadedFiles;",
+  "rows": [
+    {
+      "Table": "uploadedFiles",
+      "Create Table": "CREATE TABLE `uploadedFiles` ("
+    }
+  ],
+  "messages": [
+    "  `id` int(11) NOT NULL AUTO_INCREMENT,",
+    "  `filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `originalFilename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `fileType` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `fileSize` int(11) NOT NULL,",
+    "  `s3Key` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `s3Url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `uploadedBy` int(11) DEFAULT NULL,",
+    "  `uploadedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,",
+    "  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,",
+    "  KEY `uploadedFiles_uploadedBy_users_id_fk` (`uploadedBy`)",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=90001"
+  ],
+  "stdout": "Table\tCreate Table\nuploadedFiles\tCREATE TABLE `uploadedFiles` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `originalFilename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `fileType` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `fileSize` int(11) NOT NULL,\n  `s3Key` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `s3Url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `uploadedBy` int(11) DEFAULT NULL,\n  `uploadedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,\n  KEY `uploadedFiles_uploadedBy_users_id_fk` (`uploadedBy`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=90001\n",
+  "stderr": "",
+  "execution_time_ms": 99
+}

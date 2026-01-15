@@ -1181,5 +1181,13 @@
 - [x] Check browser console for JavaScript errors
 - [x] Verify file input and upload handler are properly wired (async flow issue found)
 - [x] Fix async flow in FileUpload component (wrap FileReader in Promise)
+- [x] Deploy fix to Heroku
+- [ ] Test upload functionality on Heroku (waiting for user to test)
+
+
+## Database Insert Error for Uploaded Files (January 14, 2026)
+- [x] Investigate why uploadedBy parameter is empty in insert query (Drizzle not handling null properly)
+- [x] Check createUploadedFile function handling of null values
+- [x] Fix database insert to conditionally include uploadedBy only when not null
 - [ ] Deploy fix to Heroku
-- [ ] Test upload functionality on Heroku
+- [ ] Test upload functionality end-to-end
