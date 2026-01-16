@@ -1,17 +1,23 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json } from "drizzle-orm/mysql-core";
+import { integer, pgEnum, pgTable, text, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
+
+/**
+ * Enums
+ */
+export const roleEnum = pgEnum("role", ["user", "admin"]);
+export const statusEnum = pgEnum("status", ["running", "completed", "failed", "cancelled", "paused"]);
 
 /**
  * Core user table backing auth flow.
  */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: roleEnum("role").default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -21,15 +27,15 @@ export type InsertUser = typeof users.$inferInsert;
 /**
  * Uploaded files table for storing CSV and other files with permanent S3 URLs
  */
-export const uploadedFiles = mysqlTable("uploadedFiles", {
-  id: int("id").autoincrement().primaryKey(),
+export const uploadedFiles = pgTable("uploadedFiles", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   filename: varchar("filename", { length: 255 }).notNull(),
   originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
   fileType: varchar("fileType", { length: 100 }).notNull(),
-  fileSize: int("fileSize").notNull(),
+  fileSize: integer("fileSize").notNull(),
   s3Key: varchar("s3Key", { length: 512 }).notNull(),
   s3Url: varchar("s3Url", { length: 1024 }).notNull(),
-  uploadedBy: int("uploadedBy"), // No foreign key - allows anonymous uploads
+  uploadedBy: integer("uploadedBy"), // No foreign key - allows anonymous uploads
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   description: text("description"),
 });
@@ -40,8 +46,8 @@ export type InsertUploadedFile = typeof uploadedFiles.$inferInsert;
 /**
  * Companies table - stores the 20 companies from the uploaded list
  */
-export const companies = mysqlTable("companies", {
-  id: int("id").autoincrement().primaryKey(),
+export const companies = pgTable("companies", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   isin: varchar("isin", { length: 12 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   sector: varchar("sector", { length: 255 }),
@@ -50,7 +56,7 @@ export const companies = mysqlTable("companies", {
   enterpriseValue: varchar("enterpriseValue", { length: 50 }),
   supplierCosts: varchar("supplierCosts", { length: 50 }), // Total annual spending on suppliers
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Company = typeof companies.$inferSelect;
@@ -59,9 +65,9 @@ export type InsertCompany = typeof companies.$inferInsert;
 /**
  * Assets table - stores asset location data from the Asset Discovery API
  */
-export const assets = mysqlTable("assets", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId").notNull(),
+export const assets = pgTable("assets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("companyId").notNull(),
   assetName: varchar("assetName", { length: 500 }).notNull(),
   address: text("address"),
   latitude: varchar("latitude", { length: 50 }),
@@ -76,7 +82,7 @@ export const assets = mysqlTable("assets", {
   dataSources: text("dataSources"),
   confidenceLevel: varchar("confidenceLevel", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Asset = typeof assets.$inferSelect;
@@ -85,15 +91,15 @@ export type InsertAsset = typeof assets.$inferInsert;
 /**
  * Geographic risk assessments - stores results from Geographic Risks API
  */
-export const geographicRisks = mysqlTable("geographicRisks", {
-  id: int("id").autoincrement().primaryKey(),
-  assetId: int("assetId").notNull(),
+export const geographicRisks = pgTable("geographicRisks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  assetId: integer("assetId").notNull(),
   latitude: varchar("latitude", { length: 50 }).notNull(),
   longitude: varchar("longitude", { length: 50 }).notNull(),
   assetValue: varchar("assetValue", { length: 50 }).notNull(),
-  riskData: json("riskData").notNull(), // Store the full API response
+  riskData: jsonb("riskData").notNull(), // Store the full API response
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type GeographicRisk = typeof geographicRisks.$inferSelect;
@@ -102,13 +108,13 @@ export type InsertGeographicRisk = typeof geographicRisks.$inferInsert;
 /**
  * Risk management assessments - stores results from Risk Management API
  */
-export const riskManagementScores = mysqlTable("riskManagementScores", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId").notNull(),
-  overallScore: int("overallScore"),
-  assessmentData: json("assessmentData").notNull(), // Store the full assessment JSON
+export const riskManagementScores = pgTable("riskManagementScores", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("companyId").notNull(),
+  overallScore: integer("overallScore"),
+  assessmentData: jsonb("assessmentData").notNull(), // Store the full assessment JSON
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type RiskManagementScore = typeof riskManagementScores.$inferSelect;
@@ -117,18 +123,18 @@ export type InsertRiskManagementScore = typeof riskManagementScores.$inferInsert
 /**
  * Supply chain risk assessments - stores results from Supply Chain Risk API
  */
-export const supplyChainRisks = mysqlTable("supplyChainRisks", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId").notNull(),
+export const supplyChainRisks = pgTable("supplyChainRisks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("companyId").notNull(),
   countryCode: varchar("countryCode", { length: 3 }).notNull(), // OECD 3-letter code
   sectorCode: varchar("sectorCode", { length: 20 }).notNull(), // OECD ICIO sector code
   expectedAnnualLossPct: varchar("expectedAnnualLossPct", { length: 50 }), // Percentage from API
   expectedAnnualLoss: varchar("expectedAnnualLoss", { length: 50 }), // supplierCosts × lossPct
   presentValue: varchar("presentValue", { length: 50 }), // 30-year PV at 10% discount
-  topSuppliers: json("topSuppliers"), // Top 5 country-sector contributors
-  assessmentData: json("assessmentData").notNull(), // Full API response
+  topSuppliers: jsonb("topSuppliers"), // Top 5 country-sector contributors
+  assessmentData: jsonb("assessmentData").notNull(), // Full API response
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type SupplyChainRisk = typeof supplyChainRisks.$inferSelect;
@@ -139,18 +145,18 @@ export type InsertSupplyChainRisk = typeof supplyChainRisks.$inferInsert;
  * Progress tracking table - stores state of long-running operations
  * Persists progress to survive server restarts and dyno cycling
  */
-export const progressTracking = mysqlTable("progressTracking", {
-  id: int("id").autoincrement().primaryKey(),
+export const progressTracking = pgTable("progressTracking", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   operationId: varchar("operationId", { length: 255 }).notNull().unique(),
   operation: varchar("operation", { length: 255 }).notNull(),
-  status: mysqlEnum("status", ["running", "completed", "failed", "cancelled", "paused"]).notNull(),
-  current: int("current").notNull().default(0),
-  total: int("total").notNull(),
+  status: statusEnum("status").notNull(),
+  current: integer("current").notNull().default(0),
+  total: integer("total").notNull(),
   message: text("message"),
   error: text("error"),
   startedAt: timestamp("startedAt").notNull(),
   completedAt: timestamp("completedAt"),
-  lastUpdatedAt: timestamp("lastUpdatedAt").defaultNow().onUpdateNow().notNull(),
+  lastUpdatedAt: timestamp("lastUpdatedAt").defaultNow().notNull(),
 });
 
 export type ProgressTracking = typeof progressTracking.$inferSelect;

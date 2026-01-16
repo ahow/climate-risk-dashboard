@@ -1,5 +1,6 @@
-import { desc, eq, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { desc, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { 
   InsertUploadedFile, 
   InsertUser, 
@@ -88,7 +89,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -149,7 +151,8 @@ export async function bulkInsertCompanies(companyList: InsertCompany[]): Promise
   if (!db) return;
   
   for (const company of companyList) {
-    await db.insert(companies).values(company).onDuplicateKeyUpdate({
+    await db.insert(companies).values(company).onConflictDoUpdate({
+      target: companies.isin,
       set: {
         name: company.name,
         sector: company.sector,

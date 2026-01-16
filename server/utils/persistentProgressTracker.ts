@@ -4,7 +4,7 @@
  */
 
 import { getDb } from '../db';
-import { progressTracking } from '../../drizzle/schema';
+import { progressTracking, ProgressTracking } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 export interface ProgressState {
@@ -435,7 +435,7 @@ class PersistentProgressTracker {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       // Note: Drizzle doesn't have a direct way to delete with complex WHERE clauses
       // We'll fetch and delete individually
-      const old = await db.select().from(progressTracking);
+      const old: ProgressTracking[] = await db.select().from(progressTracking);
       for (const progress of old) {
         if (
           progress.status !== 'running' &&

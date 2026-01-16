@@ -1,47 +1,12 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1761493986660,
-      "tag": "0000_cooing_jane_foster",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1761494039620,
-      "tag": "0001_known_spiral",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1763208833134,
-      "tag": "0002_equal_luminals",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1763383364019,
-      "tag": "0003_overjoyed_lionheart",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1768154861865,
-      "tag": "0004_deep_captain_universe",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1768320683201,
-      "tag": "0005_yielding_network",
+      "version": "7",
+      "when": 1768560368375,
+      "tag": "0000_damp_salo",
       "breakpoints": true
     }
   ]
