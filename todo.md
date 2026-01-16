@@ -1333,3 +1333,5 @@
 - [ ] Test "Fetch Risk Management Data" operation
 - [ ] Verify Calculation Monitor displays all operations
 - [ ] Create final checkpoint with working deployment
+
+- [ ] Fix uploadedFiles insert query failing on Heroku Postgres (IDENTITY column issue)

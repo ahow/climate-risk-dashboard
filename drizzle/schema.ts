@@ -10,7 +10,7 @@ export const statusEnum = pgEnum("status", ["running", "completed", "failed", "c
  * Core user table backing auth flow.
  */
 export const users = pgTable("users", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -28,7 +28,7 @@ export type InsertUser = typeof users.$inferInsert;
  * Uploaded files table for storing CSV and other files with permanent S3 URLs
  */
 export const uploadedFiles = pgTable("uploadedFiles", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   filename: varchar("filename", { length: 255 }).notNull(),
   originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
   fileType: varchar("fileType", { length: 100 }).notNull(),
@@ -47,7 +47,7 @@ export type InsertUploadedFile = typeof uploadedFiles.$inferInsert;
  * Companies table - stores the 20 companies from the uploaded list
  */
 export const companies = pgTable("companies", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   isin: varchar("isin", { length: 12 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   sector: varchar("sector", { length: 255 }),
@@ -66,7 +66,7 @@ export type InsertCompany = typeof companies.$inferInsert;
  * Assets table - stores asset location data from the Asset Discovery API
  */
 export const assets = pgTable("assets", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   companyId: integer("companyId").notNull(),
   assetName: varchar("assetName", { length: 500 }).notNull(),
   address: text("address"),
@@ -92,7 +92,7 @@ export type InsertAsset = typeof assets.$inferInsert;
  * Geographic risk assessments - stores results from Geographic Risks API
  */
 export const geographicRisks = pgTable("geographicRisks", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   assetId: integer("assetId").notNull(),
   latitude: varchar("latitude", { length: 50 }).notNull(),
   longitude: varchar("longitude", { length: 50 }).notNull(),
@@ -109,7 +109,7 @@ export type InsertGeographicRisk = typeof geographicRisks.$inferInsert;
  * Risk management assessments - stores results from Risk Management API
  */
 export const riskManagementScores = pgTable("riskManagementScores", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   companyId: integer("companyId").notNull(),
   overallScore: integer("overallScore"),
   assessmentData: jsonb("assessmentData").notNull(), // Store the full assessment JSON
@@ -124,7 +124,7 @@ export type InsertRiskManagementScore = typeof riskManagementScores.$inferInsert
  * Supply chain risk assessments - stores results from Supply Chain Risk API
  */
 export const supplyChainRisks = pgTable("supplyChainRisks", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   companyId: integer("companyId").notNull(),
   countryCode: varchar("countryCode", { length: 3 }).notNull(), // OECD 3-letter code
   sectorCode: varchar("sectorCode", { length: 20 }).notNull(), // OECD ICIO sector code
@@ -146,7 +146,7 @@ export type InsertSupplyChainRisk = typeof supplyChainRisks.$inferInsert;
  * Persists progress to survive server restarts and dyno cycling
  */
 export const progressTracking = pgTable("progressTracking", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   operationId: varchar("operationId", { length: 255 }).notNull().unique(),
   operation: varchar("operation", { length: 255 }).notNull(),
   status: statusEnum("status").notNull(),
