@@ -26,17 +26,27 @@ import { ENV } from './_core/env';
 import { queryCache, CACHE_TTL } from './utils/queryCache';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _sql: ReturnType<typeof postgres> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _sql = postgres(process.env.DATABASE_URL);
+      _db = drizzle(_sql);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _sql = null;
     }
   }
   return _db;
+}
+
+export async function getSql() {
+  if (!_sql) {
+    await getDb(); // Initialize connection
+  }
+  return _sql;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -358,15 +368,21 @@ async function getSystemUserId(): Promise<number> {
 }
 
 export async function createUploadedFile(file: Omit<InsertUploadedFile, 'id' | 'uploadedAt'>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const sql = await getSql();
+  if (!sql) throw new Error("Database not available");
   
   // Use raw SQL to avoid Drizzle adding 'default' for IDENTITY columns
   // Drizzle 0.45.1 has a bug where it includes all columns even with defaults
-  const columns = ['filename', 'originalFilename', 'fileType', 'fileSize', 's3Key', 's3Url'];
-  const values = [file.filename, file.originalFilename, file.fileType, file.fileSize, file.s3Key, file.s3Url];
   
-  // Add optional fields if provided
+  // Build the INSERT query dynamically based on provided fields
+  const columns: string[] = [];
+  const values: any[] = [];
+  
+  // Required fields
+  columns.push('filename', 'originalFilename', 'fileType', 'fileSize', 's3Key', 's3Url');
+  values.push(file.filename, file.originalFilename, file.fileType, file.fileSize, file.s3Key, file.s3Url);
+  
+  // Optional fields
   if (file.uploadedBy !== null && file.uploadedBy !== undefined) {
     columns.push('uploadedBy');
     values.push(file.uploadedBy);
@@ -376,10 +392,15 @@ export async function createUploadedFile(file: Omit<InsertUploadedFile, 'id' | '
     values.push(file.description);
   }
   
-  const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-  const sql = `INSERT INTO "uploadedFiles" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders}) RETURNING id`;
+  // Use postgres-js sql template literal for safe parameterized query
+  // Manually build column list (identifiers) and use sql() for values (parameters)
+  const columnList = columns.map(c => `"${c}"`).join(', ');
+  const result = await sql`
+    INSERT INTO "uploadedFiles" (${sql.unsafe(columnList)})
+    VALUES (${sql(values)})
+    RETURNING id
+  `;
   
-  const result = await db.execute(sql);
   return result;
 }
 
