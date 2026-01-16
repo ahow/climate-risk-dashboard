@@ -32,15 +32,17 @@ export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       // Configure postgres-js with SSL for Heroku Postgres
+      // Heroku Postgres requires SSL but uses self-signed certificates
       _sql = postgres(process.env.DATABASE_URL, {
-        ssl: 'require',
+        ssl: { rejectUnauthorized: false },
         max: 10,
         idle_timeout: 20,
         connect_timeout: 10,
       });
       _db = drizzle(_sql);
+      console.log('[Database] Connected successfully to PostgreSQL');
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
       _sql = null;
     }
@@ -164,20 +166,33 @@ export async function insertCompany(company: InsertCompany): Promise<void> {
 
 export async function bulkInsertCompanies(companyList: InsertCompany[]): Promise<void> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) {
+    console.error('[bulkInsertCompanies] Database not available');
+    throw new Error('Database not available');
+  }
+  
+  console.log(`[bulkInsertCompanies] Inserting ${companyList.length} companies`);
   
   for (const company of companyList) {
-    await db.insert(companies).values(company).onConflictDoUpdate({
-      target: companies.isin,
-      set: {
-        name: company.name,
-        sector: company.sector,
-        geography: company.geography,
-        tangibleAssets: company.tangibleAssets,
-        enterpriseValue: company.enterpriseValue,
-      }
-    });
+    try {
+      await db.insert(companies).values(company).onConflictDoUpdate({
+        target: companies.isin,
+        set: {
+          name: company.name,
+          sector: company.sector,
+          geography: company.geography,
+          tangibleAssets: company.tangibleAssets,
+          enterpriseValue: company.enterpriseValue,
+          supplierCosts: company.supplierCosts,
+        }
+      });
+    } catch (error) {
+      console.error(`[bulkInsertCompanies] Error inserting company ${company.isin}:`, error);
+      throw error;
+    }
   }
+  
+  console.log(`[bulkInsertCompanies] Successfully inserted/updated ${companyList.length} companies`);
 }
 
 // ========== Asset Queries ==========
