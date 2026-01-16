@@ -399,13 +399,15 @@ export async function createUploadedFile(file: Omit<InsertUploadedFile, 'id' | '
   }
   
   // Use postgres-js sql template literal for safe parameterized query
-  // Manually build column list (identifiers) and use sql() for values (parameters)
+  // Build the query with proper parameter binding
   const columnList = columns.map(c => `"${c}"`).join(', ');
-  const result = await sql`
-    INSERT INTO "uploadedFiles" (${sql.unsafe(columnList)})
-    VALUES (${sql(values)})
-    RETURNING id
-  `;
+  const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+  
+  // Execute the query with values as separate parameters
+  const result = await sql.unsafe(
+    `INSERT INTO "uploadedFiles" (${columnList}) VALUES (${placeholders}) RETURNING id`,
+    values
+  );
   
   // Return in MySQL-compatible format for backward compatibility
   return {
