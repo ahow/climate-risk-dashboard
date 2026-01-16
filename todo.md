@@ -1341,3 +1341,8 @@
 - [x] Fix supply chain risk display in company details page - shows $0 when dashboard shows actual value
 - [x] Fix sector label display in supply chain risk table - show full names instead of single letters (M, K, etc.)
 - [x] Calculate supply chain risk from company-level data instead of empty topSuppliers array
+
+
+## Management Score Display Fix
+- [x] Change management score display from "—" to "0%" for companies with zero scores
+- [x] Update both dashboard and company details pages

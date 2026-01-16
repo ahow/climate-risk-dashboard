@@ -164,7 +164,7 @@ export default function CompanyDetails() {
               <div>
                 <div className="text-sm text-gray-600 mb-1">Management Score</div>
                 <div className="text-2xl font-bold text-green-600">
-                  {managementScorePct > 0 ? `${managementScorePct.toFixed(0)}%` : <span className="text-gray-400">—</span>}
+                  {managementScorePct !== undefined ? `${managementScorePct.toFixed(0)}%` : <span className="text-gray-400">—</span>}
                 </div>
                 {managementScorePct > 0 && (
                   <div className="text-xs text-gray-500 mt-1">

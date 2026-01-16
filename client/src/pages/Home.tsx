@@ -782,7 +782,7 @@ export default function Home() {
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Management Score:</span>
                       <span className="font-medium">
-                        {(company as any).managementScorePct !== undefined && (company as any).managementScorePct > 0
+                        {(company as any).managementScorePct !== undefined
                           ? `${((company as any).managementScorePct).toFixed(0)}%`
                           : <span className="text-gray-400">—</span>}
                       </span>
