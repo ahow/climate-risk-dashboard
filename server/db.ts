@@ -407,7 +407,11 @@ export async function createUploadedFile(file: Omit<InsertUploadedFile, 'id' | '
     RETURNING id
   `;
   
-  return result;
+  // Return in MySQL-compatible format for backward compatibility
+  return {
+    insertId: result[0]?.id || 0,
+    rows: result
+  };
 }
 
 export async function getAllUploadedFiles() {
