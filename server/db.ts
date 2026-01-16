@@ -361,26 +361,25 @@ export async function createUploadedFile(file: Omit<InsertUploadedFile, 'id' | '
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Build values object without id and uploadedAt (they have defaults)
-  const values: any = {
-    filename: file.filename,
-    originalFilename: file.originalFilename,
-    fileType: file.fileType,
-    fileSize: file.fileSize,
-    s3Key: file.s3Key,
-    s3Url: file.s3Url,
-  };
+  // Use raw SQL to avoid Drizzle adding 'default' for IDENTITY columns
+  // Drizzle 0.45.1 has a bug where it includes all columns even with defaults
+  const columns = ['filename', 'originalFilename', 'fileType', 'fileSize', 's3Key', 's3Url'];
+  const values = [file.filename, file.originalFilename, file.fileType, file.fileSize, file.s3Key, file.s3Url];
   
-  // Only include optional fields if they have values
+  // Add optional fields if provided
   if (file.uploadedBy !== null && file.uploadedBy !== undefined) {
-    values.uploadedBy = file.uploadedBy;
+    columns.push('uploadedBy');
+    values.push(file.uploadedBy);
   }
   if (file.description !== null && file.description !== undefined) {
-    values.description = file.description;
+    columns.push('description');
+    values.push(file.description);
   }
   
-  const result = await db.insert(uploadedFiles).values(values);
+  const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+  const sql = `INSERT INTO "uploadedFiles" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders}) RETURNING id`;
   
+  const result = await db.execute(sql);
   return result;
 }
 
