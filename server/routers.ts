@@ -187,13 +187,21 @@ export const appRouter = router({
         // (ii) Top 5 supply chain contributors (country-sector)
         const supplyChainRisk = await db.getSupplyChainRiskByCompanyId(company.id);
         const topSuppliers = (supplyChainRisk?.topSuppliers as any[]) || [];
-        const top5Suppliers = topSuppliers.slice(0, 5).map(supplier => ({
-          country: supplier.country_name,
-          sector: supplier.sector_name,
-          ioCoefficient: supplier.io_coefficient,
-          climateRisk: supplier.direct_risk?.climate || 0,
-          riskContribution: supplier.risk_contribution?.climate || 0,
-        }));
+        const supplierCosts = parseFloat(company.supplierCosts || '0');
+        const top5Suppliers = topSuppliers.slice(0, 5).map(supplier => {
+          const riskContribution = supplier.risk_contribution?.climate || 0;
+          const expectedAnnualLoss = riskContribution * supplierCosts;
+          return {
+            country: supplier.country_name || supplier.country || 'Unknown',
+            sector: supplier.sector_name || supplier.sector || 'Unknown',
+            sectorCode: supplier.sector || '',
+            ioCoefficient: supplier.io_coefficient || supplier.coefficient || 0,
+            climateRisk: supplier.direct_risk?.climate || 0,
+            riskContribution,
+            riskPercentage: riskContribution, // Already a decimal (0.05 = 5%)
+            expectedAnnualLoss,
+          };
+        });
 
         // (iii) Management performance measures
         const riskManagement = await db.getRiskManagementByCompanyId(company.id);
@@ -208,8 +216,15 @@ export const appRouter = router({
           source: measure.quotes?.[0]?.source || measure.source || measure.document || '',
         }));
 
+        // Add supply chain risk to company object
+        const companySupplyChainRisk = await db.getSupplyChainRiskByCompanyId(company.id);
+        const companyWithRisk = {
+          ...company,
+          supplyChainRiskAnnual: companySupplyChainRisk?.expectedAnnualLoss || '0',
+        };
+
         return {
-          company,
+          company: companyWithRisk,
           assets: assetsWithRisks,
           topSupplyChainContributors: top5Suppliers,
           managementMeasures,

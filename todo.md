@@ -1335,3 +1335,9 @@
 - [ ] Create final checkpoint with working deployment
 
 - [x] Fix uploadedFiles insert query failing on Heroku Postgres (IDENTITY column issue)
+
+
+## Supply Chain Risk Display Bugs
+- [x] Fix supply chain risk display in company details page - shows $0 when dashboard shows actual value
+- [x] Fix sector label display in supply chain risk table - show full names instead of single letters (M, K, etc.)
+- [x] Calculate supply chain risk from company-level data instead of empty topSuppliers array

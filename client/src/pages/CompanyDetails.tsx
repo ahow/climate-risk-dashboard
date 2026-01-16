@@ -78,7 +78,8 @@ export default function CompanyDetails() {
 
   // Calculate totals
   const assetRiskAnnual = assets.reduce((sum, asset) => sum + (asset.expectedAnnualLoss || 0), 0);
-  const supplyChainRiskAnnual = supplyChainRisks.reduce((sum: number, risk: any) => sum + (risk.expectedAnnualLoss || 0), 0);
+  // Use company-level supply chain risk instead of summing topSuppliers (which may be empty)
+  const supplyChainRiskAnnual = parseFloat(company.supplyChainRiskAnnual || '0');
   const totalRiskAnnual = assetRiskAnnual + supplyChainRiskAnnual;
   
   // Management score calculation
