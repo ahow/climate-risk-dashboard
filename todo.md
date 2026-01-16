@@ -1298,5 +1298,38 @@
 - [x] Check if there are any data type mismatches or validation errors (no type issues)
 - [x] Fix identified issues (convert risk scores to loss percentages)
 - [x] Test locally to confirm supply chain data populates correctly (SUCCESS - values showing correctly)
-- [ ] Save checkpoint and deploy to Heroku
-- [ ] Verify supply chain data works on Heroku
+- [x] Save checkpoint and deploy to Heroku (checkpoint 4684cbfc saved, Heroku will auto-deploy)
+- [ ] Verify supply chain data works on Heroku after deployment completes
+
+
+## Heroku Supply Chain Data Not Populating (January 15, 2026)
+- [ ] Check Heroku database to see if supply chain data exists
+- [ ] Verify if latest checkpoint (4684cbfc) was deployed to Heroku
+- [ ] Check Heroku deployment logs for errors
+- [ ] Identify version mismatch or deployment issue
+- [ ] Ensure correct version is deployed
+- [ ] Test supply chain fetch on Heroku after deployment
+
+
+## Manual Heroku Deployment (January 15, 2026)
+- [x] Identified that checkpoint 4684cbfc wasn't auto-deployed to Heroku
+- [x] Manually triggered Heroku deployment using git push with API key
+- [x] Deployment successful - Released v65 to https://climate-risk-unified-aa97b51f74e7.herokuapp.com/
+- [ ] Verify supply chain risk data now populates correctly on Heroku
+- [ ] Test "Fetch Supply Chain Risks" button with new deployment
+
+
+## Comprehensive Heroku Investigation and Fix (January 15, 2026)
+- [ ] Diagnose "Failed query: select from companies" error on Heroku
+- [ ] Check Heroku logs for deployment errors
+- [ ] Verify DATABASE_URL environment variable exists and is correct
+- [ ] Check if database migrations ran during deployment
+- [ ] Manually run database migrations on Heroku if needed
+- [ ] Verify database schema exists (all tables created)
+- [ ] Test database connection with simple query
+- [ ] Reload company data (100 companies from Excel)
+- [ ] Test "Fetch All Assets" operation
+- [ ] Test "Fetch Supply Chain Risks" operation with new calculation
+- [ ] Test "Fetch Risk Management Data" operation
+- [ ] Verify Calculation Monitor displays all operations
+- [ ] Create final checkpoint with working deployment
