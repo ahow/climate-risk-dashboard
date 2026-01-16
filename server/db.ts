@@ -31,7 +31,13 @@ let _sql: ReturnType<typeof postgres> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _sql = postgres(process.env.DATABASE_URL);
+      // Configure postgres-js with SSL for Heroku Postgres
+      _sql = postgres(process.env.DATABASE_URL, {
+        ssl: 'require',
+        max: 10,
+        idle_timeout: 20,
+        connect_timeout: 10,
+      });
       _db = drizzle(_sql);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
