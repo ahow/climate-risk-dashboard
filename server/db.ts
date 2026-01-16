@@ -357,11 +357,11 @@ async function getSystemUserId(): Promise<number> {
   return Number((result as any).insertId);
 }
 
-export async function createUploadedFile(file: InsertUploadedFile) {
+export async function createUploadedFile(file: Omit<InsertUploadedFile, 'id' | 'uploadedAt'>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Build values object, only include uploadedBy if it's not null/undefined
+  // Build values object without id and uploadedAt (they have defaults)
   const values: any = {
     filename: file.filename,
     originalFilename: file.originalFilename,
@@ -369,12 +369,14 @@ export async function createUploadedFile(file: InsertUploadedFile) {
     fileSize: file.fileSize,
     s3Key: file.s3Key,
     s3Url: file.s3Url,
-    description: file.description,
   };
   
-  // Only include uploadedBy if it has a value
+  // Only include optional fields if they have values
   if (file.uploadedBy !== null && file.uploadedBy !== undefined) {
     values.uploadedBy = file.uploadedBy;
+  }
+  if (file.description !== null && file.description !== undefined) {
+    values.description = file.description;
   }
   
   const result = await db.insert(uploadedFiles).values(values);
