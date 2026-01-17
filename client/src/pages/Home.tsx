@@ -98,6 +98,14 @@ export default function Home() {
     enabled: false, // Don't fetch automatically
   });
 
+  // Permanent CSV
+  const [permanentCsvUrl, setPermanentCsvUrl] = useState<string | null>(null);
+  const generatePermanentCsvMutation = trpc.export.generatePermanentCSV.useMutation({
+    onSuccess: (data) => {
+      setPermanentCsvUrl(data.url);
+    },
+  });
+
   const handleExportCSV = async () => {
     try {
       // Fetch the data
@@ -132,7 +140,7 @@ export default function Home() {
           `"${row.name}"`,
           row.ev.toFixed(2),
           row.directExposure.toFixed(2),
-          row.indirectExposure.toFixed(2),
+          row.supplyChainRisk.toFixed(2),
           row.grossExpectedLoss.toFixed(2),
           row.floodLoss.toFixed(2),
           row.wildfireLoss.toFixed(2),
@@ -704,6 +712,69 @@ export default function Home() {
                 >
                   Upload Files
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Permanent CSV URL */}
+        {companies && companies.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Permanent Data Export</CardTitle>
+              <CardDescription>
+                Generate a permanent CSV file with all company data in the original upload format
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => generatePermanentCsvMutation.mutate()}
+                    disabled={generatePermanentCsvMutation.isPending}
+                  >
+                    {generatePermanentCsvMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate Permanent CSV'
+                    )}
+                  </Button>
+                </div>
+                {permanentCsvUrl && (
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-2">Permanent URL:</p>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={permanentCsvUrl}
+                        readOnly
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(permanentCsvUrl);
+                          alert('URL copied to clipboard!');
+                        }}
+                      >
+                        Copy
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(permanentCsvUrl, '_blank')}
+                      >
+                        Open
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      This URL will always point to the latest company data. Click "Generate Permanent CSV" to update it.
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

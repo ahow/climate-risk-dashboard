@@ -1356,3 +1356,11 @@
 - [x] Add explanation/tooltip for "Risk %" interpretation in supply chain risk table
 - [x] Create visualization/ranking page with country and sector filters
 - [ ] Monitor geographic risk calculation progress and verify fewer zero values
+
+
+## New Feature Requests - Permanent CSV and Enhanced Download
+- [x] Create permanent static CSV file with all company data (same format as uploaded file)
+- [x] Host static CSV on S3 with permanent public URL
+- [x] Add manual regeneration button for permanent CSV
+- [x] Enhanced CSV download to include supply chain risk (was missing)
+- [x] Display permanent CSV URL on dashboard with copy/open buttons

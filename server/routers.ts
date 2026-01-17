@@ -1227,9 +1227,11 @@ export const appRouter = router({
       const csvData: Array<{
         isin: string;
         name: string;
+        country: string;
+        sector: string;
         ev: number;
         directExposure: number;
-        indirectExposure: number;
+        supplyChainRisk: number;
         grossExpectedLoss: number;
         floodLoss: number;
         wildfireLoss: number;
@@ -1272,14 +1274,19 @@ export const appRouter = router({
           }
         }
 
+        // Get supply chain risk
+        const supplyChainRisk = await db.getSupplyChainRiskByCompanyId(company.id);
+        const supplyChainLoss = supplyChainRisk?.expectedAnnualLoss 
+          ? parseFloat(String(supplyChainRisk.expectedAnnualLoss))
+          : 0;
+
         // Get risk management score
         const riskManagement = await db.getRiskManagementByCompanyId(company.id);
         const managementScore = riskManagement?.overallScore || 0;
         const managementFactor = (100 - managementScore) / 100;
 
-        // Calculate net expected loss
-        const indirectExposure = 0; // Currently not calculated
-        const grossExpectedLoss = directExposure + indirectExposure;
+        // Calculate gross expected loss
+        const grossExpectedLoss = directExposure + supplyChainLoss;
         const netExpectedLoss = grossExpectedLoss * managementFactor;
 
         // Calculate as percentage of EV
@@ -1289,9 +1296,11 @@ export const appRouter = router({
         csvData.push({
           isin: company.isin,
           name: company.name,
+          country: company.geography || '',
+          sector: company.sector || '',
           ev,
           directExposure,
-          indirectExposure,
+          supplyChainRisk: supplyChainLoss,
           grossExpectedLoss,
           floodLoss: riskBreakdown.flood,
           wildfireLoss: riskBreakdown.wildfire,
@@ -1306,6 +1315,46 @@ export const appRouter = router({
       }
 
       return csvData;
+    }),
+
+    /**
+     * Generate and host permanent static CSV in original upload format
+     * Returns the S3 URL where the file is hosted
+     */
+    generatePermanentCSV: publicProcedure.mutation(async () => {
+      const companies = await db.getAllCompanies();
+      
+      // Generate CSV in original upload format
+      const csvRows = [
+        'ISIN,Name,Country,Sector,Tangible Assets (USD),Enterprise Value (USD),Supplier Costs (USD)'
+      ];
+      
+      for (const company of companies) {
+        const row = [
+          company.isin,
+          `"${company.name}"`,
+          company.geography || '',
+          company.sector || '',
+          company.tangibleAssets || '',
+          company.enterpriseValue || '',
+          company.supplierCosts || ''
+        ];
+        csvRows.push(row.join(','));
+      }
+      
+      const csvContent = csvRows.join('\n');
+      const buffer = Buffer.from(csvContent, 'utf-8');
+      
+      // Upload to S3 with fixed key for permanent URL
+      const fileKey = 'exports/companies-data.csv';
+      const result = await storagePut(fileKey, buffer, 'text/csv');
+      
+      return {
+        url: result.url,
+        fileKey: result.key,
+        companyCount: companies.length,
+        generatedAt: new Date().toISOString(),
+      };
     }),
   }),
 
