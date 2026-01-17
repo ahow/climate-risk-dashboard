@@ -687,6 +687,12 @@ export default function Home() {
               )}
               <div className="ml-auto flex gap-2">
                 <Button
+                  onClick={() => setLocation('/rankings')}
+                  variant="outline"
+                >
+                  View Rankings
+                </Button>
+                <Button
                   onClick={handleExportCSV}
                   variant="outline"
                 >
