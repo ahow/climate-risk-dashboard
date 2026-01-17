@@ -6,6 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import * as externalApis from "./services/externalApis";
 import { TRPCError } from "@trpc/server";
+import { getOECDSectorName } from "./utils/oecdSectorNames";
 import { companies, assets, geographicRisks, riskManagementScores, uploadedFiles } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { storagePut } from "./storage";
@@ -191,10 +192,14 @@ export const appRouter = router({
         const top5Suppliers = topSuppliers.slice(0, 5).map(supplier => {
           const riskContribution = supplier.risk_contribution?.climate || 0;
           const expectedAnnualLoss = riskContribution * supplierCosts;
+          // Use sector_name if available, otherwise try to map sector code to full name
+          const sectorCode = supplier.sector || '';
+          const sectorName = supplier.sector_name || getOECDSectorName(sectorCode);
+          
           return {
             country: supplier.country_name || supplier.country || 'Unknown',
-            sector: supplier.sector_name || supplier.sector || 'Unknown',
-            sectorCode: supplier.sector || '',
+            sector: sectorName,
+            sectorCode,
             ioCoefficient: supplier.io_coefficient || supplier.coefficient || 0,
             climateRisk: supplier.direct_risk?.climate || 0,
             riskContribution,

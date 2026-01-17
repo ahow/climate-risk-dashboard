@@ -1346,3 +1346,13 @@
 ## Management Score Display Fix
 - [x] Change management score display from "—" to "0%" for companies with zero scores
 - [x] Update both dashboard and company details pages
+
+
+## User Requests - January 17, 2026 (Session 2)
+- [x] Fix asset risk values - they are 1000x too large (wrong units)
+- [ ] Create spreadsheet download option for all company data
+- [ ] Confirm permanent URL for company data file
+- [x] Fix sector label display in supply chain risk table (M, K should show full names)
+- [x] Add explanation/tooltip for "Risk %" interpretation in supply chain risk table
+- [ ] Create visualization/ranking page with country and sector filters
+- [ ] Monitor geographic risk calculation progress and verify fewer zero values

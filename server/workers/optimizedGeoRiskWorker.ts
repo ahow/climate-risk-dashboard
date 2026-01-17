@@ -110,7 +110,9 @@ export async function calculateGeographicRisksOptimized(operationId: string) {
           
           const lat = parseFloat(asset.latitude);
           const lon = parseFloat(asset.longitude);
-          const value = parseFloat(asset.estimatedValueUsd);
+          // Geographic Risks API expects values in thousands of dollars
+          // e.g., pass 1000 for a $1M asset, not 1000000
+          const value = parseFloat(asset.estimatedValueUsd) / 1000;
           
           if (!isNaN(lat) && !isNaN(lon) && !isNaN(value) && value > 0) {
             // Fetch risk data with timeout and retry

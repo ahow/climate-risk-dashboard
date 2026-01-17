@@ -14,6 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc";
 import {
   AlertTriangle,
@@ -23,6 +29,7 @@ import {
   ChevronUp,
   FileText,
   Globe,
+  Info,
   Loader2,
   MapPin,
   Shield,
@@ -360,7 +367,21 @@ export default function CompanyDetails() {
                         <TableRow>
                           <TableHead>Country</TableHead>
                           <TableHead>Sector</TableHead>
-                          <TableHead className="text-right">Risk %</TableHead>
+                          <TableHead className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              Risk %
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p>The weighted climate risk contribution from this supplier sector, based on input-output coefficients and direct climate risk exposure. Higher percentages indicate greater supply chain vulnerability.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          </TableHead>
                           <TableHead className="text-right">Expected Annual Loss</TableHead>
                         </TableRow>
                       </TableHeader>
