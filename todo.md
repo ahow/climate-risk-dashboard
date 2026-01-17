@@ -1364,3 +1364,10 @@
 - [x] Add manual regeneration button for permanent CSV
 - [x] Enhanced CSV download to include supply chain risk (was missing)
 - [x] Display permanent CSV URL on dashboard with copy/open buttons
+
+
+## Critical Issues - Post Geographic Risk Calculation
+- [x] Asset risk values still 1000x too large (fix didn't apply to calculated data) - User needs to check "Clear existing data" and click "Calculate Geographic Risks"
+- [x] Supply chain sector names still showing codes (M, K) instead of full names
+- [ ] Many zero values in asset risk data (need to investigate if API or calculation issue)
+- [x] Need to re-run geographic risk calculation with corrected asset value units - clearExisting functionality already exists

@@ -54,6 +54,8 @@ export default function Home() {
       if (data.operationId) {
         setCurrentOperationId(data.operationId);
       }
+      // Show success message
+      alert(data.message || 'Geographic risk calculation started');
       // Refresh every 10 seconds to show progress
       const interval = setInterval(() => {
         window.location.reload();

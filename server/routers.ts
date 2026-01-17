@@ -192,9 +192,11 @@ export const appRouter = router({
         const top5Suppliers = topSuppliers.slice(0, 5).map(supplier => {
           const riskContribution = supplier.risk_contribution?.climate || 0;
           const expectedAnnualLoss = riskContribution * supplierCosts;
-          // Use sector_name if available, otherwise try to map sector code to full name
+          // Use sector_name if it's a full name (not a single-letter code), otherwise map the code
           const sectorCode = supplier.sector || '';
-          const sectorName = supplier.sector_name || getOECDSectorName(sectorCode);
+          const rawSectorName = supplier.sector_name || sectorCode;
+          // If sector_name is a single letter or short code, use the mapping instead
+          const sectorName = rawSectorName.length <= 10 ? getOECDSectorName(rawSectorName) : rawSectorName;
           
           return {
             country: supplier.country_name || supplier.country || 'Unknown',
