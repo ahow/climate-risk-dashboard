@@ -6,7 +6,7 @@
 import { fetchWithRetry } from '../utils/retry';
 
 const ASSET_DISCOVERY_API = "https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc";
-const GEOGRAPHIC_RISKS_API = "https://climate-risk-api-v5-4576cf5ec89b.herokuapp.com";
+const GEOGRAPHIC_RISKS_API = "https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com";
 const RISK_MANAGEMENT_API = "https://climate-risk-replit-562361beb142.herokuapp.com";
 
 export interface AssetData {
