@@ -1371,3 +1371,9 @@
 - [x] Supply chain sector names still showing codes (M, K) instead of full names
 - [ ] Many zero values in asset risk data (need to investigate if API or calculation issue)
 - [x] Need to re-run geographic risk calculation with corrected asset value units - clearExisting functionality already exists
+
+
+## URGENT - Delete Old Operations Feature
+- [ ] Add backend endpoint to delete/cancel progress tracking operations
+- [ ] Add "Delete" button to Calculation Monitor UI for paused/completed operations
+- [ ] Prevent old paused operations from auto-resuming and overwriting new data

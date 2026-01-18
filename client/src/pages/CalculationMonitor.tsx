@@ -3,7 +3,7 @@ import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle2, XCircle, PauseCircle, Clock, PlayCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, PauseCircle, Clock, PlayCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CalculationMonitor() {
@@ -48,6 +48,16 @@ export default function CalculationMonitor() {
     },
     onError: (error) => {
       toast.error(`Failed to clear: ${error.message}`);
+    },
+  });
+
+  const cancelMutation = trpc.progress.cancel.useMutation({
+    onSuccess: () => {
+      toast.success('Operation deleted');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete: ${error.message}`);
     },
   });
 
@@ -206,6 +216,19 @@ export default function CalculationMonitor() {
                         Resume
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        if (confirm(`Delete operation ${operation.operationId}?`)) {
+                          cancelMutation.mutate({ operationId: operation.operationId });
+                        }
+                      }}
+                      disabled={cancelMutation.isPending}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
