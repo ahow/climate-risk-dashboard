@@ -93,7 +93,7 @@ export async function registerRoutes(
 
       const assetData = await fetchAssetLocations(isin);
 
-      if (assetData.asset_count === 0) {
+      if (assetData.assetCount === 0 || assetData.assets.length === 0) {
         return res.status(404).json({ error: "No asset data found for this ISIN" });
       }
 
@@ -103,30 +103,35 @@ export async function registerRoutes(
 
       const company = await storage.createCompany({
         isin: isin.toUpperCase(),
-        companyName: assetData.company_name,
+        companyName: assetData.companyName,
         sector: detectedSector,
         country: assetData.assets[0]?.country || null,
-        totalAssetValue: assetData.total_estimated_value,
-        assetCount: assetData.asset_count,
+        totalAssetValue: assetData.totalEstimatedValue,
+        assetCount: assetData.assetCount,
         isicSectorCode: isicCode,
         countryIso3: countryIso3,
       });
 
-      for (const asset of assetData.assets) {
+      const validAssets = assetData.assets.filter(a => 
+        a.latitude != null && a.longitude != null && 
+        !isNaN(a.latitude) && !isNaN(a.longitude)
+      );
+
+      for (const asset of validAssets) {
         await storage.createAsset({
           companyId: company.id,
-          facilityName: asset.facility_name,
-          assetType: asset.asset_type,
+          facilityName: asset.facilityName,
+          assetType: asset.assetType,
           address: asset.address,
           city: asset.city,
           country: asset.country,
           latitude: asset.latitude,
           longitude: asset.longitude,
-          coordinateCertainty: asset.coordinate_certainty,
-          estimatedValueUsd: asset.estimated_value_usd,
-          valuationConfidence: asset.valuation_confidence,
-          ownershipShare: asset.ownership_share,
-          dataSource: asset.data_source,
+          coordinateCertainty: asset.coordinateCertainty,
+          estimatedValueUsd: asset.estimatedValueUsd,
+          valuationConfidence: asset.valuationConfidence,
+          ownershipShare: asset.ownershipShare,
+          dataSource: asset.dataSource,
         });
       }
 
@@ -223,6 +228,17 @@ export async function registerRoutes(
 
       processAllRisks(operation.id, companyId);
       res.json(operation);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/operations/:id", async (req, res) => {
+    try {
+      const op = await storage.getOperation(parseInt(req.params.id));
+      if (!op) return res.status(404).json({ error: "Operation not found" });
+      const company = op.companyId ? await storage.getCompany(op.companyId) : null;
+      res.json({ ...op, companyName: company?.companyName || "Unknown" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
