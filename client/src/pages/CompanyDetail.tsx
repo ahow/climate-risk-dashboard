@@ -288,7 +288,7 @@ export default function CompanyDetail() {
                     {formatCurrency((scRisk.directExpectedLoss || 0) + (scRisk.indirectExpectedLoss || 0))}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {company.supplierCosts ? `Scaled to ${formatCurrency(company.supplierCosts * 1000)} supplier exposure` : "Per $1M exposure (no supplier costs data)"}
+                    {company.supplierCosts ? `Scaled to ${formatCurrency(company.supplierCosts)} supplier exposure` : "Per $1M exposure (no supplier costs data)"}
                   </div>
                 </CardContent>
               </Card>
@@ -307,7 +307,7 @@ export default function CompanyDetail() {
                 { key: "extreme_precipitation", label: "Extreme Precipitation", icon: CloudRain },
               ];
 
-              const scaleFactor = company.supplierCosts ? (company.supplierCosts * 1000) / 1000000 : 1;
+              const scaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
               const totalDirectLoss = (directRisk.expected_loss.total_annual_loss || 1) * scaleFactor;
 
               return (
@@ -337,7 +337,7 @@ export default function CompanyDetail() {
               <div className="border rounded-md p-3">
                 <div className="text-xs text-muted-foreground">30-Year Present Value (Direct)</div>
                 <div className="text-lg font-bold" data-testid="text-sc-pv30">
-                  {formatCurrency(directRiskPV(scRisk) * (company.supplierCosts ? (company.supplierCosts * 1000) / 1000000 : 1))}
+                  {formatCurrency(directRiskPV(scRisk) * (company.supplierCosts ? company.supplierCosts / 1000000 : 1))}
                 </div>
               </div>
             )}
@@ -358,7 +358,7 @@ export default function CompanyDetail() {
                     </thead>
                     <tbody>
                       {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
-                        const sf = company.supplierCosts ? (company.supplierCosts * 1000) / 1000000 : 1;
+                        const sf = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
                         return (
                           <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
                             <td className="py-2 px-3">{supplier.country_name}</td>

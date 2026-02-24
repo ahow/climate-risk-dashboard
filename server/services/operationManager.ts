@@ -91,8 +91,8 @@ export async function processGeographicRisks(operationId: number, companyId: num
   }
 }
 
-function scaleSupplyChainRisk(result: any, supplierCostsThousands: number | null) {
-  const scaleFactor = supplierCostsThousands ? (supplierCostsThousands * 1000) / 1000000 : 1;
+function scaleSupplyChainRisk(result: any, supplierCosts: number | null) {
+  const scaleFactor = supplierCosts ? supplierCosts / 1000000 : 1;
 
   const directLossRaw = result.direct_risk.expected_loss?.total_annual_loss || 0;
   const directLossPctRaw = result.direct_risk.expected_loss?.total_annual_loss_pct || 0;
