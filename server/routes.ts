@@ -515,10 +515,12 @@ export async function registerRoutes(
             "Sector": company.sector || "",
             "Country": company.country || "",
             "Total Asset Value": company.totalAssetValue || 0,
+            "Supplier Costs ($000s)": company.supplierCosts || 0,
             "Asset Count": company.assetCount || 0,
             "Geographic Risk (EAL)": totalGeoRisk.toFixed(2),
             "Supply Chain Risk (Direct EAL)": (scRisk?.directExpectedLoss || 0).toFixed(2),
             "Supply Chain Risk (Indirect EAL)": (scRisk?.indirectExpectedLoss || 0).toFixed(2),
+            "Supply Chain Risk (Total EAL)": totalScRisk.toFixed(2),
             "Management Score": mgmtScoreVal,
             "Total Risk": totalRisk.toFixed(2),
           };

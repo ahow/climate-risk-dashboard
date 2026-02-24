@@ -42,7 +42,8 @@ async function migrate() {
         total_asset_value REAL,
         asset_count INTEGER DEFAULT 0,
         isic_sector_code VARCHAR(10),
-        country_iso3 VARCHAR(3)
+        country_iso3 VARCHAR(3),
+        supplier_costs REAL
       );
     `);
     console.log("✓ companies");

@@ -20,14 +20,21 @@ A full-stack web application that quantifies and visualizes climate-related fina
    - `GET /api/lookup/{isin}` - Management performance scores (44 measures, 9 categories)
 
 ## Database Schema
-- `companies` - Company info with ISIN, sector, country, asset value
+- `companies` - Company info with ISIN, sector, country, asset value, supplier_costs ($'000s from uploaded list)
 - `assets` - Physical facilities with coordinates and valuations
 - `geo_risks` - Per-asset climate hazard Expected Annual Loss (5 hazards)
-- `supply_chain_risks` - Country-sector risk assessment (5 dimensions)
+- `supply_chain_risks` - Country-sector risk assessment with expected loss scaled by supplier costs
 - `management_scores` - Management performance scoring (9 categories, 44 measures)
 - `operations` - Batch processing job tracking with pause/resume
 - `company_list_uploads` - Metadata for uploaded company spreadsheets
 - `company_list_entries` - Individual company rows from uploaded spreadsheets
+
+## Supply Chain Risk Scaling
+- Supply Chain API returns expected loss per $1M of exposure
+- SUPPLIERCOSTS field in uploaded spreadsheet = company's annual supplier spending in $'000s
+- Scale factor = supplierCosts * 1000 / 1,000,000 (actual exposure / $1M)
+- All stored supply chain EAL values are scaled to actual supplier exposure
+- If no supplier costs data available, falls back to raw per-$1M values (scale factor = 1)
 
 ## Key Features
 1. **Company Dashboard** (`/`) - Overview with add-by-ISIN, search, risk summary cards
