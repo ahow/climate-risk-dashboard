@@ -91,6 +91,22 @@ export async function processGeographicRisks(operationId: number, companyId: num
   }
 }
 
+function scaleSupplyChainRisk(result: any, supplierCostsThousands: number | null) {
+  const scaleFactor = supplierCostsThousands ? (supplierCostsThousands * 1000) / 1000000 : 1;
+
+  const directLossRaw = result.direct_risk.expected_loss?.total_annual_loss || 0;
+  const directLossPctRaw = result.direct_risk.expected_loss?.total_annual_loss_pct || 0;
+  const indirectLossRaw = result.indirect_risk.expected_loss?.total_annual_loss || 0;
+  const indirectLossPctRaw = result.indirect_risk.expected_loss?.total_annual_loss_pct || 0;
+
+  return {
+    directExpectedLoss: directLossRaw * scaleFactor,
+    directExpectedLossPct: directLossPctRaw,
+    indirectExpectedLoss: indirectLossRaw * scaleFactor,
+    indirectExpectedLossPct: indirectLossPctRaw,
+  };
+}
+
 export async function processSupplyChainRisk(operationId: number, companyId: number) {
   try {
     await storage.updateOperation(operationId, {
@@ -111,6 +127,7 @@ export async function processSupplyChainRisk(operationId: number, companyId: num
     await storage.deleteSupplyChainRisk(companyId);
 
     const result = await fetchSupplyChainRisk(countryCode, sectorCode);
+    const scaled = scaleSupplyChainRisk(result, company.supplierCosts);
 
     await storage.createSupplyChainRisk({
       companyId,
@@ -122,10 +139,10 @@ export async function processSupplyChainRisk(operationId: number, companyId: num
       indirectRisk: result.indirect_risk,
       totalRisk: result.total_risk,
       topSuppliers: result.top_suppliers,
-      directExpectedLoss: result.direct_risk.expected_loss?.total_annual_loss || 0,
-      directExpectedLossPct: result.direct_risk.expected_loss?.total_annual_loss_pct || 0,
-      indirectExpectedLoss: result.indirect_risk.expected_loss?.total_annual_loss || 0,
-      indirectExpectedLossPct: result.indirect_risk.expected_loss?.total_annual_loss_pct || 0,
+      directExpectedLoss: scaled.directExpectedLoss,
+      directExpectedLossPct: scaled.directExpectedLossPct,
+      indirectExpectedLoss: scaled.indirectExpectedLoss,
+      indirectExpectedLossPct: scaled.indirectExpectedLossPct,
     });
 
     await storage.updateOperation(operationId, {
@@ -257,6 +274,7 @@ export async function processAllRisks(operationId: number, companyId: number) {
       const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
       await storage.deleteSupplyChainRisk(companyId);
       const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+      const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
       await storage.createSupplyChainRisk({
         companyId,
         countryCode: scResult.country,
@@ -267,10 +285,10 @@ export async function processAllRisks(operationId: number, companyId: number) {
         indirectRisk: scResult.indirect_risk,
         totalRisk: scResult.total_risk,
         topSuppliers: scResult.top_suppliers,
-        directExpectedLoss: scResult.direct_risk.expected_loss?.total_annual_loss || 0,
-        directExpectedLossPct: scResult.direct_risk.expected_loss?.total_annual_loss_pct || 0,
-        indirectExpectedLoss: scResult.indirect_risk.expected_loss?.total_annual_loss || 0,
-        indirectExpectedLossPct: scResult.indirect_risk.expected_loss?.total_annual_loss_pct || 0,
+        directExpectedLoss: scaled.directExpectedLoss,
+        directExpectedLossPct: scaled.directExpectedLossPct,
+        indirectExpectedLoss: scaled.indirectExpectedLoss,
+        indirectExpectedLossPct: scaled.indirectExpectedLossPct,
       });
     } catch (err: any) {
       log(`Supply chain risk error: ${err.message}`);
@@ -374,6 +392,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             assetCount: assetData.assetCount,
             isicSectorCode: isicCode,
             countryIso3,
+            supplierCosts: entry.supplierCosts,
           });
 
           const validAssets = assetData.assets.filter(a =>
@@ -441,6 +460,8 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
           await storage.deleteSupplyChainRisk(company.id);
           const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+          const supplierCostsForCompany = company.supplierCosts || entry.supplierCosts;
+          const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
           await storage.createSupplyChainRisk({
             companyId: company.id,
             countryCode: scResult.country,
@@ -451,10 +472,10 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             indirectRisk: scResult.indirect_risk,
             totalRisk: scResult.total_risk,
             topSuppliers: scResult.top_suppliers,
-            directExpectedLoss: scResult.direct_risk.expected_loss?.total_annual_loss || 0,
-            directExpectedLossPct: scResult.direct_risk.expected_loss?.total_annual_loss_pct || 0,
-            indirectExpectedLoss: scResult.indirect_risk.expected_loss?.total_annual_loss || 0,
-            indirectExpectedLossPct: scResult.indirect_risk.expected_loss?.total_annual_loss_pct || 0,
+            directExpectedLoss: scaled.directExpectedLoss,
+            directExpectedLossPct: scaled.directExpectedLossPct,
+            indirectExpectedLoss: scaled.indirectExpectedLoss,
+            indirectExpectedLossPct: scaled.indirectExpectedLossPct,
           });
         } catch (err: any) {
           log(`Bulk: Supply chain error for ${company.companyName}: ${err.message}`);

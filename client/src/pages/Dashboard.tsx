@@ -223,11 +223,11 @@ export default function Dashboard() {
                       <div className="text-center">
                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                           <Link2 className="h-3 w-3" />
-                          Supply Chain
+                          Supply Chain EAL
                         </div>
                         <div className="font-semibold" data-testid={`text-sc-risk-${company.id}`}>
                           {company.hasSupplyChainRisk
-                            ? `${((company.supplyChainRisk?.directRisk as any)?.climate || 0).toFixed(1)}/5`
+                            ? formatCurrency((company.supplyChainRisk?.directExpectedLoss || 0) + (company.supplyChainRisk?.indirectExpectedLoss || 0))
                             : "---"}
                         </div>
                       </div>

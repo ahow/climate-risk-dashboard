@@ -14,6 +14,7 @@ export const companies = pgTable("companies", {
   assetCount: integer("asset_count").default(0),
   isicSectorCode: varchar("isic_sector_code", { length: 10 }),
   countryIso3: varchar("country_iso3", { length: 3 }),
+  supplierCosts: real("supplier_costs"),
 });
 
 export const assets = pgTable("assets", {

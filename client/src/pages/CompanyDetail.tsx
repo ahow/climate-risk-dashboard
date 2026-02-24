@@ -266,7 +266,7 @@ export default function CompanyDetail() {
                     {formatCurrency(scRisk.directExpectedLoss || 0)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {(scRisk.directExpectedLossPct || 0).toFixed(2)}% of supplier costs
+                    {(scRisk.directExpectedLossPct || 0).toFixed(2)}% per $1M exposure
                   </div>
                 </CardContent>
               </Card>
@@ -277,7 +277,7 @@ export default function CompanyDetail() {
                     {formatCurrency(scRisk.indirectExpectedLoss || 0)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {(scRisk.indirectExpectedLossPct || 0).toFixed(2)}% of supplier costs
+                    {(scRisk.indirectExpectedLossPct || 0).toFixed(2)}% per $1M exposure
                   </div>
                 </CardContent>
               </Card>
@@ -288,7 +288,7 @@ export default function CompanyDetail() {
                     {formatCurrency((scRisk.directExpectedLoss || 0) + (scRisk.indirectExpectedLoss || 0))}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Direct + Indirect combined
+                    {company.supplierCosts ? `Scaled to ${formatCurrency(company.supplierCosts * 1000)} supplier exposure` : "Per $1M exposure (no supplier costs data)"}
                   </div>
                 </CardContent>
               </Card>
@@ -307,7 +307,8 @@ export default function CompanyDetail() {
                 { key: "extreme_precipitation", label: "Extreme Precipitation", icon: CloudRain },
               ];
 
-              const totalDirectLoss = directRisk.expected_loss.total_annual_loss || 1;
+              const scaleFactor = company.supplierCosts ? (company.supplierCosts * 1000) / 1000000 : 1;
+              const totalDirectLoss = (directRisk.expected_loss.total_annual_loss || 1) * scaleFactor;
 
               return (
                 <div>
@@ -315,7 +316,7 @@ export default function CompanyDetail() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {hazards.map(({ key, label, icon: Icon }) => {
                       const hazardData = breakdown[key];
-                      const loss = hazardData?.annual_loss || 0;
+                      const loss = (hazardData?.annual_loss || 0) * scaleFactor;
                       const pct = totalDirectLoss > 0 ? (loss / totalDirectLoss) * 100 : 0;
                       return (
                         <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-hazard-${key}`}>
@@ -336,7 +337,7 @@ export default function CompanyDetail() {
               <div className="border rounded-md p-3">
                 <div className="text-xs text-muted-foreground">30-Year Present Value (Direct)</div>
                 <div className="text-lg font-bold" data-testid="text-sc-pv30">
-                  {formatCurrency(directRiskPV(scRisk))}
+                  {formatCurrency(directRiskPV(scRisk) * (company.supplierCosts ? (company.supplierCosts * 1000) / 1000000 : 1))}
                 </div>
               </div>
             )}
@@ -356,15 +357,18 @@ export default function CompanyDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => (
-                        <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
-                          <td className="py-2 px-3">{supplier.country_name}</td>
-                          <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
-                          <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatCurrency(supplier.expected_loss_contribution?.annual_loss || 0)}</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatCurrency(supplier.expected_loss_contribution?.present_value_30yr || 0)}</td>
-                        </tr>
-                      ))}
+                      {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
+                        const sf = company.supplierCosts ? (company.supplierCosts * 1000) / 1000000 : 1;
+                        return (
+                          <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
+                            <td className="py-2 px-3">{supplier.country_name}</td>
+                            <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
+                            <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
+                            <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.annual_loss || 0) * sf)}</td>
+                            <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.present_value_30yr || 0) * sf)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
