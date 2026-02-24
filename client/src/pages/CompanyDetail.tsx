@@ -47,6 +47,7 @@ function CollapsibleSection({
   title,
   summary,
   defaultOpen = false,
+  alwaysVisibleContent,
   children,
   testId,
 }: {
@@ -54,6 +55,7 @@ function CollapsibleSection({
   title: string;
   summary: string;
   defaultOpen?: boolean;
+  alwaysVisibleContent?: any;
   children: any;
   testId: string;
 }) {
@@ -76,6 +78,7 @@ function CollapsibleSection({
           </div>
         </div>
       </CardHeader>
+      {alwaysVisibleContent && <CardContent className="pt-0">{alwaysVisibleContent}</CardContent>}
       {isOpen && <CardContent>{children}</CardContent>}
     </Card>
   );
@@ -292,47 +295,6 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
   );
 }
 
-function SupplyChainDetail({ scRisk, company }: { scRisk: any; company: any }) {
-  return (
-    <div className="space-y-4">
-      <SupplyChainSummary scRisk={scRisk} company={company} />
-
-      {(scRisk.topSuppliers as any[])?.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium mb-2">Top Upstream Suppliers (by Climate Risk Contribution)</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="table-suppliers">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Country</th>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Sector</th>
-                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">I-O Coefficient</th>
-                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">Annual Loss ($)</th>
-                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">30yr PV ($)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
-                  const sf = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-                  return (
-                    <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
-                      <td className="py-2 px-3">{supplier.country_name}</td>
-                      <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
-                      <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
-                      <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.annual_loss || 0) * sf)}</td>
-                      <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.present_value_30yr || 0) * sf)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function CompanyDetail() {
   const { toast } = useToast();
   const [, params] = useRoute("/company/:id");
@@ -541,8 +503,40 @@ export default function CompanyDetail() {
           title="Supply Chain Climate Risk Assessment"
           summary={`EAL: ${totalScEAL}`}
           testId="section-supply-chain"
+          alwaysVisibleContent={<SupplyChainSummary scRisk={scRisk} company={company} />}
         >
-          <SupplyChainDetail scRisk={scRisk} company={company} />
+          {(scRisk.topSuppliers as any[])?.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium mb-2">Top Upstream Suppliers (by Climate Risk Contribution)</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="table-suppliers">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Country</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Sector</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">I-O Coefficient</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Annual Loss ($)</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">30yr PV ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
+                      const sf = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
+                      return (
+                        <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
+                          <td className="py-2 px-3">{supplier.country_name}</td>
+                          <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
+                          <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
+                          <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.annual_loss || 0) * sf)}</td>
+                          <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.present_value_30yr || 0) * sf)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </CollapsibleSection>
       )}
 
