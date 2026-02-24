@@ -300,8 +300,16 @@ export async function registerRoutes(
 
   app.delete("/api/operations/:id", async (req, res) => {
     try {
-      await storage.updateOperation(parseInt(req.params.id), { status: "cancelled" });
-      await storage.deleteOperation(parseInt(req.params.id));
+      const op = await storage.getOperation(parseInt(req.params.id));
+      if (op && (op.status === "running" || op.status === "pending")) {
+        await storage.updateOperation(parseInt(req.params.id), {
+          status: "cancelled",
+          statusMessage: "Cancelled by user",
+          completedAt: new Date(),
+        });
+      } else {
+        await storage.deleteOperation(parseInt(req.params.id));
+      }
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -444,6 +452,14 @@ export async function registerRoutes(
 
   app.post("/api/company-list/process-all", async (_req, res) => {
     try {
+      const ops = await storage.getOperations();
+      const existingBulk = ops.find(
+        (op) => op.type === "bulk_processing" && (op.status === "running" || op.status === "pending")
+      );
+      if (existingBulk) {
+        return res.status(409).json({ error: "A bulk processing operation is already running", operation: existingBulk });
+      }
+
       const latest = await storage.getLatestCompanyListUpload();
       if (!latest) {
         return res.status(404).json({ error: "No company list uploaded yet" });
