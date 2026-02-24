@@ -1,0 +1,33 @@
+{
+  "name": "climate-risk-dashboard",
+  "description": "Climate Risk Dashboard - Quantifies and visualizes climate-related financial risks for publicly traded companies",
+  "stack": "heroku-24",
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "NODE_ENV": {
+      "value": "production"
+    },
+    "NPM_CONFIG_PRODUCTION": {
+      "value": "false",
+      "description": "Must be false so devDependencies (tsx, esbuild, vite) are available during build"
+    },
+    "DATABASE_URL": {
+      "description": "PostgreSQL database connection URL",
+      "required": true
+    },
+    "SESSION_SECRET": {
+      "description": "Secret key for session management",
+      "generator": "secret"
+    }
+  },
+  "addons": [
+    "heroku-postgresql:essential-0"
+  ],
+  "scripts": {
+    "postdeploy": "npm run db:push"
+  }
+}
