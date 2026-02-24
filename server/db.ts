@@ -26,6 +26,10 @@ export async function ensureSchemaUpdates() {
         check: `SELECT column_name FROM information_schema.columns WHERE table_name='company_list_entries' AND column_name='supplier_costs'`,
         apply: `ALTER TABLE company_list_entries ADD COLUMN IF NOT EXISTS supplier_costs real`,
       },
+      {
+        check: `SELECT column_name FROM information_schema.columns WHERE table_name='companies' AND column_name='ev'`,
+        apply: `ALTER TABLE companies ADD COLUMN IF NOT EXISTS ev real`,
+      },
     ];
 
     for (const migration of migrations) {
