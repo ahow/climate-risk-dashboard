@@ -223,14 +223,18 @@ export default function CompanyDetail() {
                       </td>
                       <td className="py-2 px-3 text-right">{formatCurrency(asset.estimatedValueUsd || 0)}</td>
                       {asset.geoRisk ? (
-                        <>
-                          <td className="py-2 px-3 text-right font-semibold">{formatCurrency(asset.geoRisk.expectedAnnualLoss || 0)}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.hurricaneLoss || 0)}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.floodLoss || 0)}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.heatStressLoss || 0)}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.droughtLoss || 0)}</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.extremePrecipLoss || 0)}</td>
-                        </>
+                        asset.geoRisk.modelVersion === "FAILED" ? (
+                          <td colSpan={6} className="py-2 px-3 text-center text-muted-foreground">API unavailable for this location</td>
+                        ) : (
+                          <>
+                            <td className="py-2 px-3 text-right font-semibold">{formatCurrency(asset.geoRisk.expectedAnnualLoss || 0)}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.hurricaneLoss || 0)}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.floodLoss || 0)}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.heatStressLoss || 0)}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.droughtLoss || 0)}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(asset.geoRisk.extremePrecipLoss || 0)}</td>
+                          </>
+                        )
                       ) : (
                         <td colSpan={6} className="py-2 px-3 text-center text-muted-foreground">Not calculated</td>
                       )}

@@ -63,7 +63,20 @@ export async function processGeographicRisks(operationId: number, companyId: num
 
         log(`Geo risk calculated for asset ${asset.facilityName} (${i + 1}/${assets.length})`);
       } catch (err: any) {
-        log(`Error processing asset ${asset.facilityName}: ${err.message}`);
+        log(`Error processing asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+        await storage.createGeoRisk({
+          assetId: asset.id,
+          companyId: companyId,
+          expectedAnnualLoss: 0,
+          expectedAnnualLossPct: 0,
+          presentValue30yr: 0,
+          hurricaneLoss: 0,
+          floodLoss: 0,
+          heatStressLoss: 0,
+          droughtLoss: 0,
+          extremePrecipLoss: 0,
+          modelVersion: "FAILED",
+        });
       }
 
       await storage.updateOperation(operationId, {
@@ -253,7 +266,14 @@ export async function processAllRisks(operationId: number, companyId: number) {
           modelVersion: result.model_version || "V6",
         });
       } catch (err: any) {
-        log(`Error processing asset ${asset.facilityName}: ${err.message}`);
+        log(`Error processing asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+        await storage.createGeoRisk({
+          assetId: asset.id,
+          companyId,
+          expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
+          hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
+          modelVersion: "FAILED",
+        });
       }
 
       await storage.updateOperation(operationId, {
@@ -451,7 +471,14 @@ export async function processBulkFromList(operationId: number, uploadId: number)
               modelVersion: result.model_version || "V6",
             });
           } catch (err: any) {
-            log(`Bulk: Geo risk error for asset ${asset.facilityName}: ${err.message}`);
+            log(`Bulk: Geo risk error for asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+            await storage.createGeoRisk({
+              assetId: asset.id,
+              companyId: company.id,
+              expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
+              hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
+              modelVersion: "FAILED",
+            });
           }
           if (i < companyAssets.length - 1) await sleep(DELAY_MS);
         }
