@@ -15,6 +15,44 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export async function recoverOrphanedOperations() {
+  try {
+    const ops = await storage.getOperations();
+    const running = ops.filter(op => op.status === "running");
+    for (const op of running) {
+      log(`Recovering orphaned operation #${op.id} (${op.type}) - was running since ${op.startedAt}`);
+      if (op.type === "bulk_processing") {
+        const latest = await storage.getLatestCompanyListUpload();
+        if (latest) {
+          log(`Resuming bulk processing operation #${op.id}`);
+          processBulkFromList(op.id, latest.id);
+        } else {
+          await storage.updateOperation(op.id, {
+            status: "failed",
+            statusMessage: "Orphaned: no upload found to resume",
+            completedAt: new Date(),
+          });
+        }
+      } else if (op.type === "full_assessment" && op.companyId) {
+        processAllRisks(op.id, op.companyId);
+      } else if (op.type === "geographic_risk" && op.companyId) {
+        processGeographicRisks(op.id, op.companyId);
+      } else {
+        await storage.updateOperation(op.id, {
+          status: "failed",
+          statusMessage: "Orphaned: server restarted during processing",
+          completedAt: new Date(),
+        });
+      }
+    }
+    if (running.length > 0) {
+      log(`Recovered ${running.length} orphaned operation(s)`);
+    }
+  } catch (err: any) {
+    log(`Error recovering orphaned operations: ${err.message}`);
+  }
+}
+
 export async function processGeographicRisks(operationId: number, companyId: number) {
   try {
     const assets = await storage.getAssetsByCompany(companyId);
@@ -385,6 +423,26 @@ export async function processBulkFromList(operationId: number, uploadId: number)
       const isin = entry.isin.toUpperCase();
       try {
         let company = await storage.getCompanyByIsin(isin);
+
+        if (company) {
+          const existingGeoRisks = await storage.getGeoRisksByCompany(company.id);
+          const existingSCRisk = await storage.getSupplyChainRisk(company.id);
+          if (existingGeoRisks.length > 0 && existingSCRisk) {
+            const updates: any = {};
+            if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
+            if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+            if (Object.keys(updates).length > 0) {
+              await storage.updateCompany(company.id, updates);
+            }
+            processed++;
+            await storage.updateOperation(operationId, {
+              processedItems: processed,
+              statusMessage: `${processed}/${totalSteps}: ${company.companyName} already processed, skipping`,
+            });
+            await sleep(100);
+            continue;
+          }
+        }
 
         if (!company) {
           const assetData = await fetchAssetLocations(isin);
