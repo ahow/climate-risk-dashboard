@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useState } from "react";
 import {
   ArrowLeft, Play, Loader2, AlertTriangle, Droplets,
   Flame, Thermometer, CloudRain, Waves, Shield,
-  Link2, Building2, MapPin,
+  Link2, Building2, MapPin, ChevronDown, ChevronRight, Quote, FileText,
 } from "lucide-react";
 
 function formatCurrency(value: number): string {
@@ -39,6 +40,124 @@ function getRiskLevel(score: number, max: number = 5): string {
 
 function directRiskPV(scRisk: any): number {
   return (scRisk.directRisk as any)?.expected_loss?.present_value_30yr || 0;
+}
+
+function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
+  const [expandedMeasures, setExpandedMeasures] = useState<Set<string>>(new Set());
+
+  const toggleMeasure = (measureId: string) => {
+    setExpandedMeasures(prev => {
+      const next = new Set(prev);
+      if (next.has(measureId)) next.delete(measureId);
+      else next.add(measureId);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    if (!mgmtScore.scores) return;
+    const allIds = new Set<string>();
+    Object.values(mgmtScore.scores as Record<string, any[]>).forEach(measures => {
+      measures.forEach((m: any) => allIds.add(m.measureId));
+    });
+    setExpandedMeasures(allIds);
+  };
+
+  const collapseAll = () => setExpandedMeasures(new Set());
+
+  const hasAnyExpanded = expandedMeasures.size > 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Management Performance ({mgmtScore.totalScore}/{mgmtScore.totalPossible})
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={hasAnyExpanded ? collapseAll : expandAll}
+            className="text-xs"
+            data-testid="button-toggle-all-measures"
+          >
+            {hasAnyExpanded ? "Collapse All" : "Expand All"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {mgmtScore.summary && (
+          <p className="text-sm text-muted-foreground" data-testid="text-mgmt-summary">{mgmtScore.summary}</p>
+        )}
+        {mgmtScore.scores && Object.entries(mgmtScore.scores as Record<string, any[]>).map(([category, measures]) => {
+          const categoryScore = measures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
+          const categoryMax = measures.length;
+          return (
+            <div key={category} data-testid={`mgmt-category-${category.replace(/\s+/g, "-").toLowerCase()}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">{category}</span>
+                <span className="text-sm text-muted-foreground">{categoryScore}/{categoryMax}</span>
+              </div>
+              <Progress value={categoryMax > 0 ? (categoryScore / categoryMax) * 100 : 0} className="h-2" />
+              <div className="mt-1 space-y-0.5">
+                {measures.map((m: any) => {
+                  const isExpanded = expandedMeasures.has(m.measureId);
+                  const hasDetails = m.evidenceSummary || (m.quotes && m.quotes.length > 0);
+                  return (
+                    <div key={m.measureId} data-testid={`mgmt-measure-${m.measureId}`}>
+                      <div
+                        className={`flex items-center gap-2 text-xs text-muted-foreground pl-2 py-0.5 rounded ${hasDetails ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                        onClick={() => hasDetails && toggleMeasure(m.measureId)}
+                      >
+                        {hasDetails ? (
+                          isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <span className="w-3 shrink-0" />
+                        )}
+                        <span className={m.score > 0 ? "text-green-500" : "text-red-400"}>{m.score > 0 ? "✓" : "✗"}</span>
+                        <span className="flex-1">{m.title}</span>
+                        {m.confidence && <span className="opacity-60">{m.confidence}</span>}
+                      </div>
+                      {isExpanded && (
+                        <div className="ml-8 mt-1 mb-2 space-y-2 border-l-2 border-muted pl-3">
+                          {m.evidenceSummary && (
+                            <div className="text-xs" data-testid={`mgmt-evidence-${m.measureId}`}>
+                              <span className="font-medium text-foreground/80">Assessment: </span>
+                              <span className="text-muted-foreground">{m.evidenceSummary}</span>
+                            </div>
+                          )}
+                          {m.quotes && m.quotes.length > 0 && (
+                            <div className="space-y-1.5">
+                              {m.quotes.map((q: any, qi: number) => (
+                                <div key={qi} className="text-xs rounded bg-muted/40 p-2" data-testid={`mgmt-quote-${m.measureId}-${qi}`}>
+                                  <div className="flex items-start gap-1.5 mb-1">
+                                    <Quote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/60" />
+                                    <span className="italic text-muted-foreground leading-relaxed">"{q.text}"</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-1 text-muted-foreground/70">
+                                    <FileText className="h-3 w-3 shrink-0" />
+                                    <span>{q.source}{q.page ? `, p.${q.page}` : ""}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {(!m.quotes || m.quotes.length === 0) && !m.evidenceSummary && (
+                            <p className="text-xs text-muted-foreground/60 italic">No evidence found</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function CompanyDetail() {
@@ -383,41 +502,7 @@ export default function CompanyDetail() {
       )}
 
       {mgmtScore && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Management Performance ({mgmtScore.totalScore}/{mgmtScore.totalPossible})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {mgmtScore.summary && (
-              <p className="text-sm text-muted-foreground" data-testid="text-mgmt-summary">{mgmtScore.summary}</p>
-            )}
-            {mgmtScore.scores && Object.entries(mgmtScore.scores as Record<string, any[]>).map(([category, measures]) => {
-              const categoryScore = measures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
-              const categoryMax = measures.length;
-              return (
-                <div key={category} data-testid={`mgmt-category-${category.replace(/\s+/g, "-").toLowerCase()}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{category}</span>
-                    <span className="text-sm text-muted-foreground">{categoryScore}/{categoryMax}</span>
-                  </div>
-                  <Progress value={categoryMax > 0 ? (categoryScore / categoryMax) * 100 : 0} className="h-2" />
-                  <div className="mt-1 space-y-1">
-                    {measures.map((m: any) => (
-                      <div key={m.measureId} className="flex items-center gap-2 text-xs text-muted-foreground pl-2">
-                        <span className={m.score > 0 ? "text-green-500" : "text-red-400"}>{m.score > 0 ? "✓" : "✗"}</span>
-                        <span>{m.title}</span>
-                        {m.confidence && <span className="ml-auto opacity-60">{m.confidence}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+        <ManagementSection mgmtScore={mgmtScore} />
       )}
     </div>
   );
