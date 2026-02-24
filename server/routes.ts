@@ -363,9 +363,9 @@ export async function registerRoutes(
         level4Sector: row["LEVEL4 SECTOR NAME"] || null,
         level5Sector: row["LEVEL5 SECTOR NAME"] || null,
         geography: row["GEOGRAPHIC DESCR."] || row["GEOGRAPHIC DESCR"] || null,
-        totalValue: row["TotalValue"] != null ? Number(row["TotalValue"]) : null,
-        ev: row["EV"] != null ? Number(row["EV"]) : null,
-        supplierCosts: row["SUPPLIERCOSTS"] != null ? Number(row["SUPPLIERCOSTS"]) : null,
+        totalValue: row["TotalValue"] != null ? Number(row["TotalValue"]) * 1000 : null,
+        ev: row["EV"] != null ? Number(row["EV"]) * 1000 : null,
+        supplierCosts: row["SUPPLIERCOSTS"] != null ? Number(row["SUPPLIERCOSTS"]) * 1000 : null,
       })).filter((e: any) => e.isin && e.companyName);
 
       await storage.createCompanyListEntries(entries);
@@ -419,9 +419,9 @@ export async function registerRoutes(
         "LEVEL4 SECTOR NAME": e.level4Sector || "",
         "LEVEL5 SECTOR NAME": e.level5Sector || "",
         "GEOGRAPHIC DESCR.": e.geography || "",
-        "TotalValue": e.totalValue || 0,
-        "EV": e.ev || 0,
-        "SUPPLIERCOSTS": e.supplierCosts || 0,
+        "TotalValue": e.totalValue ? e.totalValue / 1000 : 0,
+        "EV": e.ev ? e.ev / 1000 : 0,
+        "SUPPLIERCOSTS": e.supplierCosts ? e.supplierCosts / 1000 : 0,
       }));
 
       const wb = XLSX.utils.book_new();
@@ -452,7 +452,7 @@ export async function registerRoutes(
           const vals = [
             e.isin, e.companyName, e.level2Sector || "", e.level3Sector || "",
             e.level4Sector || "", e.level5Sector || "", e.geography || "",
-            String(e.totalValue || 0), String(e.ev || 0), String(e.supplierCosts || 0),
+            String(e.totalValue ? e.totalValue / 1000 : 0), String(e.ev ? e.ev / 1000 : 0), String(e.supplierCosts ? e.supplierCosts / 1000 : 0),
           ];
           return vals.map(v => v.includes(",") ? `"${v}"` : v).join(",");
         }),
@@ -531,7 +531,7 @@ export async function registerRoutes(
             "Sector": company.sector || "",
             "Country": company.country || "",
             "Total Asset Value": company.totalAssetValue || 0,
-            "Supplier Costs ($000s)": company.supplierCosts || 0,
+            "Supplier Costs": company.supplierCosts || 0,
             "Asset Count": company.assetCount || 0,
             "Geographic Risk (EAL)": totalGeoRisk.toFixed(2),
             "Supply Chain Risk (Direct EAL)": (scRisk?.directExpectedLoss || 0).toFixed(2),
