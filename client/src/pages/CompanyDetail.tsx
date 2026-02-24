@@ -216,6 +216,32 @@ function CollapsibleSection({
   );
 }
 
+function ManagementSummaryRow({ scores }: { scores: Record<string, any[]> }) {
+  const categories = Object.entries(scores);
+  return (
+    <div className="flex flex-wrap gap-2" data-testid="mgmt-summary-row">
+      {categories.map(([category, measures]) => {
+        const categoryScore = measures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
+        const categoryMax = measures.length;
+        const pct = categoryMax > 0 ? (categoryScore / categoryMax) * 100 : 0;
+        const color = pct >= 75 ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+          : pct >= 40 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+          : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
+        return (
+          <div
+            key={category}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium flex-1 min-w-[140px] ${color}`}
+            data-testid={`mgmt-badge-${category.replace(/\s+/g, "-").toLowerCase()}`}
+          >
+            <div className="truncate">{category}</div>
+            <div className="text-sm font-semibold mt-0.5">{categoryScore}/{categoryMax}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
   const [expandedMeasures, setExpandedMeasures] = useState<Set<string>>(new Set());
 
@@ -250,6 +276,9 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
       title={`Management Performance (${mgmtScore.totalScore}/${mgmtScore.totalPossible})`}
       summary={`${scorePct}%`}
       testId="section-management"
+      alwaysVisibleContent={
+        mgmtScore.scores ? <ManagementSummaryRow scores={mgmtScore.scores} /> : null
+      }
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -279,31 +308,30 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
               <div className="mt-1 space-y-0.5">
                 {measures.map((m: any) => {
                   const isExpanded = expandedMeasures.has(m.measureId);
-                  const hasDetails = m.evidenceSummary || (m.quotes && m.quotes.length > 0);
                   return (
                     <div key={m.measureId} data-testid={`mgmt-measure-${m.measureId}`}>
                       <div
-                        className={`flex items-center gap-2 text-xs text-muted-foreground pl-2 py-0.5 rounded ${hasDetails ? "cursor-pointer hover:bg-muted/50" : ""}`}
-                        onClick={() => hasDetails && toggleMeasure(m.measureId)}
+                        className="flex items-center gap-2 text-xs text-muted-foreground pl-2 py-0.5 rounded cursor-pointer hover:bg-muted/50"
+                        onClick={() => toggleMeasure(m.measureId)}
                       >
-                        {hasDetails ? (
-                          isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />
-                        ) : (
-                          <span className="w-3 shrink-0" />
-                        )}
+                        {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
                         <span className={m.score > 0 ? "text-green-500" : "text-red-400"}>{m.score > 0 ? "✓" : "✗"}</span>
                         <span className="flex-1">{m.title}</span>
                         {m.confidence && <span className="opacity-60">{m.confidence}</span>}
                       </div>
                       {isExpanded && (
                         <div className="ml-8 mt-1 mb-2 space-y-2 border-l-2 border-muted pl-3">
+                          <div className="text-xs" data-testid={`mgmt-question-${m.measureId}`}>
+                            <span className="font-medium text-foreground/80">Question: </span>
+                            <span className="text-muted-foreground">{m.title}</span>
+                          </div>
                           {m.evidenceSummary && (
                             <div className="text-xs" data-testid={`mgmt-evidence-${m.measureId}`}>
                               <span className="font-medium text-foreground/80">Assessment: </span>
                               <span className="text-muted-foreground">{m.evidenceSummary}</span>
                             </div>
                           )}
-                          {m.quotes && m.quotes.length > 0 && (
+                          {m.quotes && m.quotes.length > 0 ? (
                             <div className="space-y-1.5">
                               {m.quotes.map((q: any, qi: number) => (
                                 <div key={qi} className="text-xs rounded bg-muted/40 p-2" data-testid={`mgmt-quote-${m.measureId}-${qi}`}>
@@ -318,9 +346,8 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
                                 </div>
                               ))}
                             </div>
-                          )}
-                          {(!m.quotes || m.quotes.length === 0) && !m.evidenceSummary && (
-                            <p className="text-xs text-muted-foreground/60 italic">No evidence found</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground/60 italic">No supporting quotes found</p>
                           )}
                         </div>
                       )}
