@@ -440,7 +440,15 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           added++;
           log(`Bulk: Added ${company.companyName} (${isin}) with ${validAssets.length} assets`);
         } else {
-          log(`Bulk: ${company.companyName} (${isin}) already exists, running risk calculations`);
+          const updates: any = {};
+          if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
+          if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+          if (Object.keys(updates).length > 0) {
+            company = await storage.updateCompany(company.id, updates);
+            log(`Bulk: Updated ${company.companyName} (${isin}) with EV=${updates.ev}, supplierCosts=${updates.supplierCosts}`);
+          } else {
+            log(`Bulk: ${company.companyName} (${isin}) already exists, running risk calculations`);
+          }
         }
 
         await storage.updateOperation(operationId, {

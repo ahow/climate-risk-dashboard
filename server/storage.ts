@@ -18,6 +18,7 @@ export interface IStorage {
   getCompany(id: number): Promise<Company | undefined>;
   getCompanyByIsin(isin: string): Promise<Company | undefined>;
   createCompany(data: InsertCompany): Promise<Company>;
+  updateCompany(id: number, data: Partial<InsertCompany>): Promise<Company>;
   deleteCompany(id: number): Promise<void>;
 
   getAssetsByCompany(companyId: number): Promise<Asset[]>;
@@ -68,6 +69,11 @@ export class DatabaseStorage implements IStorage {
 
   async createCompany(data: InsertCompany): Promise<Company> {
     const [company] = await db.insert(companies).values(data).returning();
+    return company;
+  }
+
+  async updateCompany(id: number, data: Partial<InsertCompany>): Promise<Company> {
+    const [company] = await db.update(companies).set(data).where(eq(companies.id, id)).returning();
     return company;
   }
 
