@@ -1,484 +1,301 @@
-/**
- * External API Integration Services
- * Handles communication with Asset Discovery, Geographic Risks, and Risk Management APIs
- */
+const ASSET_API_BASE = "https://corporate-asset-database-251730b20663.herokuapp.com";
+const CLIMATE_RISK_API_BASE = "https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com";
+const SUPPLY_CHAIN_API_BASE = "https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com";
+const MANAGEMENT_API_BASE = "https://climate-risk-replit-562361beb142.herokuapp.com";
 
-import { fetchWithRetry } from '../utils/retry';
-
-const ASSET_DISCOVERY_API = "https://climate-risk-asset-api-82e03a276d7d.herokuapp.com/api/trpc";
-const GEOGRAPHIC_RISKS_API = "https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com";
-const RISK_MANAGEMENT_API = "https://climate-risk-replit-562361beb142.herokuapp.com";
-
-export interface AssetData {
-  asset_name: string;
-  company_name: string;
-  isin: string; // 12-digit International Securities Identification Number
-  asset_type: string | null;
-  location: string;
-  city: string | null;
-  country: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  geocoding_certainty: number | null;
-  coordinate_certainty: number | null;
-  estimated_value_usd: number | null;
-  value_confidence: number | null;
-  description: string | null;
-  data_source: string | null;
-  ownership_share: number | null;
-  notes: string | null;
+async function fetchWithRetry(url: string, options?: RequestInit, retries = 3, timeoutMs = 30000): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeout);
+      if (response.ok) return response;
+      if (response.status === 404) return response;
+      if (i < retries - 1) {
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        if (i === retries - 1) throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`);
+      } else if (i === retries - 1) throw error;
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+    }
+  }
+  throw new Error(`Failed after ${retries} retries: ${url}`);
 }
 
-export interface GeographicRiskData {
-  asset_value: number;
+interface RawAssetApiResponse {
+  isin: string;
+  total_assets: number;
+  company_name?: string;
+  sector?: string;
+  total_estimated_value?: number;
+  asset_count?: number;
+  assets: Array<{
+    companyName?: string;
+    facilityName?: string;
+    facility_name?: string;
+    assetType?: string;
+    asset_type?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    latitude: number;
+    longitude: number;
+    coordinateCertainty?: number;
+    coordinate_certainty?: number;
+    valueUsd?: number;
+    estimated_value_usd?: number;
+    valuationConfidence?: number;
+    valuation_confidence?: number;
+    ownershipShare?: number;
+    ownership_share?: number;
+    sector?: string;
+    dataSource?: string;
+    data_source?: string;
+  }>;
+}
+
+export interface AssetLocationResponse {
+  isin: string;
+  companyName: string;
+  sector: string;
+  totalEstimatedValue: number;
+  assetCount: number;
+  assets: Array<{
+    facilityName: string;
+    assetType: string;
+    address: string;
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+    coordinateCertainty: number;
+    estimatedValueUsd: number;
+    valuationConfidence: number;
+    ownershipShare: number;
+    dataSource: string;
+  }>;
+}
+
+export async function fetchAssetLocations(isin: string): Promise<AssetLocationResponse> {
+  const response = await fetchWithRetry(`${ASSET_API_BASE}/api/assets/isin/${isin}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { isin, companyName: "", sector: "", totalEstimatedValue: 0, assetCount: 0, assets: [] };
+    }
+    throw new Error(`Asset API error: ${response.status}`);
+  }
+  const raw: RawAssetApiResponse = await response.json();
+
+  const firstAsset = raw.assets?.[0];
+  const companyName = raw.company_name || firstAsset?.companyName || "Unknown Company";
+  const sector = raw.sector || firstAsset?.sector || "";
+  const assetCount = raw.asset_count || raw.total_assets || raw.assets?.length || 0;
+
+  const normalizedAssets = (raw.assets || []).map(a => ({
+    facilityName: a.facilityName || a.facility_name || "Unknown Facility",
+    assetType: a.assetType || a.asset_type || "Unknown",
+    address: a.address || "",
+    city: a.city || "",
+    country: a.country || "",
+    latitude: a.latitude,
+    longitude: a.longitude,
+    coordinateCertainty: a.coordinateCertainty ?? a.coordinate_certainty ?? 0,
+    estimatedValueUsd: a.valueUsd || a.estimated_value_usd || 0,
+    valuationConfidence: a.valuationConfidence ?? a.valuation_confidence ?? 0,
+    ownershipShare: a.ownershipShare ?? a.ownership_share ?? 100,
+    dataSource: a.dataSource || a.data_source || "API",
+  }));
+
+  const totalEstimatedValue = raw.total_estimated_value ||
+    normalizedAssets.reduce((sum, a) => sum + a.estimatedValueUsd, 0);
+
+  return {
+    isin: raw.isin,
+    companyName,
+    sector,
+    totalEstimatedValue,
+    assetCount,
+    assets: normalizedAssets,
+  };
+}
+
+export interface ClimateRiskResponse {
   expected_annual_loss: number;
   expected_annual_loss_pct: number;
   present_value_30yr: number;
   present_value_30yr_pct: number;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  parameters: {
-    building_type: string;
-    climate_escalation: number;
-    discount_rate: number;
-    time_horizon: number;
-  };
+  model_version: string;
   risk_breakdown: {
-    hurricane: RiskDetail;
-    flood: RiskDetail;
-    drought: RiskDetail;
-    heat_stress: RiskDetail;
-    extreme_precipitation: RiskDetail;
+    hurricane: { annual_loss: number; annual_loss_pct: number };
+    flood: { annual_loss: number; annual_loss_pct: number };
+    heat_stress: { annual_loss: number; annual_loss_pct: number };
+    drought: { annual_loss: number; annual_loss_pct: number };
+    extreme_precipitation: { annual_loss: number; annual_loss_pct: number };
   };
 }
 
-export interface RiskDetail {
-  annual_loss: number;
-  annual_loss_pct: number;
-  confidence: string;
-  details: string;
+export async function fetchClimateRisk(
+  latitude: number,
+  longitude: number,
+  assetValue: number
+): Promise<ClimateRiskResponse> {
+  const response = await fetchWithRetry(`${CLIMATE_RISK_API_BASE}/assess`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ latitude, longitude, asset_value: assetValue }),
+  });
+  if (!response.ok) {
+    throw new Error(`Climate Risk API error: ${response.status}`);
+  }
+  return response.json();
 }
 
-// New API response structure from /api/company/isin/{ISIN}
-export interface RiskManagementData {
+export interface SupplyChainRiskResponse {
+  country: string;
+  country_name: string;
+  sector: string;
+  sector_name: string;
+  direct_risk: {
+    climate: number;
+    modern_slavery: number;
+    political: number;
+    water_stress: number;
+    nature_loss: number;
+    expected_loss: {
+      total_annual_loss: number;
+      total_annual_loss_pct: number;
+      present_value_30yr: number;
+      risk_breakdown: Record<string, { annual_loss: number; annual_loss_pct: number }>;
+    };
+  };
+  indirect_risk: {
+    climate: number;
+    modern_slavery: number;
+    political: number;
+    water_stress: number;
+    nature_loss: number;
+    expected_loss: {
+      total_annual_loss: number;
+      total_annual_loss_pct: number;
+    };
+  };
+  total_risk: {
+    climate: number;
+    modern_slavery: number;
+    political: number;
+    water_stress: number;
+    nature_loss: number;
+  };
+  top_suppliers: Array<{
+    country: string;
+    sector: string;
+    coefficient: number;
+    country_name: string;
+    sector_name: string;
+    direct_risk: Record<string, number>;
+    risk_contribution: Record<string, number>;
+    expected_loss_contribution: {
+      annual_loss: number;
+      present_value_30yr: number;
+    };
+  }>;
+}
+
+export async function fetchSupplyChainRisk(
+  countryIso3: string,
+  sectorIsic: string
+): Promise<SupplyChainRiskResponse> {
+  const response = await fetchWithRetry(
+    `${SUPPLY_CHAIN_API_BASE}/api/assess?country=${countryIso3}&sector=${sectorIsic}`
+  );
+  if (!response.ok) {
+    throw new Error(`Supply Chain API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+export interface ManagementPerformanceResponse {
   company: {
     id: number;
     name: string;
     isin: string;
     sector: string;
-    industry?: string;
-    country?: string;
-    totalScore: number | null;
-    analysisStatus: 'idle' | 'processing' | 'completed' | 'failed';
-    summary: string | null;
+    industry: string;
+    country: string;
+    analysisStatus: string;
+    totalScore: number;
+    totalPossible: number;
+    summary: string;
+    updatedAt: string;
   };
   documents: Array<{
     id: number;
-    title: string;
     url: string;
+    title: string;
     type: string;
+    publicationYear: number;
+    downloadedAt?: string;
   }>;
-  measureScores: Array<{
+  scores: Record<string, Array<{
     measureId: string;
-    category: string;
     title: string;
     score: number;
     evidenceSummary: string;
-    confidence: 'High' | 'Medium' | 'Low';
-    quotes: Array<{
-      text: string;
-      source: string;
-      page?: number;
-    }>;
-  }>;
+    coverage: string | null;
+    confidence: string;
+    quotes: Array<{ text: string; source: string; page: string }>;
+  }>>;
+  measureCount?: number;
+  analysisResults?: any[];
 }
 
-/**
- * Fetch all assets from the Asset Discovery API
- * Returns all 565 assets with 100% coordinate and value coverage
- */
-export async function fetchAllAssetsFromAPI(): Promise<AssetData[]> {
-  try {
-    console.log('Fetching all assets from Asset Discovery API...');
-    
-    const url = `${ASSET_DISCOVERY_API}/assets.getAll`;
-    
-    // Use retry logic to handle API hibernation (502/504 errors)
-    const response = await fetchWithRetry(url, undefined, {
-      maxRetries: 5,
-      initialDelay: 2000,
-      maxDelay: 30000,
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch all assets: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Extract data from tRPC response format: result.data.json
-    // @ts-ignore
-    const result = data?.result?.data?.json;
-    if (!result || !result.assets) {
-      console.warn('No assets found in API response');
-      return [];
-    }
-    
-    console.log(`Fetched ${result.total_assets} assets (${result.assets_with_coordinates} with coordinates)`);
-    
-    // Map new API format to our AssetData interface
-    // New API v2.0 uses: facility_name, value_usd, address, isin
-    // Old API used: asset_name, estimated_value_usd, location
-    return result.assets.map((asset: any) => ({
-      asset_name: asset.facility_name || asset.asset_name,
-      company_name: asset.company_name,
-      isin: asset.isin, // 12-digit ISIN for reliable company matching
-      asset_type: asset.asset_type,
-      location: asset.address || asset.location,
-      city: asset.city,
-      country: asset.country,
-      latitude: asset.latitude,
-      longitude: asset.longitude,
-      geocoding_certainty: asset.geocoding_certainty,
-      coordinate_certainty: asset.coordinate_certainty,
-      estimated_value_usd: asset.value_usd || asset.estimated_value_usd,
-      value_confidence: asset.value_confidence,
-      description: asset.description,
-      data_source: asset.data_source,
-      ownership_share: asset.ownership_share,
-      notes: asset.notes,
-    }));
-  } catch (error) {
-    console.error('Error fetching all assets:', error);
-    throw error;
+interface BulkManagementResponse {
+  generatedAt: string;
+  totalCompanies: number;
+  companies: ManagementPerformanceResponse[];
+}
+
+let cachedBulkData: BulkManagementResponse | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
+  const now = Date.now();
+  if (cachedBulkData && (now - cacheTimestamp) < CACHE_TTL_MS) {
+    return cachedBulkData;
   }
-}
 
-/**
- * Fetch assets for a company from the Asset Discovery API
- * Note: This API uses tRPC protocol with URL-encoded JSON input
- */
-export async function fetchCompanyAssets(companyName: string): Promise<AssetData[]> {
-  try {
-    console.log(`Fetching assets for company: ${companyName}`);
-    
-    // Prepare tRPC input format
-    const inputData = {
-      json: {
-        company_name: companyName
-      }
-    };
-    
-    const encodedInput = encodeURIComponent(JSON.stringify(inputData));
-    const url = `${ASSET_DISCOVERY_API}/assets.getByCompany?input=${encodedInput}`;
-    
-    // Use retry logic to handle API hibernation (502/504 errors)
-    const response = await fetchWithRetry(url, undefined, {
-      maxRetries: 5,
-      initialDelay: 2000,
-      maxDelay: 30000,
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch assets: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Extract data from tRPC response format: result.data.json
-    // @ts-ignore
-    const result = data?.result?.data?.json;
-    if (!result || !result.assets) {
-      console.warn(`No assets found for company: ${companyName}`);
-      return [];
-    }
-    
-    // Map new API format to our AssetData interface
-    // New API v2.0 uses: facility_name, value_usd, address, isin
-    // Old API used: asset_name, estimated_value_usd, location
-    return result.assets.map((asset: any) => ({
-      asset_name: asset.facility_name || asset.asset_name,
-      company_name: asset.company_name,
-      isin: asset.isin, // 12-digit ISIN for reliable company matching
-      asset_type: asset.asset_type,
-      location: asset.address || asset.location,
-      city: asset.city,
-      country: asset.country,
-      latitude: asset.latitude,
-      longitude: asset.longitude,
-      geocoding_certainty: asset.geocoding_certainty,
-      coordinate_certainty: asset.coordinate_certainty,
-      estimated_value_usd: asset.value_usd || asset.estimated_value_usd,
-      value_confidence: asset.value_confidence,
-      description: asset.description,
-      data_source: asset.data_source,
-      ownership_share: asset.ownership_share,
-      notes: asset.notes,
-    }));
-  } catch (error) {
-    console.error(`Error fetching assets for ${companyName}:`, error);
-    throw error;
+  const response = await fetchWithRetry(
+    `${MANAGEMENT_API_BASE}/api/export/json`,
+    undefined,
+    3,
+    60000
+  );
+  if (!response.ok) {
+    throw new Error(`Management bulk API error: ${response.status}`);
   }
-}
-
-/**
- * Check if Climate Risk API is healthy and responsive
- */
-export async function checkClimateRiskApiHealth(): Promise<{ healthy: boolean; message: string }> {
-  try {
-    const response = await fetch(`${GEOGRAPHIC_RISKS_API}/assess`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        latitude: 0,
-        longitude: 0,
-        asset_value: 1,
-      }),
-      signal: AbortSignal.timeout(30000), // 30 second timeout
-    });
-
-    if (response.ok) {
-      return { healthy: true, message: 'API is responsive' };
-    } else if (response.status === 503) {
-      return { healthy: false, message: 'API is sleeping or unavailable (503)' };
-    } else {
-      return { healthy: false, message: `API returned status ${response.status}` };
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+      throw new Error("Management API returned HTML instead of JSON - API may be unavailable");
     }
-  } catch (error: any) {
-    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-      return { healthy: false, message: 'API health check timed out (30s)' };
-    }
-    return { healthy: false, message: `API health check failed: ${error.message}` };
+    throw new Error(`Management API returned unexpected content-type: ${contentType}`);
   }
+  cachedBulkData = await response.json() as BulkManagementResponse;
+  cacheTimestamp = now;
+  return cachedBulkData;
 }
 
-/**
- * Fetch geographic risk assessment for a specific location
- */
-export async function fetchGeographicRisk(
-  latitude: number,
-  longitude: number,
-  assetValue: number
-): Promise<GeographicRiskData> {
-  try {
-    // Use retry logic to handle API hibernation and temporary failures
-    // API requires 35+ second timeout to wake from hibernation
-    const response = await fetchWithRetry(
-      `${GEOGRAPHIC_RISKS_API}/assess`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          latitude,
-          longitude,
-          asset_value: assetValue,
-          building_type: 'wood_frame', // Default building type
-        }),
-      },
-      {
-        maxRetries: 5,
-        initialDelay: 2000,
-        maxDelay: 30000,
-        timeout: 40000, // 40 seconds to allow API to wake up
-        retryableStatuses: [502, 503, 504, 408, 429, 404], // Include 404 as retryable
-      }
-    );
-
-    if (!response.ok) {
-      // Handle 404 errors specifically
-      if (response.status === 404) {
-        throw new Error(`Geographic risk API endpoint not found (404). The API may be hibernating or the endpoint has changed.`);
-      }
-      throw new Error(`Failed to fetch geographic risk: ${response.status} ${response.statusText}`);
-    }
-
-    // Check if response is HTML (error page) instead of JSON
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-      throw new Error('Geographic risk API returned an error page. The external API service may be down or experiencing issues. Please try again later or contact support.');
-    }
-
-    return await response.json() as any;
-  } catch (error) {
-    console.error(`Error fetching geographic risk for (${latitude}, ${longitude}):`, error);
-    throw error;
-  }
+export async function fetchManagementPerformance(
+  isin: string
+): Promise<ManagementPerformanceResponse | null> {
+  const bulkData = await fetchBulkManagementData();
+  const match = bulkData.companies.find(
+    c => c.company.isin.toUpperCase() === isin.toUpperCase()
+  );
+  return match || null;
 }
-
-/**
- * Fetch country-level geographic risk assessment (population-weighted)
- * Used for supply chain analysis where specific coordinates are not available
- */
-export async function fetchGeographicRiskByCountry(
-  countryCode: string,
-  assetValue: number
-): Promise<GeographicRiskData> {
-  try {
-    // Use retry logic to handle API hibernation and temporary failures
-    // API requires 35+ second timeout to wake from hibernation
-    const response = await fetchWithRetry(
-      `${GEOGRAPHIC_RISKS_API}/assess/country`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          country: countryCode, // ISO-3 country code (e.g., 'USA', 'GBR', 'JPN')
-          asset_value: assetValue,
-        }),
-      },
-      {
-        maxRetries: 5,
-        initialDelay: 2000,
-        maxDelay: 30000,
-        timeout: 40000, // 40 seconds to allow API to wake up
-        retryableStatuses: [502, 503, 504, 408, 429, 404], // Include 404 as retryable
-      }
-    );
-
-    if (!response.ok) {
-      // Handle 404 errors specifically
-      if (response.status === 404) {
-        const errorData = await response.json().catch(() => ({})) as { message?: string };
-        throw new Error(`Country not found: ${countryCode}. ${errorData.message || 'Use ISO-3 country code'}`);
-      }
-      throw new Error(`Failed to fetch country-level geographic risk: ${response.status} ${response.statusText}`);
-    }
-
-    // Check if response is HTML (error page) instead of JSON
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-      throw new Error('Geographic risk API returned an error page. The external API service may be down or experiencing issues. Please try again later or contact support.');
-    }
-
-    return await response.json() as any;
-  } catch (error) {
-    console.error(`Error fetching country-level geographic risk for ${countryCode}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Fetch risk management assessment for a company by ISIN
- */
-export async function fetchRiskManagement(isin: string): Promise<RiskManagementData> {
-  try {
-    console.log(`Fetching risk management for ISIN: ${isin}`);
-    
-    // Use new ISIN-based endpoint: GET /api/company/isin/{ISIN}
-    const response = await fetchWithRetry(
-      `${RISK_MANAGEMENT_API}/api/company/isin/${isin}`,
-      undefined,
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        maxDelay: 10000,
-      }
-    );
-    
-    if (!response.ok) {
-      // If 404, company not found in the system
-      if (response.status === 404) {
-        console.warn(`Company not found for ISIN: ${isin}`);
-        // Return empty structure for companies not in the system
-        return {
-          company: {
-            id: 0,
-            name: '',
-            isin: isin,
-            sector: '',
-            totalScore: null,
-            analysisStatus: 'idle',
-            summary: null,
-          },
-          documents: [],
-          measureScores: [],
-        };
-      }
-      throw new Error(`Failed to fetch risk management: ${response.statusText}`);
-    }
-    
-    const data = await response.json() as any;
-    
-    // Check if response contains error message
-    // @ts-ignore - data is typed as any
-    if (data.message) {
-      // @ts-ignore - data is typed as any
-      console.warn(`API message for ${isin}: ${data.message}`);
-      return {
-        company: {
-          id: 0,
-          name: '',
-          isin: isin,
-          sector: '',
-          totalScore: null,
-          analysisStatus: 'idle',
-          summary: null,
-        },
-        documents: [],
-        measureScores: [],
-      };
-    }
-    
-    return data as RiskManagementData;
-  } catch (error) {
-    console.error(`Error fetching risk management for ${isin}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Batch fetch geographic risks for multiple assets
- */
-export async function batchFetchGeographicRisks(
-  assets: Array<{ latitude: number; longitude: number; assetValue: number }>
-): Promise<GeographicRiskData[]> {
-  try {
-    // Make individual requests (can be optimized with batch endpoint if available)
-    const promises = assets.map(asset =>
-      fetchGeographicRisk(asset.latitude, asset.longitude, asset.assetValue)
-    );
-    
-    return await Promise.all(promises);
-  } catch (error) {
-    console.error('Error in batch fetch geographic risks:', error);
-    throw error;
-  }
-}
-
-/**
- * Get all companies from Asset Discovery API
- */
-export async function fetchAllCompanies(): Promise<Array<{
-  company_name: string;
-  total_assets: number;
-  assets_with_coordinates: number;
-  geocoding_percentage: string;
-}>> {
-  try {
-    // Use retry logic to handle API hibernation (502/504 errors)
-    const response = await fetchWithRetry(`${ASSET_DISCOVERY_API}/assets.getCompanies`, undefined, {
-      maxRetries: 5,
-      initialDelay: 2000,
-      maxDelay: 30000,
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch companies: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    // @ts-ignore
-    const result = data?.result?.data?.json;
-    
-    return result?.companies || [];
-  } catch (error) {
-    console.error('Error fetching all companies:', error);
-    throw error;
-  }
-}
-

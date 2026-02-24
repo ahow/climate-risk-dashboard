@@ -1,8 +1,7 @@
 {
   "name": "climate-risk-dashboard",
-  "description": "Climate Risk Dashboard - Assess physical climate risks across company portfolios",
-  "repository": "https://github.com/user/climate-risk-dashboard",
-  "keywords": ["climate", "risk", "dashboard", "nodejs", "react"],
+  "description": "Climate Risk Dashboard - Quantifies and visualizes climate-related financial risks for publicly traded companies",
+  "stack": "heroku-24",
   "buildpacks": [
     {
       "url": "heroku/nodejs"
@@ -10,23 +9,21 @@
   ],
   "env": {
     "NODE_ENV": {
-      "description": "Node environment",
       "value": "production"
     },
     "DATABASE_URL": {
-      "description": "MySQL/TiDB database connection string",
+      "description": "PostgreSQL database connection URL",
       "required": true
     },
-    "JWT_SECRET": {
-      "description": "Secret key for JWT token signing",
+    "SESSION_SECRET": {
+      "description": "Secret key for session management",
       "generator": "secret"
     }
   },
   "addons": [
-    {
-      "plan": "jawsdb:kitefin",
-      "as": "DATABASE"
-    }
-  ]
+    "heroku-postgresql:essential-0"
+  ],
+  "scripts": {
+    "postdeploy": "npm run db:push"
+  }
 }
-

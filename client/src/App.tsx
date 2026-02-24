@@ -1,44 +1,36 @@
-import { Toaster } from "@/components/ui/sonner";
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import RiskRanking from "./pages/RiskRanking";
-import CompanyFileUpload from "./pages/CompanyFileUpload";
-import CompanyDetails from "./pages/CompanyDetails";
-import FileUpload from "./pages/FileUpload";
-import Rankings from "./pages/Rankings";
-import CalculationMonitor from "./pages/CalculationMonitor";
+import Layout from "@/components/Layout";
+import Dashboard from "@/pages/Dashboard";
+import CompanyDetail from "@/pages/CompanyDetail";
+import CalculationMonitor from "@/pages/CalculationMonitor";
+import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/rankings"} component={RiskRanking} />
-      <Route path={"/upload-companies"} component={CompanyFileUpload} />
-      <Route path={"/company/:isin"} component={CompanyDetails} />
-      <Route path={"/upload"} component={FileUpload} />
-      <Route path={"/monitor"} component={CalculationMonitor} />
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
+    <Layout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/company/:id" component={CompanyDetail} />
+        <Route path="/monitor" component={CalculationMonitor} />
+        <Route component={NotFound} />
+      </Switch>
+    </Layout>
   );
 }
 
 function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
 export default App;
-
