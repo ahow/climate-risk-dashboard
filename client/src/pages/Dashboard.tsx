@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Building2, Plus, Trash2, AlertTriangle, Shield, Link2,
-  ChevronRight, Loader2, Search,
+  ChevronRight, Loader2, Search, Pause, Play, Square,
+  Activity,
 } from "lucide-react";
 
 function formatCurrency(value: number): string {
@@ -19,6 +21,23 @@ function formatCurrency(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
+const typeLabels: Record<string, string> = {
+  geographic_risk: "Geographic Risk",
+  supply_chain_risk: "Supply Chain Risk",
+  management_score: "Management Score",
+  full_assessment: "Full Assessment",
+  bulk_processing: "Bulk Processing",
+};
+
+function formatDuration(start: string, end?: string | null): string {
+  const startTime = new Date(start).getTime();
+  const endTime = end ? new Date(end).getTime() : Date.now();
+  const diff = Math.floor((endTime - startTime) / 1000);
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
+  return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const [isinInput, setIsinInput] = useState("");
@@ -26,6 +45,55 @@ export default function Dashboard() {
 
   const { data: companies = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/companies"],
+  });
+
+  const { data: operations = [] } = useQuery<any[]>({
+    queryKey: ["/api/operations"],
+    refetchInterval: 3000,
+  });
+
+  const activeOps = operations.filter((op: any) =>
+    ["running", "pending", "paused"].includes(op.status)
+  );
+
+  const pauseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/operations/${id}/pause`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/operations"] });
+      toast({ title: "Operation Paused" });
+    },
+    onError: () => {
+      toast({ title: "Failed to pause operation", variant: "destructive" });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/operations/${id}/resume`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/operations"] });
+      toast({ title: "Operation Resumed" });
+    },
+    onError: () => {
+      toast({ title: "Failed to resume operation", variant: "destructive" });
+    },
+  });
+
+  const stopMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/operations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/operations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+      toast({ title: "Operation Stopped" });
+    },
+    onError: () => {
+      toast({ title: "Failed to stop operation", variant: "destructive" });
+    },
   });
 
   const addCompanyMutation = useMutation({
@@ -111,6 +179,89 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {activeOps.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Active Operations ({activeOps.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {activeOps.map((op: any) => {
+              const progress = op.totalItems > 0 ? (op.processedItems / op.totalItems) * 100 : 0;
+              return (
+                <div key={op.id} className="space-y-2" data-testid={`active-op-${op.id}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={op.status === "paused" ? "secondary" : "default"} className="text-xs">
+                        {op.status === "paused" ? "Paused" : op.status === "running" ? "Running" : "Pending"}
+                      </Badge>
+                      <span className="text-sm font-medium">{typeLabels[op.type] || op.type}</span>
+                      {op.companyName && (
+                        <span className="text-sm text-muted-foreground">— {op.companyName}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {op.startedAt && formatDuration(op.startedAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {op.status === "running" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pauseMutation.mutate(op.id)}
+                          disabled={pauseMutation.isPending}
+                          data-testid={`button-pause-${op.id}`}
+                        >
+                          <Pause className="h-3 w-3 mr-1" />
+                          Pause
+                        </Button>
+                      )}
+                      {op.status === "paused" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => resumeMutation.mutate(op.id)}
+                          disabled={resumeMutation.isPending}
+                          data-testid={`button-resume-${op.id}`}
+                        >
+                          <Play className="h-3 w-3 mr-1" />
+                          Resume
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Stop this operation? Progress so far will be kept.")) {
+                            stopMutation.mutate(op.id);
+                          }
+                        }}
+                        variant="destructive"
+                        data-testid={`button-stop-${op.id}`}
+                      >
+                        <Square className="h-3 w-3 mr-1" />
+                        Stop
+                      </Button>
+                    </div>
+                  </div>
+                  {op.totalItems > 0 && (
+                    <>
+                      <Progress value={progress} className="h-2" />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{op.statusMessage}</span>
+                        <span>{op.processedItems}/{op.totalItems} ({progress.toFixed(0)}%)</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
