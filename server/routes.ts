@@ -22,29 +22,45 @@ export async function registerRoutes(
   app.get("/api/companies", async (_req, res) => {
     try {
       const companies = await storage.getCompanies();
+      console.log(`[companies] Found ${companies.length} companies in database`);
       const enriched = await Promise.all(
         companies.map(async (company) => {
-          const geoRisks = await storage.getGeoRisksByCompany(company.id);
-          const scRisk = await storage.getSupplyChainRisk(company.id);
-          const mgmtScore = await storage.getManagementScore(company.id);
+          try {
+            const geoRisks = await storage.getGeoRisksByCompany(company.id);
+            const scRisk = await storage.getSupplyChainRisk(company.id);
+            const mgmtScore = await storage.getManagementScore(company.id);
 
-          const totalGeoRisk = geoRisks.reduce((sum, r) => sum + (r.expectedAnnualLoss || 0), 0);
-          const totalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (r.presentValue30yr || 0), 0);
+            const totalGeoRisk = geoRisks.reduce((sum, r) => sum + (Number(r.expectedAnnualLoss) || 0), 0);
+            const totalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (Number(r.presentValue30yr) || 0), 0);
 
-          return {
-            ...company,
-            totalGeoRisk,
-            totalGeoRiskPV,
-            supplyChainRisk: scRisk,
-            managementScore: mgmtScore,
-            hasGeoRisks: geoRisks.length > 0,
-            hasSupplyChainRisk: !!scRisk,
-            hasManagementScore: !!mgmtScore,
-          };
+            return {
+              ...company,
+              totalGeoRisk,
+              totalGeoRiskPV,
+              supplyChainRisk: scRisk,
+              managementScore: mgmtScore,
+              hasGeoRisks: geoRisks.length > 0,
+              hasSupplyChainRisk: !!scRisk,
+              hasManagementScore: !!mgmtScore,
+            };
+          } catch (enrichErr: any) {
+            console.error(`[companies] Error enriching company ${company.id} (${company.isin}):`, enrichErr.message);
+            return {
+              ...company,
+              totalGeoRisk: 0,
+              totalGeoRiskPV: 0,
+              supplyChainRisk: null,
+              managementScore: null,
+              hasGeoRisks: false,
+              hasSupplyChainRisk: false,
+              hasManagementScore: false,
+            };
+          }
         })
       );
       res.json(enriched);
     } catch (err: any) {
+      console.error(`[companies] Fatal error loading companies:`, err.message);
       res.status(500).json({ error: err.message });
     }
   });
