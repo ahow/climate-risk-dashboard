@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ArrowLeft, Play, Loader2, AlertTriangle, Droplets,
   Flame, Thermometer, CloudRain, Waves, Shield,
   Link2, Building2, MapPin, ChevronDown, ChevronRight, Quote, FileText,
+  Globe,
 } from "lucide-react";
 
 function formatCurrency(value: number): string {
@@ -18,6 +19,137 @@ function formatCurrency(value: number): string {
   if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
   if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
   return `$${value.toFixed(0)}`;
+}
+
+function AssetMap({ assets }: { assets: any[] }) {
+  const [hoveredAsset, setHoveredAsset] = useState<number | null>(null);
+
+  const validAssets = useMemo(() =>
+    assets.filter((a: any) => a.latitude != null && a.longitude != null),
+    [assets]
+  );
+
+  const maxValue = useMemo(() =>
+    Math.max(...validAssets.map((a: any) => a.estimatedValueUsd || 1), 1),
+    [validAssets]
+  );
+
+  const W = 800;
+  const H = 400;
+  const PAD = 10;
+
+  function project(lon: number, lat: number): [number, number] {
+    const x = PAD + ((lon + 180) / 360) * (W - 2 * PAD);
+    const y = PAD + ((90 - lat) / 180) * (H - 2 * PAD);
+    return [x, y];
+  }
+
+  function dotRadius(value: number): number {
+    const minR = 4;
+    const maxR = 20;
+    const ratio = Math.sqrt((value || 1) / maxValue);
+    return minR + ratio * (maxR - minR);
+  }
+
+  return (
+    <div className="relative" data-testid="asset-map">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-auto rounded-lg bg-slate-100 dark:bg-slate-800/50"
+        style={{ maxHeight: "350px" }}
+      >
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.3" className="text-slate-300 dark:text-slate-600" />
+          </pattern>
+        </defs>
+        <rect width={W} height={H} fill="url(#grid)" rx="8" />
+
+        {[{lat:0,label:"Equator"},{lat:23.5,label:"Tropic of Cancer"},{lat:-23.5,label:"Tropic of Capricorn"},{lat:66.5,label:"Arctic"},{lat:-66.5,label:"Antarctic"}].map(line => {
+          const [,y] = project(0, line.lat);
+          return (
+            <g key={line.label}>
+              <line x1={PAD} y1={y} x2={W-PAD} y2={y} strokeDasharray="4,4" className="stroke-slate-300 dark:stroke-slate-600" strokeWidth="0.5" />
+            </g>
+          );
+        })}
+
+        {[-180,-120,-60,0,60,120,180].map(lon => {
+          const [x] = project(lon, 0);
+          return <line key={lon} x1={x} y1={PAD} x2={x} y2={H-PAD} strokeDasharray="4,4" className="stroke-slate-300 dark:stroke-slate-600" strokeWidth="0.5" />;
+        })}
+
+        {validAssets.map((asset: any, idx: number) => {
+          const [cx, cy] = project(asset.longitude, asset.latitude);
+          const r = dotRadius(asset.estimatedValueUsd || 0);
+          const isHovered = hoveredAsset === asset.id;
+          const eal = asset.geoRisk?.expectedAnnualLoss || 0;
+          const hasRisk = asset.geoRisk && asset.geoRisk.modelVersion !== "FAILED";
+          const riskPct = hasRisk && (asset.estimatedValueUsd || 0) > 0
+            ? (eal / asset.estimatedValueUsd * 100)
+            : 0;
+          const fillColor = !hasRisk ? "rgb(148,163,184)"
+            : riskPct > 1 ? "rgb(239,68,68)"
+            : riskPct > 0.3 ? "rgb(245,158,11)"
+            : "rgb(34,197,94)";
+
+          return (
+            <g
+              key={asset.id || idx}
+              onMouseEnter={() => setHoveredAsset(asset.id)}
+              onMouseLeave={() => setHoveredAsset(null)}
+              className="cursor-pointer"
+              data-testid={`map-dot-${asset.id}`}
+            >
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isHovered ? r * 1.3 : r}
+                fill={fillColor}
+                fillOpacity={isHovered ? 0.9 : 0.6}
+                stroke={isHovered ? "white" : fillColor}
+                strokeWidth={isHovered ? 2 : 1}
+                strokeOpacity={0.8}
+                style={{ transition: "all 0.15s ease" }}
+              />
+              {isHovered && (
+                <g>
+                  <rect
+                    x={cx + r + 8}
+                    y={cy - 32}
+                    width={Math.max(160, (asset.facilityName || "").length * 7 + 20)}
+                    height={52}
+                    rx={6}
+                    className="fill-slate-900 dark:fill-slate-100"
+                    fillOpacity={0.92}
+                  />
+                  <text x={cx + r + 16} y={cy - 14} className="fill-white dark:fill-slate-900" fontSize="11" fontWeight="600">
+                    {asset.facilityName || "Unknown"}
+                  </text>
+                  <text x={cx + r + 16} y={cy} className="fill-slate-300 dark:fill-slate-500" fontSize="10">
+                    Value: {formatCurrency(asset.estimatedValueUsd || 0)}
+                  </text>
+                  <text x={cx + r + 16} y={cy + 14} className="fill-slate-300 dark:fill-slate-500" fontSize="10">
+                    {hasRisk ? `EAL: ${formatCurrency(eal)}` : "Risk: Not calculated"}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground px-1">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-green-500"></span> Low risk</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span> Medium risk</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-red-500"></span> High risk</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-slate-400"></span> Not assessed</span>
+        </div>
+        <span>Dot size = estimated asset value</span>
+      </div>
+    </div>
+  );
 }
 
 function RiskBadge({ level }: { level: string }) {
@@ -443,8 +575,15 @@ export default function CompanyDetail() {
         title={`Asset Risk Breakdown (${company.assets?.length || 0} assets)`}
         summary={`EAL: ${totalGeoEAL}`}
         testId="section-assets"
+        alwaysVisibleContent={
+          company.assets?.length > 0 ? (
+            <AssetMap assets={company.assets} />
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No assets found</p>
+          )
+        }
       >
-        {company.assets?.length > 0 ? (
+        {company.assets?.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="table-assets">
               <thead>
@@ -492,8 +631,6 @@ export default function CompanyDetail() {
               </tbody>
             </table>
           </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-4">No assets found</p>
         )}
       </CollapsibleSection>
 
