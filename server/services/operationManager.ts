@@ -15,8 +15,35 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export async function backfillCompanyFinancials() {
+  try {
+    const latest = await storage.getLatestCompanyListUpload();
+    if (!latest) return;
+    const entries = await storage.getCompanyListEntries(latest.id);
+    let updated = 0;
+    for (const entry of entries) {
+      const company = await storage.getCompanyByIsin(entry.isin.toUpperCase());
+      if (!company) continue;
+      const updates: any = {};
+      if (company.ev == null && entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+      if (company.supplierCosts == null && entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
+      if (Object.keys(updates).length > 0) {
+        await storage.updateCompany(company.id, updates);
+        updated++;
+      }
+    }
+    if (updated > 0) {
+      log(`Backfilled EV/supplierCosts for ${updated} companies from uploaded list`);
+    }
+  } catch (err: any) {
+    log(`Error backfilling company financials: ${err.message}`);
+  }
+}
+
 export async function recoverOrphanedOperations() {
   try {
+    await backfillCompanyFinancials();
+
     const ops = await storage.getOperations();
     const running = ops.filter(op => op.status === "running");
     for (const op of running) {
