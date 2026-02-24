@@ -232,14 +232,13 @@ export default function Dashboard() {
                         </Button>
                       )}
                       <Button
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
                         onClick={() => {
                           if (confirm("Stop this operation? Progress so far will be kept.")) {
                             stopMutation.mutate(op.id);
                           }
                         }}
-                        variant="destructive"
                         data-testid={`button-stop-${op.id}`}
                       >
                         <Square className="h-3 w-3 mr-1" />
