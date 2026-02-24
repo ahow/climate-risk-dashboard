@@ -37,6 +37,10 @@ function getRiskLevel(score: number, max: number = 5): string {
   return "critical";
 }
 
+function directRiskPV(scRisk: any): number {
+  return (scRisk.directRisk as any)?.expected_loss?.present_value_30yr || 0;
+}
+
 export default function CompanyDetail() {
   const { toast } = useToast();
   const [, params] = useRoute("/company/:id");
@@ -134,14 +138,14 @@ export default function CompanyDetail() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <Link2 className="h-3 w-3" /> Supply Chain Risk
+              <Link2 className="h-3 w-3" /> Supply Chain Climate Risk
             </div>
             <div className="text-xl font-bold mt-1" data-testid="text-sc-climate">
-              {scRisk ? `${((scRisk.totalRisk as any)?.climate || 0).toFixed(2)}/5` : "Not calculated"}
+              {scRisk ? formatCurrency((scRisk.directExpectedLoss || 0) + (scRisk.indirectExpectedLoss || 0)) : "Not calculated"}
             </div>
             {scRisk && (
               <div className="text-xs text-muted-foreground mt-1">
-                <RiskBadge level={getRiskLevel((scRisk.totalRisk as any)?.climate || 0)} />
+                EAL (Direct + Indirect)
               </div>
             )}
           </CardContent>
@@ -246,59 +250,100 @@ export default function CompanyDetail() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Link2 className="h-4 w-4" />
-              Supply Chain Risk Assessment
+              Supply Chain Climate Risk Assessment
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
               {scRisk.countryName} / {scRisk.sectorName}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {["climate", "modern_slavery", "political", "water_stress", "nature_loss"].map((dim) => {
-                const labels: Record<string, string> = {
-                  climate: "Climate", modern_slavery: "Modern Slavery",
-                  political: "Political", water_stress: "Water Stress", nature_loss: "Nature Loss",
-                };
-                const totalRisk = scRisk.totalRisk as any;
-                const score = totalRisk?.[dim] || 0;
-                return (
-                  <div key={dim} className="text-center" data-testid={`sc-dimension-${dim}`}>
-                    <div className="text-xs text-muted-foreground mb-1">{labels[dim]}</div>
-                    <div className="text-lg font-bold">{score.toFixed(2)}</div>
-                    <Progress value={(score / 5) * 100} className="h-1.5 mt-1" />
-                    <RiskBadge level={getRiskLevel(score)} />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground mb-1">Direct Climate Risk (EAL)</div>
+                  <div className="text-lg font-bold" data-testid="text-sc-direct-eal">
+                    {formatCurrency(scRisk.directExpectedLoss || 0)}
                   </div>
-                );
-              })}
+                  <div className="text-xs text-muted-foreground">
+                    {(scRisk.directExpectedLossPct || 0).toFixed(2)}% of supplier costs
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground mb-1">Indirect Climate Risk (EAL)</div>
+                  <div className="text-lg font-bold" data-testid="text-sc-indirect-eal">
+                    {formatCurrency(scRisk.indirectExpectedLoss || 0)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {(scRisk.indirectExpectedLossPct || 0).toFixed(2)}% of supplier costs
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border">
+                <CardContent className="pt-4 pb-3">
+                  <div className="text-xs text-muted-foreground mb-1">Total Climate Risk (EAL)</div>
+                  <div className="text-lg font-bold" data-testid="text-sc-total-eal">
+                    {formatCurrency((scRisk.directExpectedLoss || 0) + (scRisk.indirectExpectedLoss || 0))}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Direct + Indirect combined
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Expected Annual Loss</h4>
-              <div className="grid grid-cols-2 gap-4">
+            {(() => {
+              const directRisk = scRisk.directRisk as any;
+              const breakdown = directRisk?.expected_loss?.risk_breakdown;
+              if (!breakdown) return null;
+
+              const hazards = [
+                { key: "hurricane", label: "Hurricane", icon: Waves },
+                { key: "flood", label: "Flood", icon: Droplets },
+                { key: "heat_stress", label: "Heat Stress", icon: Thermometer },
+                { key: "drought", label: "Drought", icon: Flame },
+                { key: "extreme_precipitation", label: "Extreme Precipitation", icon: CloudRain },
+              ];
+
+              const totalDirectLoss = directRisk.expected_loss.total_annual_loss || 1;
+
+              return (
                 <div>
-                  <div className="text-xs text-muted-foreground">Direct</div>
-                  <div className="font-semibold" data-testid="text-sc-direct-eal">
-                    {formatCurrency(scRisk.directExpectedLoss || 0)}M
-                    <span className="text-xs text-muted-foreground ml-1">
-                      ({(scRisk.directExpectedLossPct || 0).toFixed(2)}% GDP)
-                    </span>
+                  <h4 className="text-sm font-medium mb-3">Direct Climate Risk Breakdown by Hazard</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {hazards.map(({ key, label, icon: Icon }) => {
+                      const hazardData = breakdown[key];
+                      const loss = hazardData?.annual_loss || 0;
+                      const pct = totalDirectLoss > 0 ? (loss / totalDirectLoss) * 100 : 0;
+                      return (
+                        <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-hazard-${key}`}>
+                          <Icon className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                          <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                          <div className="text-sm font-bold">{formatCurrency(loss)}</div>
+                          <Progress value={pct} className="h-1.5 mt-1" />
+                          <div className="text-xs text-muted-foreground mt-1">{pct.toFixed(1)}% of direct</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Indirect (Supply Chain)</div>
-                  <div className="font-semibold" data-testid="text-sc-indirect-eal">
-                    {formatCurrency(scRisk.indirectExpectedLoss || 0)}M
-                    <span className="text-xs text-muted-foreground ml-1">
-                      ({(scRisk.indirectExpectedLossPct || 0).toFixed(2)}% GDP)
-                    </span>
-                  </div>
+              );
+            })()}
+
+            {directRiskPV(scRisk) > 0 && (
+              <div className="border rounded-md p-3">
+                <div className="text-xs text-muted-foreground">30-Year Present Value (Direct)</div>
+                <div className="text-lg font-bold" data-testid="text-sc-pv30">
+                  {formatCurrency(directRiskPV(scRisk))}
                 </div>
               </div>
-            </div>
+            )}
 
             {(scRisk.topSuppliers as any[])?.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium mb-2">Top Upstream Suppliers</h4>
+                <h4 className="text-sm font-medium mb-2">Top Upstream Suppliers (by Climate Risk Contribution)</h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm" data-testid="table-suppliers">
                     <thead>
@@ -306,8 +351,8 @@ export default function CompanyDetail() {
                         <th className="text-left py-2 px-3 font-medium text-muted-foreground">Country</th>
                         <th className="text-left py-2 px-3 font-medium text-muted-foreground">Sector</th>
                         <th className="text-right py-2 px-3 font-medium text-muted-foreground">I-O Coefficient</th>
-                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Climate Risk</th>
-                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Annual Loss</th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">Annual Loss ($)</th>
+                        <th className="text-right py-2 px-3 font-medium text-muted-foreground">30yr PV ($)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -316,8 +361,8 @@ export default function CompanyDetail() {
                           <td className="py-2 px-3">{supplier.country_name}</td>
                           <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
                           <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
-                          <td className="py-2 px-3 text-right">{supplier.direct_risk?.climate?.toFixed(2)}/5</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(supplier.expected_loss_contribution?.annual_loss || 0)}M</td>
+                          <td className="py-2 px-3 text-right font-mono">{formatCurrency(supplier.expected_loss_contribution?.annual_loss || 0)}</td>
+                          <td className="py-2 px-3 text-right font-mono">{formatCurrency(supplier.expected_loss_contribution?.present_value_30yr || 0)}</td>
                         </tr>
                       ))}
                     </tbody>
