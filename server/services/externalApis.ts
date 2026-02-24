@@ -237,37 +237,65 @@ export interface ManagementPerformanceResponse {
     title: string;
     type: string;
     publicationYear: number;
+    downloadedAt?: string;
   }>;
   scores: Record<string, Array<{
     measureId: string;
     title: string;
     score: number;
     evidenceSummary: string;
-    coverage: string;
+    coverage: string | null;
     confidence: string;
     quotes: Array<{ text: string; source: string; page: string }>;
   }>>;
-  measureCount: number;
+  measureCount?: number;
+  analysisResults?: any[];
 }
 
-export async function fetchManagementPerformance(
-  isin: string
-): Promise<ManagementPerformanceResponse | null> {
-  const response = await fetchWithRetry(`${MANAGEMENT_API_BASE}/api/lookup/${isin}`);
-  if (response.status === 404) {
-    return null;
+interface BulkManagementResponse {
+  generatedAt: string;
+  totalCompanies: number;
+  companies: ManagementPerformanceResponse[];
+}
+
+let cachedBulkData: BulkManagementResponse | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
+  const now = Date.now();
+  if (cachedBulkData && (now - cacheTimestamp) < CACHE_TTL_MS) {
+    return cachedBulkData;
   }
+
+  const response = await fetchWithRetry(
+    `${MANAGEMENT_API_BASE}/api/export/json`,
+    undefined,
+    3,
+    60000
+  );
   if (!response.ok) {
-    throw new Error(`Management API error: ${response.status}`);
+    throw new Error(`Management bulk API error: ${response.status}`);
   }
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     const text = await response.text();
     if (text.includes("<!DOCTYPE") || text.includes("<html")) {
-      console.log(`Management API returned HTML instead of JSON for ${isin} - API may be unavailable`);
-      return null;
+      throw new Error("Management API returned HTML instead of JSON - API may be unavailable");
     }
     throw new Error(`Management API returned unexpected content-type: ${contentType}`);
   }
-  return response.json();
+  cachedBulkData = await response.json() as BulkManagementResponse;
+  cacheTimestamp = now;
+  return cachedBulkData;
+}
+
+export async function fetchManagementPerformance(
+  isin: string
+): Promise<ManagementPerformanceResponse | null> {
+  const bulkData = await fetchBulkManagementData();
+  const match = bulkData.companies.find(
+    c => c.company.isin.toUpperCase() === isin.toUpperCase()
+  );
+  return match || null;
 }

@@ -343,14 +343,23 @@ export default function CompanyDetail() {
             )}
             {mgmtScore.scores && Object.entries(mgmtScore.scores as Record<string, any[]>).map(([category, measures]) => {
               const categoryScore = measures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
-              const categoryMax = measures.length * 5;
+              const categoryMax = measures.length;
               return (
                 <div key={category} data-testid={`mgmt-category-${category.replace(/\s+/g, "-").toLowerCase()}`}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">{category}</span>
                     <span className="text-sm text-muted-foreground">{categoryScore}/{categoryMax}</span>
                   </div>
-                  <Progress value={(categoryScore / categoryMax) * 100} className="h-2" />
+                  <Progress value={categoryMax > 0 ? (categoryScore / categoryMax) * 100 : 0} className="h-2" />
+                  <div className="mt-1 space-y-1">
+                    {measures.map((m: any) => (
+                      <div key={m.measureId} className="flex items-center gap-2 text-xs text-muted-foreground pl-2">
+                        <span className={m.score > 0 ? "text-green-500" : "text-red-400"}>{m.score > 0 ? "✓" : "✗"}</span>
+                        <span>{m.title}</span>
+                        {m.confidence && <span className="ml-auto opacity-60">{m.confidence}</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
