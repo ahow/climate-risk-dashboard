@@ -210,7 +210,7 @@ function CollapsibleSection({
 function ManagementSummaryRow({ scores }: { scores: Record<string, any[]> }) {
   const categories = Object.entries(scores);
   return (
-    <div className="flex flex-wrap gap-2" data-testid="mgmt-summary-row">
+    <div className="flex gap-1.5 overflow-x-auto" data-testid="mgmt-summary-row">
       {categories.map(([category, measures]) => {
         const categoryScore = measures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
         const categoryMax = measures.length;
@@ -221,7 +221,7 @@ function ManagementSummaryRow({ scores }: { scores: Record<string, any[]> }) {
         return (
           <div
             key={category}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium flex-1 min-w-[140px] ${color}`}
+            className={`rounded-md px-2 py-1.5 text-xs font-medium flex-1 min-w-0 ${color}`}
             data-testid={`mgmt-badge-${category.replace(/\s+/g, "-").toLowerCase()}`}
           >
             <div className="truncate">{category}</div>
