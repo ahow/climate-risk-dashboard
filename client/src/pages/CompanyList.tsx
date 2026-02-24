@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, Download, FileSpreadsheet, Link2, Copy, Trash2, Loader2, Search } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Upload, Download, FileSpreadsheet, Link2, Copy, Trash2, Loader2, Search, Play, ExternalLink } from "lucide-react";
 
 interface CompanyListUpload {
   id: number;
@@ -42,11 +43,23 @@ interface LatestResponse {
   entries: CompanyListEntry[];
 }
 
+interface BulkOperation {
+  id: number;
+  type: string;
+  status: string;
+  totalItems: number;
+  processedItems: number;
+  statusMessage: string;
+  startedAt: string;
+  completedAt: string | null;
+}
+
 export default function CompanyList() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [copied, setCopied] = useState(false);
+  const [bulkOperationId, setBulkOperationId] = useState<number | null>(null);
 
   const { data: latestData, isLoading } = useQuery<LatestResponse>({
     queryKey: ["/api/company-list/latest"],
@@ -55,6 +68,25 @@ export default function CompanyList() {
 
   const { data: uploads } = useQuery<CompanyListUpload[]>({
     queryKey: ["/api/company-list"],
+  });
+
+  const { data: allOperations } = useQuery<BulkOperation[]>({
+    queryKey: ["/api/operations"],
+    refetchInterval: 5000,
+  });
+
+  const activeBulkOp = allOperations?.find(
+    (op) => op.type === "bulk_processing" && (op.status === "running" || op.status === "pending")
+  );
+
+  const trackedOp = bulkOperationId
+    ? allOperations?.find((op) => op.id === bulkOperationId)
+    : activeBulkOp;
+
+  const { data: bulkOpStatus } = useQuery<BulkOperation>({
+    queryKey: ["/api/operations", trackedOp?.id],
+    enabled: !!trackedOp?.id,
+    refetchInterval: trackedOp && (trackedOp.status === "running" || trackedOp.status === "pending") ? 3000 : false,
   });
 
   const uploadMutation = useMutation({
@@ -91,6 +123,27 @@ export default function CompanyList() {
       queryClient.invalidateQueries({ queryKey: ["/api/company-list/latest"] });
     },
   });
+
+  const processAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/company-list/process-all");
+      return res.json();
+    },
+    onSuccess: (data: BulkOperation) => {
+      setBulkOperationId(data.id);
+      toast({ title: "Bulk processing started", description: `Processing ${data.totalItems} companies from your uploaded list` });
+      queryClient.invalidateQueries({ queryKey: ["/api/operations"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to start", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const isBulkRunning = activeBulkOp != null || processAllMutation.isPending;
+  const displayOp = bulkOpStatus || trackedOp;
+  const bulkProgress = displayOp && displayOp.totalItems > 0
+    ? Math.round((displayOp.processedItems / displayOp.totalItems) * 100)
+    : 0;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -197,6 +250,69 @@ export default function CompanyList() {
               </Button>
             </div>
           </CardContent>
+        </Card>
+      )}
+
+      {latestData && (
+        <Card data-testid="card-bulk-processing">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Play className="h-5 w-5" />
+                  Bulk Risk Processing
+                </CardTitle>
+                <CardDescription>
+                  Add all companies from the uploaded list to the dashboard and automatically calculate all risk assessments. Data is saved permanently until you choose to update it.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => processAllMutation.mutate()}
+                  disabled={isBulkRunning || processAllMutation.isPending}
+                  data-testid="button-process-all"
+                >
+                  {isBulkRunning ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  {isBulkRunning ? "Processing..." : "Process All Companies"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = "/monitor"}
+                  data-testid="button-goto-monitor"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Monitor
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          {displayOp && (
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground" data-testid="text-bulk-status">{displayOp.statusMessage}</span>
+                  <span className="font-medium" data-testid="text-bulk-progress">
+                    {displayOp.processedItems}/{displayOp.totalItems} ({bulkProgress}%)
+                  </span>
+                </div>
+                <Progress value={bulkProgress} className="h-2" data-testid="progress-bulk" />
+                {displayOp.status === "completed" && (
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium" data-testid="text-bulk-complete">
+                    Processing complete. View results on the Dashboard.
+                  </p>
+                )}
+                {displayOp.status === "failed" && (
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium" data-testid="text-bulk-failed">
+                    Processing failed. Check the Calculation Monitor for details.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
 

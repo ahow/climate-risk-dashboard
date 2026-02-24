@@ -7,6 +7,7 @@ import {
   processSupplyChainRisk,
   processManagementScore,
   processAllRisks,
+  processBulkFromList,
 } from "./services/operationManager";
 import { isinToIso3, sectorToIsic } from "./utils/mappings";
 import { z } from "zod";
@@ -286,6 +287,9 @@ export async function registerRoutes(
         processManagementScore(id, op.companyId);
       } else if (op.type === "full_assessment" && op.companyId) {
         processAllRisks(id, op.companyId);
+      } else if (op.type === "bulk_processing") {
+        const latest = await storage.getLatestCompanyListUpload();
+        if (latest) processBulkFromList(id, latest.id);
       }
 
       res.json(await storage.getOperation(id));
@@ -433,6 +437,32 @@ export async function registerRoutes(
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=company-list.csv");
       res.send(csvLines.join("\n"));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/company-list/process-all", async (_req, res) => {
+    try {
+      const latest = await storage.getLatestCompanyListUpload();
+      if (!latest) {
+        return res.status(404).json({ error: "No company list uploaded yet" });
+      }
+
+      const entries = await storage.getCompanyListEntries(latest.id);
+      if (entries.length === 0) {
+        return res.status(400).json({ error: "Company list has no entries" });
+      }
+
+      const operation = await storage.createOperation({
+        type: "bulk_processing",
+        status: "pending",
+        statusMessage: `Starting bulk processing of ${entries.length} companies from ${latest.fileName}`,
+        totalItems: entries.length,
+      });
+
+      processBulkFromList(operation.id, latest.id);
+      res.json(operation);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
