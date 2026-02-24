@@ -389,10 +389,10 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
           <CardContent className="pt-4 pb-3">
             <div className="text-xs text-muted-foreground mb-1">Direct Climate Risk (EAL)</div>
             <div className="text-lg font-bold" data-testid="text-sc-direct-eal">
-              {formatCurrency(scRisk.directExpectedLoss || 0)}
+              {formatCurrency((directRisk?.expected_loss?.total_annual_loss || 0) * scaleFactor)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {(scRisk.directExpectedLossPct || 0).toFixed(2)}% per $1M exposure
+              {(directRisk?.expected_loss?.total_annual_loss_pct || 0).toFixed(2)}% per $1M exposure
             </div>
           </CardContent>
         </Card>
@@ -400,10 +400,10 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
           <CardContent className="pt-4 pb-3">
             <div className="text-xs text-muted-foreground mb-1">Indirect Climate Risk (EAL)</div>
             <div className="text-lg font-bold" data-testid="text-sc-indirect-eal">
-              {formatCurrency(scRisk.indirectExpectedLoss || 0)}
+              {formatCurrency(((scRisk.indirectRisk as any)?.expected_loss?.total_annual_loss || 0) * scaleFactor)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {(scRisk.indirectExpectedLossPct || 0).toFixed(2)}% per $1M exposure
+              {((scRisk.indirectRisk as any)?.expected_loss?.total_annual_loss_pct || 0).toFixed(2)}% per $1M exposure
             </div>
           </CardContent>
         </Card>
@@ -411,7 +411,7 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
           <CardContent className="pt-4 pb-3">
             <div className="text-xs text-muted-foreground mb-1">Total Climate Risk (EAL)</div>
             <div className="text-lg font-bold" data-testid="text-sc-total-eal">
-              {formatCurrency((scRisk.directExpectedLoss || 0) + (scRisk.indirectExpectedLoss || 0))}
+              {formatCurrency(((directRisk?.expected_loss?.total_annual_loss || 0) + ((scRisk.indirectRisk as any)?.expected_loss?.total_annual_loss || 0)) * scaleFactor)}
             </div>
             <div className="text-xs text-muted-foreground">
               {company.supplierCosts ? `Scaled to ${formatCurrency(company.supplierCosts)} supplier exposure` : "Per $1M exposure (no supplier costs data)"}
@@ -499,7 +499,10 @@ export default function CompanyDetail() {
   const scRisk = company.supplyChainRisk;
 
   const totalGeoEAL = company.geoRisks?.length > 0 ? formatCurrency(company.totalGeoRisk) : "Not calculated";
-  const totalScEAL = scRisk ? formatCurrency((scRisk.directExpectedLoss || 0) + (scRisk.indirectExpectedLoss || 0)) : "Not calculated";
+  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
+  const scDirectEAL = scRisk ? (scRisk.directRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
+  const scIndirectEAL = scRisk ? (scRisk.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
+  const totalScEAL = scRisk ? formatCurrency(scDirectEAL + scIndirectEAL) : "Not calculated";
   const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}/${mgmtScore.totalPossible}` : "Not assessed";
 
   return (

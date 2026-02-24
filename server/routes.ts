@@ -519,7 +519,12 @@ export async function registerRoutes(
           const mgmtScore = await storage.getManagementScore(company.id);
 
           const totalGeoRisk = geoRisks.reduce((sum, r) => sum + (r.expectedAnnualLoss || 0), 0);
-          const totalScRisk = (scRisk?.directExpectedLoss || 0) + (scRisk?.indirectExpectedLoss || 0);
+          const scSf = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
+          const scDirectRaw = (scRisk?.directRisk as any)?.expected_loss?.total_annual_loss || 0;
+          const scIndirectRaw = (scRisk?.indirectRisk as any)?.expected_loss?.total_annual_loss || 0;
+          const scDirectScaled = scDirectRaw * scSf;
+          const scIndirectScaled = scIndirectRaw * scSf;
+          const totalScRisk = scDirectScaled + scIndirectScaled;
           const mgmtScoreVal = mgmtScore
             ? `${mgmtScore.totalScore}/${mgmtScore.totalPossible}`
             : "N/A";
@@ -532,10 +537,11 @@ export async function registerRoutes(
             "Country": company.country || "",
             "Total Asset Value": company.totalAssetValue || 0,
             "Supplier Costs": company.supplierCosts || 0,
+            "EV": company.ev || 0,
             "Asset Count": company.assetCount || 0,
             "Geographic Risk (EAL)": totalGeoRisk.toFixed(2),
-            "Supply Chain Risk (Direct EAL)": (scRisk?.directExpectedLoss || 0).toFixed(2),
-            "Supply Chain Risk (Indirect EAL)": (scRisk?.indirectExpectedLoss || 0).toFixed(2),
+            "Supply Chain Risk (Direct EAL)": scDirectScaled.toFixed(2),
+            "Supply Chain Risk (Indirect EAL)": scIndirectScaled.toFixed(2),
             "Supply Chain Risk (Total EAL)": totalScRisk.toFixed(2),
             "Management Score": mgmtScoreVal,
             "Total Risk": totalRisk.toFixed(2),
