@@ -13,6 +13,7 @@ import {
   Link2, Building2, MapPin, ChevronDown, ChevronRight, Quote, FileText,
   Globe,
 } from "lucide-react";
+import { WORLD_PATHS } from "@/lib/worldMapPaths";
 
 function formatCurrency(value: number): string {
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
@@ -55,29 +56,19 @@ function AssetMap({ assets }: { assets: any[] }) {
     <div className="relative" data-testid="asset-map">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto rounded-lg bg-slate-100 dark:bg-slate-800/50"
+        className="w-full h-auto rounded-lg bg-sky-50 dark:bg-slate-800/50"
         style={{ maxHeight: "350px" }}
       >
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.3" className="text-slate-300 dark:text-slate-600" />
-          </pattern>
-        </defs>
-        <rect width={W} height={H} fill="url(#grid)" rx="8" />
+        <rect width={W} height={H} rx="8" className="fill-sky-50 dark:fill-slate-800/50" />
 
-        {[{lat:0,label:"Equator"},{lat:23.5,label:"Tropic of Cancer"},{lat:-23.5,label:"Tropic of Capricorn"},{lat:66.5,label:"Arctic"},{lat:-66.5,label:"Antarctic"}].map(line => {
-          const [,y] = project(0, line.lat);
-          return (
-            <g key={line.label}>
-              <line x1={PAD} y1={y} x2={W-PAD} y2={y} strokeDasharray="4,4" className="stroke-slate-300 dark:stroke-slate-600" strokeWidth="0.5" />
-            </g>
-          );
-        })}
-
-        {[-180,-120,-60,0,60,120,180].map(lon => {
-          const [x] = project(lon, 0);
-          return <line key={lon} x1={x} y1={PAD} x2={x} y2={H-PAD} strokeDasharray="4,4" className="stroke-slate-300 dark:stroke-slate-600" strokeWidth="0.5" />;
-        })}
+        {WORLD_PATHS.map((d, i) => (
+          <path
+            key={i}
+            d={d}
+            className="fill-slate-200 dark:fill-slate-600 stroke-slate-300 dark:stroke-slate-500"
+            strokeWidth="0.5"
+          />
+        ))}
 
         {validAssets.map((asset: any, idx: number) => {
           const [cx, cy] = project(asset.longitude, asset.latitude);
