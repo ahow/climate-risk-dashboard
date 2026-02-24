@@ -26,12 +26,15 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - `supply_chain_risks` - Country-sector risk assessment (5 dimensions)
 - `management_scores` - Management performance scoring (9 categories, 44 measures)
 - `operations` - Batch processing job tracking with pause/resume
+- `company_list_uploads` - Metadata for uploaded company spreadsheets
+- `company_list_entries` - Individual company rows from uploaded spreadsheets
 
 ## Key Features
 1. **Company Dashboard** (`/`) - Overview with add-by-ISIN, search, risk summary cards
 2. **Company Detail** (`/company/:id`) - Full risk breakdown with asset table, supply chain, management scores
 3. **Calculation Monitor** (`/monitor`) - Real-time progress tracking with pause/resume/delete
-4. **CSV Export** - Download all company risk data as CSV
+4. **Company List** (`/company-list`) - Upload Excel spreadsheets, permanent download URLs for sharing
+5. **CSV Export** - Download all company risk data as CSV
 
 ## File Structure
 ```
@@ -47,6 +50,7 @@ client/src/components/Layout.tsx - Navigation header
 client/src/pages/Dashboard.tsx     - Main dashboard
 client/src/pages/CompanyDetail.tsx - Company risk details
 client/src/pages/CalculationMonitor.tsx - Job monitoring
+client/src/pages/CompanyList.tsx       - Company list upload & management
 ```
 
 ## User Preferences
