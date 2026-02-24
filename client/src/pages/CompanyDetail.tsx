@@ -308,13 +308,27 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
                         {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
                         <span className={m.score > 0 ? "text-green-500" : "text-red-400"}>{m.score > 0 ? "✓" : "✗"}</span>
                         <span className="flex-1">{m.title}</span>
-                        {m.confidence && <span className="opacity-60">{m.confidence}</span>}
+                        {m.confidence && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            m.confidence === "High" 
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" 
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                          }`} title={m.confidence === "High" ? "High confidence: strong evidence found" : "Low confidence: weak or indirect evidence"}>
+                            {m.confidence === "High" ? "High confidence" : "Low confidence"}
+                          </span>
+                        )}
                       </div>
                       {isExpanded && (
-                        <div className="ml-8 mt-1 mb-2 space-y-2 border-l-2 border-muted pl-3">
+                        <div className="ml-8 mt-1 mb-2 space-y-2.5 border-l-2 border-muted pl-3">
                           <div className="text-xs" data-testid={`mgmt-question-${m.measureId}`}>
                             <span className="font-medium text-foreground/80">Question: </span>
-                            <span className="text-muted-foreground">{m.title}</span>
+                            <span className="text-muted-foreground">Does the company demonstrate {m.title.toLowerCase()}?</span>
+                          </div>
+                          <div className="text-xs" data-testid={`mgmt-result-${m.measureId}`}>
+                            <span className="font-medium text-foreground/80">Result: </span>
+                            <span className={m.score > 0 ? "text-green-600 dark:text-green-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
+                              {m.score > 0 ? "Yes — evidence found" : "No — insufficient evidence"}
+                            </span>
                           </div>
                           {m.evidenceSummary && (
                             <div className="text-xs" data-testid={`mgmt-evidence-${m.measureId}`}>
@@ -324,21 +338,22 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
                           )}
                           {m.quotes && m.quotes.length > 0 ? (
                             <div className="space-y-1.5">
+                              <span className="text-xs font-medium text-foreground/80">Supporting Quotes:</span>
                               {m.quotes.map((q: any, qi: number) => (
-                                <div key={qi} className="text-xs rounded bg-muted/40 p-2" data-testid={`mgmt-quote-${m.measureId}-${qi}`}>
-                                  <div className="flex items-start gap-1.5 mb-1">
+                                <div key={qi} className="text-xs rounded bg-muted/40 p-2.5" data-testid={`mgmt-quote-${m.measureId}-${qi}`}>
+                                  <div className="flex items-start gap-1.5 mb-1.5">
                                     <Quote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/60" />
                                     <span className="italic text-muted-foreground leading-relaxed">"{q.text}"</span>
                                   </div>
                                   <div className="flex items-center gap-1.5 mt-1 text-muted-foreground/70">
                                     <FileText className="h-3 w-3 shrink-0" />
-                                    <span>{q.source}{q.page ? `, p.${q.page}` : ""}</span>
+                                    <span className="font-medium">{q.source}{q.page ? ` (p. ${q.page})` : ""}</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-muted-foreground/60 italic">No supporting quotes found</p>
+                            <p className="text-xs text-muted-foreground/60 italic">No supporting quotes found in company disclosures</p>
                           )}
                         </div>
                       )}
