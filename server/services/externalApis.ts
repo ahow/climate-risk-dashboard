@@ -291,12 +291,42 @@ async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
   return cachedBulkData;
 }
 
+async function fetchManagementIndividual(
+  isin: string
+): Promise<ManagementPerformanceResponse | null> {
+  const response = await fetchWithRetry(
+    `${MANAGEMENT_API_BASE}/api/lookup/${isin}`,
+    undefined,
+    3,
+    30000
+  );
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Management lookup API error: ${response.status}`);
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return null;
+  const data = await response.json() as ManagementPerformanceResponse;
+  if (!data?.company) return null;
+  return data;
+}
+
 export async function fetchManagementPerformance(
   isin: string
 ): Promise<ManagementPerformanceResponse | null> {
-  const bulkData = await fetchBulkManagementData();
-  const match = bulkData.companies.find(
-    c => c.company.isin.toUpperCase() === isin.toUpperCase()
-  );
-  return match || null;
+  try {
+    const bulkData = await fetchBulkManagementData();
+    const match = bulkData.companies.find(
+      c => c.company.isin.toUpperCase() === isin.toUpperCase()
+    );
+    if (match) return match;
+  } catch (err: any) {
+    console.log(`[mgmt] Bulk export failed, falling back to individual lookup for ${isin}: ${err.message}`);
+  }
+  try {
+    return await fetchManagementIndividual(isin);
+  } catch (err: any) {
+    console.log(`[mgmt] Individual lookup also failed for ${isin}: ${err.message}`);
+    return null;
+  }
 }
