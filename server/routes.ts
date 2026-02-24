@@ -10,6 +10,8 @@ import {
 } from "./services/operationManager";
 import { isinToIso3, sectorToIsic } from "./utils/mappings";
 import { z } from "zod";
+import multer from "multer";
+import * as XLSX from "xlsx";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -296,6 +298,149 @@ export async function registerRoutes(
     try {
       await storage.updateOperation(parseInt(req.params.id), { status: "cancelled" });
       await storage.deleteOperation(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+  app.post("/api/company-list/upload", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<any>(worksheet);
+
+      if (rows.length === 0) {
+        return res.status(400).json({ error: "Spreadsheet is empty" });
+      }
+
+      const uploadRecord = await storage.createCompanyListUpload({
+        fileName: req.file.originalname,
+        rowCount: rows.length,
+      });
+
+      const entries = rows.map((row: any) => ({
+        uploadId: uploadRecord.id,
+        isin: String(row["ISIN"] || "").trim(),
+        companyName: String(row["Company"] || row["COMPANY"] || "").trim(),
+        level2Sector: row["LEVEL2 SECTOR NAME"] || null,
+        level3Sector: row["LEVEL3 SECTOR NAME"] || null,
+        level4Sector: row["LEVEL4 SECTOR NAME"] || null,
+        level5Sector: row["LEVEL5 SECTOR NAME"] || null,
+        geography: row["GEOGRAPHIC DESCR."] || row["GEOGRAPHIC DESCR"] || null,
+        totalValue: row["TotalValue"] != null ? Number(row["TotalValue"]) : null,
+        ev: row["EV"] != null ? Number(row["EV"]) : null,
+        supplierCosts: row["SUPPLIERCOSTS"] != null ? Number(row["SUPPLIERCOSTS"]) : null,
+      })).filter((e: any) => e.isin && e.companyName);
+
+      await storage.createCompanyListEntries(entries);
+
+      res.status(201).json({
+        id: uploadRecord.id,
+        fileName: uploadRecord.fileName,
+        rowCount: entries.length,
+        uploadedAt: uploadRecord.uploadedAt,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/company-list", async (_req, res) => {
+    try {
+      const uploads = await storage.getCompanyListUploads();
+      res.json(uploads);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/company-list/latest", async (_req, res) => {
+    try {
+      const latest = await storage.getLatestCompanyListUpload();
+      if (!latest) {
+        return res.status(404).json({ error: "No company list uploaded yet" });
+      }
+      const entries = await storage.getCompanyListEntries(latest.id);
+      res.json({ upload: latest, entries });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/company-list/download", async (_req, res) => {
+    try {
+      const latest = await storage.getLatestCompanyListUpload();
+      if (!latest) {
+        return res.status(404).json({ error: "No company list uploaded yet" });
+      }
+      const entries = await storage.getCompanyListEntries(latest.id);
+
+      const data = entries.map(e => ({
+        "ISIN": e.isin,
+        "Company": e.companyName,
+        "LEVEL2 SECTOR NAME": e.level2Sector || "",
+        "LEVEL3 SECTOR NAME": e.level3Sector || "",
+        "LEVEL4 SECTOR NAME": e.level4Sector || "",
+        "LEVEL5 SECTOR NAME": e.level5Sector || "",
+        "GEOGRAPHIC DESCR.": e.geography || "",
+        "TotalValue": e.totalValue || 0,
+        "EV": e.ev || 0,
+        "SUPPLIERCOSTS": e.supplierCosts || 0,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=company-list.xlsx`);
+      res.send(buffer);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/company-list/download/csv", async (_req, res) => {
+    try {
+      const latest = await storage.getLatestCompanyListUpload();
+      if (!latest) {
+        return res.status(404).json({ error: "No company list uploaded yet" });
+      }
+      const entries = await storage.getCompanyListEntries(latest.id);
+
+      const headers = ["ISIN", "Company", "LEVEL2 SECTOR NAME", "LEVEL3 SECTOR NAME", "LEVEL4 SECTOR NAME", "LEVEL5 SECTOR NAME", "GEOGRAPHIC DESCR.", "TotalValue", "EV", "SUPPLIERCOSTS"];
+      const csvLines = [
+        headers.join(","),
+        ...entries.map(e => {
+          const vals = [
+            e.isin, e.companyName, e.level2Sector || "", e.level3Sector || "",
+            e.level4Sector || "", e.level5Sector || "", e.geography || "",
+            String(e.totalValue || 0), String(e.ev || 0), String(e.supplierCosts || 0),
+          ];
+          return vals.map(v => v.includes(",") ? `"${v}"` : v).join(",");
+        }),
+      ];
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=company-list.csv");
+      res.send(csvLines.join("\n"));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/company-list/:id", async (req, res) => {
+    try {
+      await storage.deleteCompanyListUpload(parseInt(req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

@@ -2,12 +2,15 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "./db";
 import {
   companies, assets, geoRisks, supplyChainRisks, managementScores, operations,
+  companyListUploads, companyListEntries,
   type Company, type InsertCompany,
   type Asset, type InsertAsset,
   type GeoRisk, type InsertGeoRisk,
   type SupplyChainRisk, type InsertSupplyChainRisk,
   type ManagementScore, type InsertManagementScore,
   type Operation, type InsertOperation,
+  type CompanyListUpload, type InsertCompanyListUpload,
+  type CompanyListEntry, type InsertCompanyListEntry,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -39,6 +42,13 @@ export interface IStorage {
   createOperation(data: InsertOperation): Promise<Operation>;
   updateOperation(id: number, data: Partial<Operation>): Promise<Operation>;
   deleteOperation(id: number): Promise<void>;
+
+  getLatestCompanyListUpload(): Promise<CompanyListUpload | undefined>;
+  getCompanyListUploads(): Promise<CompanyListUpload[]>;
+  createCompanyListUpload(data: InsertCompanyListUpload): Promise<CompanyListUpload>;
+  deleteCompanyListUpload(id: number): Promise<void>;
+  getCompanyListEntries(uploadId: number): Promise<CompanyListEntry[]>;
+  createCompanyListEntries(entries: InsertCompanyListEntry[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -144,6 +154,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteOperation(id: number): Promise<void> {
     await db.delete(operations).where(eq(operations.id, id));
+  }
+
+  async getLatestCompanyListUpload(): Promise<CompanyListUpload | undefined> {
+    const [upload] = await db.select().from(companyListUploads).orderBy(desc(companyListUploads.uploadedAt)).limit(1);
+    return upload;
+  }
+
+  async getCompanyListUploads(): Promise<CompanyListUpload[]> {
+    return db.select().from(companyListUploads).orderBy(desc(companyListUploads.uploadedAt));
+  }
+
+  async createCompanyListUpload(data: InsertCompanyListUpload): Promise<CompanyListUpload> {
+    const [upload] = await db.insert(companyListUploads).values(data).returning();
+    return upload;
+  }
+
+  async deleteCompanyListUpload(id: number): Promise<void> {
+    await db.delete(companyListUploads).where(eq(companyListUploads.id, id));
+  }
+
+  async getCompanyListEntries(uploadId: number): Promise<CompanyListEntry[]> {
+    return db.select().from(companyListEntries).where(eq(companyListEntries.uploadId, uploadId));
+  }
+
+  async createCompanyListEntries(entries: InsertCompanyListEntry[]): Promise<void> {
+    if (entries.length === 0) return;
+    const batchSize = 500;
+    for (let i = 0; i < entries.length; i += batchSize) {
+      await db.insert(companyListEntries).values(entries.slice(i, i + batchSize));
+    }
   }
 }
 

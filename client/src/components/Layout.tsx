@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { BarChart3, Building2, Activity, Download, Moon, Sun } from "lucide-react";
+import { BarChart3, Building2, Activity, Download, Moon, Sun, FileSpreadsheet } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { path: "/", label: "Dashboard", icon: BarChart3 },
     { path: "/monitor", label: "Calculations", icon: Activity },
+    { path: "/company-list", label: "Company List", icon: FileSpreadsheet },
   ];
 
   return (

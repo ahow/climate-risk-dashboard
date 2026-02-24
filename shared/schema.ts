@@ -91,6 +91,36 @@ export const operations = pgTable("operations", {
   completedAt: timestamp("completed_at"),
 });
 
+export const companyListUploads = pgTable("company_list_uploads", {
+  id: serial("id").primaryKey(),
+  fileName: text("file_name").notNull(),
+  rowCount: integer("row_count").default(0),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const companyListEntries = pgTable("company_list_entries", {
+  id: serial("id").primaryKey(),
+  uploadId: integer("upload_id").notNull().references(() => companyListUploads.id, { onDelete: "cascade" }),
+  isin: varchar("isin", { length: 12 }).notNull(),
+  companyName: text("company_name").notNull(),
+  level2Sector: text("level2_sector"),
+  level3Sector: text("level3_sector"),
+  level4Sector: text("level4_sector"),
+  level5Sector: text("level5_sector"),
+  geography: text("geography"),
+  totalValue: real("total_value"),
+  ev: real("ev"),
+  supplierCosts: real("supplier_costs"),
+});
+
+export const insertCompanyListUploadSchema = createInsertSchema(companyListUploads).omit({ id: true });
+export const insertCompanyListEntrySchema = createInsertSchema(companyListEntries).omit({ id: true });
+
+export type CompanyListUpload = typeof companyListUploads.$inferSelect;
+export type InsertCompanyListUpload = z.infer<typeof insertCompanyListUploadSchema>;
+export type CompanyListEntry = typeof companyListEntries.$inferSelect;
+export type InsertCompanyListEntry = z.infer<typeof insertCompanyListEntrySchema>;
+
 export const insertCompanySchema = createInsertSchema(companies).omit({ id: true });
 export const insertAssetSchema = createInsertSchema(assets).omit({ id: true });
 export const insertGeoRiskSchema = createInsertSchema(geoRisks).omit({ id: true });
