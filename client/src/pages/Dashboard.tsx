@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Building2, Plus, Trash2, AlertTriangle, Shield, Link2,
   ChevronRight, Loader2, Search, Pause, Play, Square,
   Activity,
@@ -19,6 +27,49 @@ function formatCurrency(value: number): string {
   if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
   if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
   return `$${value.toFixed(0)}`;
+}
+
+function formatPct(value: number): string {
+  if (value >= 10) return `${value.toFixed(0)}%`;
+  if (value >= 1) return `${value.toFixed(1)}%`;
+  return `${value.toFixed(2)}%`;
+}
+
+function getCompanyMetrics(company: any) {
+  const directExposure = company.totalGeoRisk || 0;
+  const supplyChainEAL = (company.supplyChainRisk?.directExpectedLoss || 0) + (company.supplyChainRisk?.indirectExpectedLoss || 0);
+  const totalExposure = directExposure + supplyChainEAL;
+
+  const mgmtTotalScore = company.managementScore?.totalScore ?? null;
+  const mgmtTotalPossible = company.managementScore?.totalPossible ?? null;
+  const mgmtScorePct = mgmtTotalScore != null && mgmtTotalPossible && mgmtTotalPossible > 0
+    ? mgmtTotalScore / mgmtTotalPossible
+    : null;
+
+  const adjustedExposure = mgmtScorePct != null
+    ? totalExposure * (1 - 0.7 * mgmtScorePct)
+    : totalExposure;
+
+  const directExposurePV = company.totalGeoRiskPV || 0;
+  const scPV = company.supplyChainRisk?.directRisk?.expected_loss?.present_value_30yr
+    ? company.supplyChainRisk.directRisk.expected_loss.present_value_30yr * (company.supplierCosts ? company.supplierCosts / 1000000 : 1)
+    : 0;
+  const totalExposurePV = directExposurePV + scPV;
+  const adjustedExposurePV = mgmtScorePct != null
+    ? totalExposurePV * (1 - 0.7 * mgmtScorePct)
+    : totalExposurePV;
+
+  const ev = company.ev || 0;
+  const valuationExposurePct = ev > 0 ? (adjustedExposurePV / ev) * 100 : null;
+
+  return {
+    directExposure,
+    supplyChainEAL,
+    totalExposure,
+    mgmtScorePct,
+    adjustedExposure,
+    valuationExposurePct,
+  };
 }
 
 const typeLabels: Record<string, string> = {
@@ -166,7 +217,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Total Geographic EAL</div>
+            <div className="text-sm font-medium text-muted-foreground">Total Direct Exposure</div>
             <div className="text-2xl font-bold mt-1" data-testid="text-total-geo-risk">{formatCurrency(totalGeoRisk)}</div>
           </CardContent>
         </Card>
@@ -332,20 +383,33 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
-          {filteredCompanies.map((company: any) => (
-            <Card key={company.id} className="hover-elevate" data-testid={`card-company-${company.id}`}>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="flex-1 min-w-0">
+        <div className="border rounded-lg overflow-x-auto">
+          <Table data-testid="table-companies">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[180px]">Company</TableHead>
+                <TableHead className="text-right">Direct Exposure</TableHead>
+                <TableHead className="text-right">Supply Chain</TableHead>
+                <TableHead className="text-right">Total Exposure</TableHead>
+                <TableHead className="text-right">Mgmt Score</TableHead>
+                <TableHead className="text-right">Adjusted Exposure</TableHead>
+                <TableHead className="text-right">Valuation Exposure</TableHead>
+                <TableHead className="w-10"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCompanies.map((company: any) => {
+                const m = getCompanyMetrics(company);
+                const hasRisks = company.hasGeoRisks || company.hasSupplyChainRisk;
+                return (
+                  <TableRow key={company.id} data-testid={`row-company-${company.id}`}>
+                    <TableCell>
                       <Link href={`/company/${company.id}`}>
-                        <span className="text-base font-semibold text-foreground hover:text-primary cursor-pointer flex items-center gap-2" data-testid={`link-company-${company.id}`}>
+                        <span className="font-semibold text-foreground hover:text-primary cursor-pointer" data-testid={`link-company-${company.id}`}>
                           {company.companyName}
-                          <ChevronRight className="h-4 w-4" />
                         </span>
                       </Link>
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-muted-foreground font-mono" data-testid={`text-isin-${company.id}`}>
                           {company.isin}
                         </span>
@@ -354,65 +418,46 @@ export default function Dashboard() {
                             {company.sector}
                           </Badge>
                         )}
-                        <span className="text-xs text-muted-foreground">
-                          {company.assetCount} assets
-                        </span>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-6 text-sm">
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Geo Risk
-                        </div>
-                        <div className="font-semibold" data-testid={`text-geo-risk-${company.id}`}>
-                          {company.hasGeoRisks ? formatCurrency(company.totalGeoRisk) : "---"}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Link2 className="h-3 w-3" />
-                          Supply Chain EAL
-                        </div>
-                        <div className="font-semibold" data-testid={`text-sc-risk-${company.id}`}>
-                          {company.hasSupplyChainRisk
-                            ? formatCurrency((company.supplyChainRisk?.directExpectedLoss || 0) + (company.supplyChainRisk?.indirectExpectedLoss || 0))
-                            : "---"}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Shield className="h-3 w-3" />
-                          Mgmt Score
-                        </div>
-                        <div className="font-semibold" data-testid={`text-mgmt-score-${company.id}`}>
-                          {company.hasManagementScore
-                            ? `${company.managementScore?.totalScore}/${company.managementScore?.totalPossible}`
-                            : "---"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Remove ${company.companyName}?`)) {
-                        deleteCompanyMutation.mutate(company.id);
-                      }
-                    }}
-                    className="text-muted-foreground hover:text-destructive ml-4"
-                    data-testid={`button-delete-${company.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </TableCell>
+                    <TableCell className="text-right font-mono" data-testid={`text-direct-exposure-${company.id}`}>
+                      {company.hasGeoRisks ? formatCurrency(m.directExposure) : "---"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono" data-testid={`text-sc-risk-${company.id}`}>
+                      {company.hasSupplyChainRisk ? formatCurrency(m.supplyChainEAL) : "---"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold" data-testid={`text-total-exposure-${company.id}`}>
+                      {hasRisks ? formatCurrency(m.totalExposure) : "---"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono" data-testid={`text-mgmt-score-${company.id}`}>
+                      {m.mgmtScorePct != null ? formatPct(m.mgmtScorePct * 100) : "---"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold" data-testid={`text-adjusted-exposure-${company.id}`}>
+                      {hasRisks ? formatCurrency(m.adjustedExposure) : "---"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono" data-testid={`text-valuation-exposure-${company.id}`}>
+                      {m.valuationExposurePct != null ? formatPct(m.valuationExposurePct) : "---"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm(`Remove ${company.companyName}?`)) {
+                            deleteCompanyMutation.mutate(company.id);
+                          }
+                        }}
+                        className="text-muted-foreground hover:text-destructive h-8 w-8"
+                        data-testid={`button-delete-${company.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

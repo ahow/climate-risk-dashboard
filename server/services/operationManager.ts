@@ -393,6 +393,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             isicSectorCode: isicCode,
             countryIso3,
             supplierCosts: entry.supplierCosts,
+            ev: entry.ev,
           });
 
           const validAssets = assetData.assets.filter(a =>
