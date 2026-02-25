@@ -1,3 +1,4 @@
+import { Fragment, useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -6,11 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useState, useMemo } from "react";
 import {
   ArrowLeft, Play, Loader2, AlertTriangle, Droplets,
   Flame, Thermometer, CloudRain, Waves, Shield,
-  Link2, Building2, MapPin, ChevronDown, ChevronRight, Quote, FileText,
+  Link2, Building2, MapPin, ChevronDown, ChevronRight,
   Globe,
 } from "lucide-react";
 import { WORLD_PATHS } from "@/lib/worldMapPaths";
@@ -234,29 +234,6 @@ function ManagementSummaryRow({ scores }: { scores: Record<string, any[]> }) {
 }
 
 function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
-  const [expandedMeasures, setExpandedMeasures] = useState<Set<string>>(new Set());
-
-  const toggleMeasure = (measureId: string) => {
-    setExpandedMeasures(prev => {
-      const next = new Set(prev);
-      if (next.has(measureId)) next.delete(measureId);
-      else next.add(measureId);
-      return next;
-    });
-  };
-
-  const expandAll = () => {
-    if (!mgmtScore.scores) return;
-    const allIds = new Set<string>();
-    Object.values(mgmtScore.scores as Record<string, any[]>).forEach(measures => {
-      measures.forEach((m: any) => allIds.add(m.measureId));
-    });
-    setExpandedMeasures(allIds);
-  };
-
-  const collapseAll = () => setExpandedMeasures(new Set());
-  const hasAnyExpanded = expandedMeasures.size > 0;
-
   const scorePct = mgmtScore.totalPossible > 0
     ? ((mgmtScore.totalScore / mgmtScore.totalPossible) * 100).toFixed(0)
     : "0";
@@ -272,20 +249,9 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
       }
     >
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          {mgmtScore.summary && (
-            <p className="text-sm text-muted-foreground flex-1" data-testid="text-mgmt-summary">{mgmtScore.summary}</p>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); hasAnyExpanded ? collapseAll() : expandAll(); }}
-            className="text-xs shrink-0 ml-2"
-            data-testid="button-toggle-all-measures"
-          >
-            {hasAnyExpanded ? "Collapse All" : "Expand All"}
-          </Button>
-        </div>
+        {mgmtScore.summary && (
+          <p className="text-sm text-muted-foreground" data-testid="text-mgmt-summary">{mgmtScore.summary}</p>
+        )}
         {mgmtScore.scores && Object.entries(mgmtScore.scores as Record<string, any[]>).map(([category, measures]) => {
           const categoryScore = measures.reduce((sum: number, m: any) => sum + (m.score || 0), 0);
           const categoryMax = measures.length;
@@ -296,70 +262,85 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
                 <span className="text-sm text-muted-foreground">{categoryScore}/{categoryMax}</span>
               </div>
               <Progress value={categoryMax > 0 ? (categoryScore / categoryMax) * 100 : 0} className="h-2" />
-              <div className="mt-1 space-y-0.5">
-                {measures.map((m: any) => {
-                  const isExpanded = expandedMeasures.has(m.measureId);
-                  return (
-                    <div key={m.measureId} data-testid={`mgmt-measure-${m.measureId}`}>
-                      <div
-                        className="flex items-center gap-2 text-xs text-muted-foreground pl-2 py-0.5 rounded cursor-pointer hover:bg-muted/50"
-                        onClick={() => toggleMeasure(m.measureId)}
-                      >
-                        {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-                        <span className={m.score > 0 ? "text-green-500" : "text-red-400"}>{m.score > 0 ? "✓" : "✗"}</span>
-                        <span className="flex-1">{m.title}</span>
-                        {m.confidence && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                            m.confidence === "High" 
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" 
-                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                          }`} title={m.confidence === "High" ? "High confidence: strong evidence found" : "Low confidence: weak or indirect evidence"}>
-                            {m.confidence === "High" ? "High confidence" : "Low confidence"}
-                          </span>
-                        )}
-                      </div>
-                      {isExpanded && (
-                        <div className="ml-8 mt-1 mb-2 space-y-2.5 border-l-2 border-muted pl-3">
-                          <div className="text-xs" data-testid={`mgmt-question-${m.measureId}`}>
-                            <span className="font-medium text-foreground/80">Question: </span>
-                            <span className="text-muted-foreground">Does the company demonstrate {m.title.toLowerCase()}?</span>
-                          </div>
-                          <div className="text-xs" data-testid={`mgmt-result-${m.measureId}`}>
-                            <span className="font-medium text-foreground/80">Result: </span>
-                            <span className={m.score > 0 ? "text-green-600 dark:text-green-400 font-medium" : "text-red-500 dark:text-red-400 font-medium"}>
-                              {m.score > 0 ? "Yes — evidence found" : "No — insufficient evidence"}
-                            </span>
-                          </div>
-                          {m.evidenceSummary && (
-                            <div className="text-xs" data-testid={`mgmt-evidence-${m.measureId}`}>
-                              <span className="font-medium text-foreground/80">Assessment: </span>
-                              <span className="text-muted-foreground">{m.evidenceSummary}</span>
-                            </div>
-                          )}
-                          {m.quotes && m.quotes.length > 0 ? (
-                            <div className="space-y-1.5">
-                              <span className="text-xs font-medium text-foreground/80">Supporting Quotes:</span>
-                              {m.quotes.map((q: any, qi: number) => (
-                                <div key={qi} className="text-xs rounded bg-muted/40 p-2.5" data-testid={`mgmt-quote-${m.measureId}-${qi}`}>
-                                  <div className="flex items-start gap-1.5 mb-1.5">
-                                    <Quote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/60" />
-                                    <span className="italic text-muted-foreground leading-relaxed">"{q.text}"</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 mt-1 text-muted-foreground/70">
-                                    <FileText className="h-3 w-3 shrink-0" />
-                                    <span className="font-medium">{q.source}{q.page ? ` (p. ${q.page})` : ""}</span>
-                                  </div>
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full text-xs border-collapse" data-testid={`mgmt-table-${category.replace(/\s+/g, "-").toLowerCase()}`}>
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left font-medium text-muted-foreground py-1.5 px-2 w-[30%]">Question</th>
+                      <th className="text-left font-medium text-muted-foreground py-1.5 px-2 w-[35%]">Verbatim Quote</th>
+                      <th className="text-left font-medium text-muted-foreground py-1.5 px-2 w-[20%]">Source</th>
+                      <th className="text-center font-medium text-muted-foreground py-1.5 px-2 w-[8%]">Confidence</th>
+                      <th className="text-center font-medium text-muted-foreground py-1.5 px-2 w-[7%]">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {measures.map((m: any, mi: number) => {
+                      const firstQuote = m.quotes && m.quotes.length > 0 ? m.quotes[0] : null;
+                      const extraQuotes = m.quotes && m.quotes.length > 1 ? m.quotes.slice(1) : [];
+                      return (
+                        <Fragment key={m.measureId}>
+                          <tr
+                            className={`border-b border-border/50 align-top hover:bg-muted/30 ${mi % 2 === 0 ? "" : "bg-muted/10"}`}
+                            data-testid={`mgmt-measure-${m.measureId}`}
+                          >
+                            <td className="py-2 px-2">
+                              <div className="font-medium text-foreground/90 mb-0.5">{m.title}</div>
+                              <div className="text-muted-foreground leading-relaxed">{m.question || `Does the company demonstrate ${m.title.toLowerCase()}?`}</div>
+                            </td>
+                            <td className="py-2 px-2">
+                              {firstQuote ? (
+                                <div>
+                                  <span className="italic text-muted-foreground leading-relaxed">"{firstQuote.text}"</span>
+                                  {extraQuotes.length > 0 && (
+                                    <div className="mt-1.5 text-[10px] text-muted-foreground/60">+{extraQuotes.length} more quote{extraQuotes.length > 1 ? "s" : ""}</div>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground/60 italic">No supporting quotes found in company disclosures</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                              ) : (
+                                <span className="text-muted-foreground/50 italic">No quote available</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-muted-foreground">
+                              {firstQuote ? (
+                                <span>{firstQuote.source}{firstQuote.page ? ` (p. ${firstQuote.page})` : ""}</span>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              {m.confidence && (
+                                <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded ${
+                                  m.confidence === "High"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                }`}>
+                                  {m.confidence}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <span className={`font-semibold ${m.score > 0 ? "text-green-600 dark:text-green-400" : "text-red-400 dark:text-red-400"}`}>
+                                {m.score > 0 ? "✓" : "✗"}
+                              </span>
+                            </td>
+                          </tr>
+                          {extraQuotes.map((q: any, qi: number) => (
+                            <tr key={`${m.measureId}-xq-${qi}`} className={`border-b border-border/30 align-top ${mi % 2 === 0 ? "" : "bg-muted/10"}`} data-testid={`mgmt-quote-${m.measureId}-${qi + 1}`}>
+                              <td className="py-1 px-2"></td>
+                              <td className="py-1 px-2">
+                                <span className="italic text-muted-foreground/80 leading-relaxed text-[11px]">"{q.text}"</span>
+                              </td>
+                              <td className="py-1 px-2 text-muted-foreground/80 text-[11px]">
+                                {q.source}{q.page ? ` (p. ${q.page})` : ""}
+                              </td>
+                              <td className="py-1 px-2"></td>
+                              <td className="py-1 px-2"></td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           );
