@@ -3,23 +3,77 @@ const CLIMATE_RISK_API_BASE = "https://climate-risk-api-v6-prob-be68437e49be.her
 const SUPPLY_CHAIN_API_BASE = "https://supply-chain-risk-api-7567b2b7e4c5.herokuapp.com";
 const MANAGEMENT_API_BASE = "https://climate-risk-replit-562361beb142.herokuapp.com";
 
-async function fetchWithRetry(url: string, options?: RequestInit, retries = 3, timeoutMs = 30000): Promise<Response> {
+const circuitBreakers: Record<string, { failures: number; openUntil: number }> = {};
+const CIRCUIT_THRESHOLD = 3;
+const CIRCUIT_COOLDOWN_MS = 60000;
+
+function getCircuitKey(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+function isCircuitOpen(key: string): boolean {
+  const cb = circuitBreakers[key];
+  if (!cb) return false;
+  if (cb.failures >= CIRCUIT_THRESHOLD && Date.now() < cb.openUntil) return true;
+  if (Date.now() >= cb.openUntil) {
+    cb.failures = 0;
+    return false;
+  }
+  return false;
+}
+
+function recordFailure(key: string) {
+  if (!circuitBreakers[key]) circuitBreakers[key] = { failures: 0, openUntil: 0 };
+  circuitBreakers[key].failures++;
+  if (circuitBreakers[key].failures >= CIRCUIT_THRESHOLD) {
+    circuitBreakers[key].openUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+  }
+}
+
+function recordSuccess(key: string) {
+  if (circuitBreakers[key]) circuitBreakers[key].failures = 0;
+}
+
+async function fetchWithRetry(url: string, options?: RequestInit, retries = 3, timeoutMs = 15000): Promise<Response> {
+  const circuitKey = getCircuitKey(url);
+  if (isCircuitOpen(circuitKey)) {
+    throw new Error(`Circuit breaker open for ${circuitKey} — API appears down, skipping for ${Math.ceil(CIRCUIT_COOLDOWN_MS / 1000)}s`);
+  }
+
   for (let i = 0; i < retries; i++) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeout);
-      if (response.ok) return response;
+      if (response.ok) {
+        recordSuccess(circuitKey);
+        return response;
+      }
       if (response.status === 404) return response;
+      if (response.status === 503) {
+        recordFailure(circuitKey);
+        throw new Error(`API returned 503 (unavailable): ${url}`);
+      }
       if (i < retries - 1) {
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+        await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)));
       }
     } catch (error: any) {
+      if (error.message?.includes("503")) {
+        throw error;
+      }
       if (error.name === "AbortError") {
+        recordFailure(circuitKey);
         if (i === retries - 1) throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`);
-      } else if (i === retries - 1) throw error;
-      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+      } else if (i === retries - 1) {
+        recordFailure(circuitKey);
+        throw error;
+      }
+      await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)));
     }
   }
   throw new Error(`Failed after ${retries} retries: ${url}`);
@@ -261,7 +315,7 @@ interface BulkManagementResponse {
 
 let cachedBulkData: BulkManagementResponse | null = null;
 let cacheTimestamp: number = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
 async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
   const now = Date.now();
