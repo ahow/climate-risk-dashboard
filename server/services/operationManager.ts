@@ -9,10 +9,26 @@ import { isinToIso3, sectorToIsic } from "../utils/mappings";
 import { log } from "../index";
 
 const BATCH_SIZE = 10;
-const DELAY_MS = 1500;
+const DELAY_MS = 500;
+const GEO_CONCURRENCY = 5;
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function processInBatches<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+    if (i + concurrency < items.length) await sleep(200);
+  }
+  return results;
 }
 
 export async function backfillCompanyFinancials() {
@@ -100,14 +116,12 @@ export async function processGeographicRisks(operationId: number, companyId: num
     });
 
     await storage.deleteGeoRisksByCompany(companyId);
+    let processed = 0;
 
-    for (let i = 0; i < assets.length; i++) {
+    await processInBatches(assets, GEO_CONCURRENCY, async (asset) => {
       const operation = await storage.getOperation(operationId);
-      if (!operation || operation.status === "paused" || operation.status === "cancelled") {
-        return;
-      }
+      if (!operation || operation.status === "paused" || operation.status === "cancelled") return;
 
-      const asset = assets[i];
       try {
         const assetValue = asset.estimatedValueUsd || 1000000;
         const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
@@ -125,34 +139,23 @@ export async function processGeographicRisks(operationId: number, companyId: num
           extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
           modelVersion: result.model_version || "V6",
         });
-
-        log(`Geo risk calculated for asset ${asset.facilityName} (${i + 1}/${assets.length})`);
       } catch (err: any) {
         log(`Error processing asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
         await storage.createGeoRisk({
           assetId: asset.id,
           companyId: companyId,
-          expectedAnnualLoss: 0,
-          expectedAnnualLossPct: 0,
-          presentValue30yr: 0,
-          hurricaneLoss: 0,
-          floodLoss: 0,
-          heatStressLoss: 0,
-          droughtLoss: 0,
-          extremePrecipLoss: 0,
+          expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
+          hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
           modelVersion: "FAILED",
         });
       }
 
+      processed++;
       await storage.updateOperation(operationId, {
-        processedItems: i + 1,
-        statusMessage: `Processed ${i + 1}/${assets.length} assets`,
+        processedItems: processed,
+        statusMessage: `Processed ${processed}/${assets.length} assets`,
       });
-
-      if (i < assets.length - 1) {
-        await sleep(DELAY_MS);
-      }
-    }
+    });
 
     await storage.updateOperation(operationId, {
       status: "completed",
@@ -309,98 +312,92 @@ export async function processAllRisks(operationId: number, companyId: number) {
     });
 
     await storage.deleteGeoRisksByCompany(companyId);
-    for (let i = 0; i < assets.length; i++) {
-      const operation = await storage.getOperation(operationId);
-      if (!operation || operation.status === "paused" || operation.status === "cancelled") return;
+    let geoProcessed = 0;
 
-      const asset = assets[i];
+    const geoRiskTask = (async () => {
+      await processInBatches(assets, GEO_CONCURRENCY, async (asset) => {
+        try {
+          const assetValue = asset.estimatedValueUsd || 1000000;
+          const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
+          await storage.createGeoRisk({
+            assetId: asset.id,
+            companyId,
+            expectedAnnualLoss: result.expected_annual_loss,
+            expectedAnnualLossPct: result.expected_annual_loss_pct,
+            presentValue30yr: result.present_value_30yr,
+            hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
+            floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
+            heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
+            droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
+            extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
+            modelVersion: result.model_version || "V6",
+          });
+        } catch (err: any) {
+          log(`Error processing asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+          await storage.createGeoRisk({
+            assetId: asset.id,
+            companyId,
+            expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
+            hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
+            modelVersion: "FAILED",
+          });
+        }
+        geoProcessed++;
+        await storage.updateOperation(operationId, {
+          processedItems: geoProcessed,
+          statusMessage: `Geographic risk: ${geoProcessed}/${assets.length} assets`,
+        });
+      });
+    })();
+
+    const supplyChainTask = (async () => {
       try {
-        const assetValue = asset.estimatedValueUsd || 1000000;
-        const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
-        await storage.createGeoRisk({
-          assetId: asset.id,
+        const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
+        const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+        await storage.deleteSupplyChainRisk(companyId);
+        const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+        const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
+        await storage.createSupplyChainRisk({
           companyId,
-          expectedAnnualLoss: result.expected_annual_loss,
-          expectedAnnualLossPct: result.expected_annual_loss_pct,
-          presentValue30yr: result.present_value_30yr,
-          hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
-          floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
-          heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
-          droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
-          extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
-          modelVersion: result.model_version || "V6",
+          countryCode: scResult.country,
+          countryName: scResult.country_name,
+          sectorCode: scResult.sector,
+          sectorName: scResult.sector_name,
+          directRisk: scResult.direct_risk,
+          indirectRisk: scResult.indirect_risk,
+          totalRisk: scResult.total_risk,
+          topSuppliers: scResult.top_suppliers,
+          directExpectedLoss: scaled.directExpectedLoss,
+          directExpectedLossPct: scaled.directExpectedLossPct,
+          indirectExpectedLoss: scaled.indirectExpectedLoss,
+          indirectExpectedLossPct: scaled.indirectExpectedLossPct,
         });
       } catch (err: any) {
-        log(`Error processing asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
-        await storage.createGeoRisk({
-          assetId: asset.id,
-          companyId,
-          expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
-          hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
-          modelVersion: "FAILED",
-        });
+        log(`Supply chain risk error: ${err.message}`);
       }
+    })();
 
-      await storage.updateOperation(operationId, {
-        processedItems: i + 1,
-        statusMessage: `Geographic risk: ${i + 1}/${assets.length} assets`,
-      });
-
-      if (i < assets.length - 1) await sleep(DELAY_MS);
-    }
-
-    await storage.updateOperation(operationId, {
-      processedItems: assets.length,
-      statusMessage: "Calculating supply chain risk...",
-    });
-
-    try {
-      const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
-      const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
-      await storage.deleteSupplyChainRisk(companyId);
-      const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
-      const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
-      await storage.createSupplyChainRisk({
-        companyId,
-        countryCode: scResult.country,
-        countryName: scResult.country_name,
-        sectorCode: scResult.sector,
-        sectorName: scResult.sector_name,
-        directRisk: scResult.direct_risk,
-        indirectRisk: scResult.indirect_risk,
-        totalRisk: scResult.total_risk,
-        topSuppliers: scResult.top_suppliers,
-        directExpectedLoss: scaled.directExpectedLoss,
-        directExpectedLossPct: scaled.directExpectedLossPct,
-        indirectExpectedLoss: scaled.indirectExpectedLoss,
-        indirectExpectedLossPct: scaled.indirectExpectedLossPct,
-      });
-    } catch (err: any) {
-      log(`Supply chain risk error: ${err.message}`);
-    }
-
-    await storage.updateOperation(operationId, {
-      processedItems: assets.length + 1,
-      statusMessage: "Fetching management performance...",
-    });
-
-    try {
-      await storage.deleteManagementScore(companyId);
-      const mgmtResult = await fetchManagementPerformance(company.isin);
-      if (mgmtResult) {
-        await storage.createManagementScore({
-          companyId,
-          totalScore: mgmtResult.company.totalScore,
-          totalPossible: mgmtResult.company.totalPossible,
-          summary: mgmtResult.company.summary,
-          analysisStatus: mgmtResult.company.analysisStatus,
-          scores: mgmtResult.scores,
-          documents: mgmtResult.documents,
-        });
+    const managementTask = (async () => {
+      try {
+        await storage.deleteManagementScore(companyId);
+        const mgmtResult = await fetchManagementPerformance(company.isin);
+        if (mgmtResult) {
+          await storage.createManagementScore({
+            companyId,
+            totalScore: mgmtResult.company.totalScore,
+            totalPossible: mgmtResult.company.totalPossible,
+            summary: mgmtResult.company.summary,
+            analysisStatus: mgmtResult.company.analysisStatus,
+            scores: mgmtResult.scores,
+            documents: mgmtResult.documents,
+          });
+        }
+      } catch (err: any) {
+        log(`Management score error: ${err.message}`);
       }
-    } catch (err: any) {
-      log(`Management score error: ${err.message}`);
-    }
+    })();
+
+    await Promise.all([geoRiskTask, supplyChainTask, managementTask]);
 
     await storage.updateOperation(operationId, {
       status: "completed",
@@ -541,84 +538,88 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         });
 
         const companyAssets = await storage.getAssetsByCompany(company.id);
-        await storage.deleteGeoRisksByCompany(company.id);
-        for (let i = 0; i < companyAssets.length; i++) {
-          const op = await storage.getOperation(operationId);
-          if (!op || op.status === "paused" || op.status === "cancelled") return;
 
-          const asset = companyAssets[i];
+        const geoRiskTask = (async () => {
+          await storage.deleteGeoRisksByCompany(company.id);
+          await processInBatches(companyAssets, GEO_CONCURRENCY, async (asset) => {
+            try {
+              const assetValue = asset.estimatedValueUsd || 1000000;
+              const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
+              await storage.createGeoRisk({
+                assetId: asset.id,
+                companyId: company.id,
+                expectedAnnualLoss: result.expected_annual_loss,
+                expectedAnnualLossPct: result.expected_annual_loss_pct,
+                presentValue30yr: result.present_value_30yr,
+                hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
+                floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
+                heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
+                droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
+                extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
+                modelVersion: result.model_version || "V6",
+              });
+            } catch (err: any) {
+              log(`Bulk: Geo risk error for asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+              await storage.createGeoRisk({
+                assetId: asset.id,
+                companyId: company.id,
+                expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
+                hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
+                modelVersion: "FAILED",
+              });
+            }
+          });
+        })();
+
+        const supplyChainTask = (async () => {
           try {
-            const assetValue = asset.estimatedValueUsd || 1000000;
-            const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
-            await storage.createGeoRisk({
-              assetId: asset.id,
+            const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
+            const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+            await storage.deleteSupplyChainRisk(company.id);
+            const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+            const supplierCostsForCompany = company.supplierCosts || entry.supplierCosts;
+            const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
+            await storage.createSupplyChainRisk({
               companyId: company.id,
-              expectedAnnualLoss: result.expected_annual_loss,
-              expectedAnnualLossPct: result.expected_annual_loss_pct,
-              presentValue30yr: result.present_value_30yr,
-              hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
-              floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
-              heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
-              droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
-              extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
-              modelVersion: result.model_version || "V6",
+              countryCode: scResult.country,
+              countryName: scResult.country_name,
+              sectorCode: scResult.sector,
+              sectorName: scResult.sector_name,
+              directRisk: scResult.direct_risk,
+              indirectRisk: scResult.indirect_risk,
+              totalRisk: scResult.total_risk,
+              topSuppliers: scResult.top_suppliers,
+              directExpectedLoss: scaled.directExpectedLoss,
+              directExpectedLossPct: scaled.directExpectedLossPct,
+              indirectExpectedLoss: scaled.indirectExpectedLoss,
+              indirectExpectedLossPct: scaled.indirectExpectedLossPct,
             });
           } catch (err: any) {
-            log(`Bulk: Geo risk error for asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
-            await storage.createGeoRisk({
-              assetId: asset.id,
-              companyId: company.id,
-              expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
-              hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
-              modelVersion: "FAILED",
-            });
+            log(`Bulk: Supply chain error for ${company.companyName}: ${err.message}`);
           }
-          if (i < companyAssets.length - 1) await sleep(DELAY_MS);
-        }
+        })();
 
-        try {
-          const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
-          const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
-          await storage.deleteSupplyChainRisk(company.id);
-          const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
-          const supplierCostsForCompany = company.supplierCosts || entry.supplierCosts;
-          const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
-          await storage.createSupplyChainRisk({
-            companyId: company.id,
-            countryCode: scResult.country,
-            countryName: scResult.country_name,
-            sectorCode: scResult.sector,
-            sectorName: scResult.sector_name,
-            directRisk: scResult.direct_risk,
-            indirectRisk: scResult.indirect_risk,
-            totalRisk: scResult.total_risk,
-            topSuppliers: scResult.top_suppliers,
-            directExpectedLoss: scaled.directExpectedLoss,
-            directExpectedLossPct: scaled.directExpectedLossPct,
-            indirectExpectedLoss: scaled.indirectExpectedLoss,
-            indirectExpectedLossPct: scaled.indirectExpectedLossPct,
-          });
-        } catch (err: any) {
-          log(`Bulk: Supply chain error for ${company.companyName}: ${err.message}`);
-        }
-
-        try {
-          await storage.deleteManagementScore(company.id);
-          const mgmtResult = await fetchManagementPerformance(company.isin);
-          if (mgmtResult) {
-            await storage.createManagementScore({
-              companyId: company.id,
-              totalScore: mgmtResult.company.totalScore,
-              totalPossible: mgmtResult.company.totalPossible,
-              summary: mgmtResult.company.summary,
-              analysisStatus: mgmtResult.company.analysisStatus,
-              scores: mgmtResult.scores,
-              documents: mgmtResult.documents,
-            });
+        const managementTask = (async () => {
+          try {
+            await storage.deleteManagementScore(company.id);
+            const mgmtResult = await fetchManagementPerformance(company.isin);
+            if (mgmtResult) {
+              await storage.createManagementScore({
+                companyId: company.id,
+                totalScore: mgmtResult.company.totalScore,
+                totalPossible: mgmtResult.company.totalPossible,
+                summary: mgmtResult.company.summary,
+                analysisStatus: mgmtResult.company.analysisStatus,
+                scores: mgmtResult.scores,
+                documents: mgmtResult.documents,
+              });
+            }
+          } catch (err: any) {
+            log(`Bulk: Management score error for ${company.companyName}: ${err.message}`);
           }
-        } catch (err: any) {
-          log(`Bulk: Management score error for ${company.companyName}: ${err.message}`);
-        }
+        })();
+
+        await Promise.all([geoRiskTask, supplyChainTask, managementTask]);
 
         processed++;
         await storage.updateOperation(operationId, {
@@ -636,7 +637,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         });
       }
 
-      await sleep(500);
+      await sleep(200);
     }
 
     await storage.updateOperation(operationId, {
