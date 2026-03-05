@@ -451,7 +451,11 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         if (company) {
           const existingGeoRisks = await storage.getGeoRisksByCompany(company.id);
           const existingSCRisk = await storage.getSupplyChainRisk(company.id);
-          if (existingGeoRisks.length > 0 && existingSCRisk) {
+          const companyAssetCount = (await storage.getAssetsByCompany(company.id)).length;
+          const hasSuccessfulGeoRisks = existingGeoRisks.length > 0 &&
+            existingGeoRisks.length >= companyAssetCount &&
+            existingGeoRisks.some((r: any) => r.modelVersion !== "FAILED");
+          if (hasSuccessfulGeoRisks && existingSCRisk) {
             const updates: any = {};
             if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
             if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
