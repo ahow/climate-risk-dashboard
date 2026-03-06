@@ -116,11 +116,15 @@ async function backfillManagementScores() {
     log(`[startup] Found ${companies.length} companies total`);
     const missing: Array<{id: number, isin: string, name: string}> = [];
     let hasScore = 0;
+    let corruptedCount = 0;
     for (const company of companies) {
       try {
         const mgmt = await storage.getManagementScore(company.id);
         if (!mgmt) {
           missing.push({ id: company.id, isin: company.isin, name: company.companyName });
+        } else if (mgmt.totalScore == null || mgmt.totalPossible == null || mgmt.totalPossible > 100) {
+          missing.push({ id: company.id, isin: company.isin, name: company.companyName });
+          corruptedCount++;
         } else {
           hasScore++;
         }
@@ -129,9 +133,9 @@ async function backfillManagementScores() {
         missing.push({ id: company.id, isin: company.isin, name: company.companyName });
       }
     }
-    log(`[startup] Management score status: ${hasScore} have scores, ${missing.length} missing`);
+    log(`[startup] Management score status: ${hasScore} valid, ${missing.length} need repair (${corruptedCount} corrupted, ${missing.length - corruptedCount} missing)`);
     if (missing.length === 0) {
-      log(`[startup] All ${companies.length} companies have management scores`);
+      log(`[startup] All ${companies.length} companies have valid management scores`);
       return;
     }
     log(`[startup] Backfilling management scores for ${missing.length} companies...`);
