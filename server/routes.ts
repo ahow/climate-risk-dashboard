@@ -586,7 +586,7 @@ export async function registerRoutes(
 
           try {
             const { fetchManagementPerformance } = await import("./services/externalApis");
-            const mgmtResult = await fetchManagementPerformance(company.isin);
+            const mgmtResult = await fetchManagementPerformance(company.isin, company.companyName);
             if (mgmtResult) {
               await storage.deleteManagementScore(company.id);
               await storage.createManagementScore({

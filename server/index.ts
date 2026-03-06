@@ -144,7 +144,7 @@ async function backfillManagementScores() {
     let noData = 0;
     for (const company of missing) {
       try {
-        const mgmtResult = await fetchManagementPerformance(company.isin);
+        const mgmtResult = await fetchManagementPerformance(company.isin, company.name);
         if (mgmtResult) {
           try {
             await storage.deleteManagementScore(company.id);

@@ -378,7 +378,8 @@ async function fetchManagementIndividual(
 }
 
 export async function fetchManagementPerformance(
-  isin: string
+  isin: string,
+  companyName?: string
 ): Promise<ManagementPerformanceResponse | null> {
   try {
     const bulkData = await fetchBulkManagementData();
@@ -386,6 +387,18 @@ export async function fetchManagementPerformance(
       c => c.company.isin.toUpperCase() === isin.toUpperCase()
     );
     if (match) return match;
+
+    if (companyName) {
+      const normalizedName = companyName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const nameMatch = bulkData.companies.find(c => {
+        const apiName = c.company.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        return apiName === normalizedName || apiName.includes(normalizedName) || normalizedName.includes(apiName);
+      });
+      if (nameMatch) {
+        console.log(`[mgmt] Found ${companyName} by name match (API ISIN: ${nameMatch.company.isin}, our ISIN: ${isin})`);
+        return nameMatch;
+      }
+    }
   } catch (err: any) {
     console.log(`[mgmt] Bulk export failed, falling back to individual lookup for ${isin}: ${err.message}`);
   }

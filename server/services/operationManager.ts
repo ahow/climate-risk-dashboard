@@ -258,7 +258,7 @@ export async function processManagementScore(operationId: number, companyId: num
 
     await storage.deleteManagementScore(companyId);
 
-    const result = await fetchManagementPerformance(company.isin);
+    const result = await fetchManagementPerformance(company.isin, company.companyName);
 
     if (!result) {
       await storage.updateOperation(operationId, {
@@ -380,7 +380,7 @@ export async function processAllRisks(operationId: number, companyId: number) {
     const managementTask = (async () => {
       try {
         await storage.deleteManagementScore(companyId);
-        const mgmtResult = await fetchManagementPerformance(company.isin);
+        const mgmtResult = await fetchManagementPerformance(company.isin, company.companyName);
         if (mgmtResult) {
           await storage.createManagementScore({
             companyId,
@@ -482,7 +482,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             }
             try {
               await storage.deleteManagementScore(company.id);
-              const mgmtResult = await fetchManagementPerformance(company.isin);
+              const mgmtResult = await fetchManagementPerformance(company.isin, company.companyName);
               if (mgmtResult) {
                 await storage.createManagementScore({
                   companyId: company.id,
@@ -642,7 +642,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         const managementTask = (async () => {
           try {
             await storage.deleteManagementScore(company.id);
-            const mgmtResult = await fetchManagementPerformance(company.isin);
+            const mgmtResult = await fetchManagementPerformance(company.isin, company.companyName);
             if (mgmtResult) {
               await storage.createManagementScore({
                 companyId: company.id,
