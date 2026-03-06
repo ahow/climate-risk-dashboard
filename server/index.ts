@@ -122,7 +122,7 @@ async function backfillManagementScores() {
         const mgmt = await storage.getManagementScore(company.id);
         if (!mgmt) {
           missing.push({ id: company.id, isin: company.isin, name: company.companyName });
-        } else if (mgmt.totalScore == null || mgmt.totalPossible == null || mgmt.totalPossible > 100) {
+        } else if (mgmt.totalScore == null || mgmt.totalPossible == null || mgmt.totalPossible !== 26) {
           missing.push({ id: company.id, isin: company.isin, name: company.companyName });
           corruptedCount++;
         } else {
