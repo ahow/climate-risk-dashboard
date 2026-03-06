@@ -500,6 +500,83 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/backfill-management", async (_req, res) => {
+    try {
+      const companies = await storage.getCompanies();
+      const missing: Array<{id: number, isin: string, name: string}> = [];
+      for (const company of companies) {
+        const mgmt = await storage.getManagementScore(company.id);
+        if (!mgmt) {
+          missing.push({ id: company.id, isin: company.isin, name: company.companyName });
+        }
+      }
+      if (missing.length === 0) {
+        return res.json({ message: "All companies already have management scores", backfilled: 0 });
+      }
+
+      const operation = await storage.createOperation({
+        type: "bulk_processing",
+        status: "running",
+        statusMessage: `Backfilling management scores for ${missing.length} companies`,
+        totalItems: missing.length,
+      });
+
+      (async () => {
+        let processed = 0;
+        let success = 0;
+        for (const company of missing) {
+          const op = await storage.getOperation(operation.id);
+          if (op?.status === "paused") {
+            while (true) {
+              await new Promise(r => setTimeout(r, 2000));
+              const check = await storage.getOperation(operation.id);
+              if (check?.status !== "paused") break;
+            }
+          }
+          if (op?.status === "cancelled") break;
+
+          try {
+            const { fetchManagementPerformance } = await import("./services/externalApis");
+            const mgmtResult = await fetchManagementPerformance(company.isin);
+            if (mgmtResult) {
+              await storage.deleteManagementScore(company.id);
+              await storage.createManagementScore({
+                companyId: company.id,
+                totalScore: mgmtResult.company.totalScore,
+                totalPossible: mgmtResult.company.totalPossible,
+                summary: mgmtResult.company.summary,
+                analysisStatus: mgmtResult.company.analysisStatus,
+                scores: mgmtResult.scores,
+                documents: mgmtResult.documents,
+              });
+              success++;
+              console.log(`[backfill] Management score saved for ${company.name} (${company.isin})`);
+            } else {
+              console.log(`[backfill] No management data for ${company.name} (${company.isin})`);
+            }
+          } catch (err: any) {
+            console.log(`[backfill] Error for ${company.name}: ${err.message}`);
+          }
+          processed++;
+          await storage.updateOperation(operation.id, {
+            processedItems: processed,
+            statusMessage: `Management backfill: ${processed}/${missing.length} (${success} saved)`,
+          });
+        }
+        await storage.updateOperation(operation.id, {
+          status: "completed",
+          processedItems: processed,
+          statusMessage: `Management backfill complete: ${success}/${missing.length} scores saved`,
+          completedAt: new Date(),
+        });
+      })();
+
+      res.json({ message: `Started backfilling management scores for ${missing.length} companies`, operationId: operation.id, missing: missing.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.delete("/api/company-list/:id", async (req, res) => {
     try {
       await storage.deleteCompanyListUpload(parseInt(req.params.id));
