@@ -9,7 +9,8 @@ const CIRCUIT_COOLDOWN_MS = 60000;
 
 function getCircuitKey(url: string): string {
   try {
-    return new URL(url).hostname;
+    const u = new URL(url);
+    return u.hostname + u.pathname;
   } catch {
     return url;
   }
@@ -326,8 +327,8 @@ async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
   const response = await fetchWithRetry(
     `${MANAGEMENT_API_BASE}/api/export/json`,
     undefined,
-    3,
-    60000
+    1,
+    45000
   );
   if (!response.ok) {
     throw new Error(`Management bulk API error: ${response.status}`);
