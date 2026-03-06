@@ -451,11 +451,13 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         if (company) {
           const existingGeoRisks = await storage.getGeoRisksByCompany(company.id);
           const existingSCRisk = await storage.getSupplyChainRisk(company.id);
+          const existingMgmt = await storage.getManagementScore(company.id);
           const companyAssetCount = (await storage.getAssetsByCompany(company.id)).length;
           const hasSuccessfulGeoRisks = existingGeoRisks.length > 0 &&
             existingGeoRisks.length >= companyAssetCount &&
             existingGeoRisks.some((r: any) => r.modelVersion !== "FAILED");
-          if (hasSuccessfulGeoRisks && existingSCRisk) {
+
+          if (hasSuccessfulGeoRisks && existingSCRisk && existingMgmt) {
             const updates: any = {};
             if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
             if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
@@ -466,6 +468,40 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             await storage.updateOperation(operationId, {
               processedItems: processed,
               statusMessage: `${processed}/${totalSteps}: ${company.companyName} already processed, skipping`,
+            });
+            await sleep(100);
+            continue;
+          }
+
+          if (hasSuccessfulGeoRisks && existingSCRisk && !existingMgmt) {
+            const updates: any = {};
+            if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
+            if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+            if (Object.keys(updates).length > 0) {
+              await storage.updateCompany(company.id, updates);
+            }
+            try {
+              await storage.deleteManagementScore(company.id);
+              const mgmtResult = await fetchManagementPerformance(company.isin);
+              if (mgmtResult) {
+                await storage.createManagementScore({
+                  companyId: company.id,
+                  totalScore: mgmtResult.company.totalScore,
+                  totalPossible: mgmtResult.company.totalPossible,
+                  summary: mgmtResult.company.summary,
+                  analysisStatus: mgmtResult.company.analysisStatus,
+                  scores: mgmtResult.scores,
+                  documents: mgmtResult.documents,
+                });
+                log(`Bulk: Backfilled management score for ${company.companyName}`);
+              }
+            } catch (err: any) {
+              log(`Bulk: Management score backfill error for ${company.companyName}: ${err.message}`);
+            }
+            processed++;
+            await storage.updateOperation(operationId, {
+              processedItems: processed,
+              statusMessage: `${processed}/${totalSteps}: ${company.companyName} - management score updated`,
             });
             await sleep(100);
             continue;
