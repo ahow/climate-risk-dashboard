@@ -111,43 +111,74 @@ app.use((req, res, next) => {
 
 async function backfillManagementScores() {
   try {
+    log(`[startup] Starting management score backfill check...`);
     const companies = await storage.getCompanies();
+    log(`[startup] Found ${companies.length} companies total`);
     const missing: Array<{id: number, isin: string, name: string}> = [];
+    let hasScore = 0;
     for (const company of companies) {
-      const mgmt = await storage.getManagementScore(company.id);
-      if (!mgmt) {
+      try {
+        const mgmt = await storage.getManagementScore(company.id);
+        if (!mgmt) {
+          missing.push({ id: company.id, isin: company.isin, name: company.companyName });
+        } else {
+          hasScore++;
+        }
+      } catch (checkErr: any) {
+        log(`[startup] Error checking management score for ${company.companyName} (id:${company.id}): ${checkErr.message}`);
         missing.push({ id: company.id, isin: company.isin, name: company.companyName });
       }
     }
+    log(`[startup] Management score status: ${hasScore} have scores, ${missing.length} missing`);
     if (missing.length === 0) {
       log(`[startup] All ${companies.length} companies have management scores`);
       return;
     }
-    log(`[startup] Backfilling management scores for ${missing.length}/${companies.length} companies`);
+    log(`[startup] Backfilling management scores for ${missing.length} companies...`);
     let success = 0;
+    let failed = 0;
+    let noData = 0;
     for (const company of missing) {
       try {
         const mgmtResult = await fetchManagementPerformance(company.isin);
         if (mgmtResult) {
-          await storage.deleteManagementScore(company.id);
-          await storage.createManagementScore({
-            companyId: company.id,
-            totalScore: mgmtResult.company.totalScore,
-            totalPossible: mgmtResult.company.totalPossible,
-            summary: mgmtResult.company.summary,
-            analysisStatus: mgmtResult.company.analysisStatus,
-            scores: mgmtResult.scores,
-            documents: mgmtResult.documents,
-          });
-          success++;
-          log(`[startup] Management score saved for ${company.name} (${success}/${missing.length})`);
+          try {
+            await storage.deleteManagementScore(company.id);
+          } catch (delErr: any) {
+            log(`[startup] Delete error for ${company.name}: ${delErr.message}`);
+          }
+          try {
+            await storage.createManagementScore({
+              companyId: company.id,
+              totalScore: mgmtResult.company.totalScore,
+              totalPossible: mgmtResult.company.totalPossible,
+              summary: mgmtResult.company.summary,
+              analysisStatus: mgmtResult.company.analysisStatus,
+              scores: mgmtResult.scores,
+              documents: mgmtResult.documents,
+            });
+            success++;
+            if (success % 10 === 0 || success <= 3) {
+              log(`[startup] Management score saved for ${company.name} (${success}/${missing.length})`);
+            }
+          } catch (createErr: any) {
+            failed++;
+            log(`[startup] CREATE FAILED for ${company.name}: ${createErr.message}`);
+          }
+        } else {
+          noData++;
+          if (noData <= 5) {
+            log(`[startup] No management data available for ${company.name} (${company.isin})`);
+          }
         }
       } catch (err: any) {
-        log(`[startup] Management score error for ${company.name}: ${err.message}`);
+        failed++;
+        log(`[startup] Fetch error for ${company.name}: ${err.message}`);
       }
     }
-    log(`[startup] Management backfill complete: ${success}/${missing.length} scores saved`);
+    log(`[startup] Management backfill complete: ${success} saved, ${noData} no data, ${failed} failed out of ${missing.length} missing`);
   } catch (err: any) {
-    log(`[startup] Management backfill failed: ${err.message}`);
+    log(`[startup] Management backfill FATAL error: ${err.message}`);
+    log(`[startup] Stack: ${err.stack}`);
   }
 }
