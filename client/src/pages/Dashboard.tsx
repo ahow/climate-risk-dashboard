@@ -41,9 +41,7 @@ function getCompanyMetrics(company: any) {
 
   const sc = company.supplyChainRisk;
   const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-  const scDirectEAL = (sc?.directRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor;
-  const scIndirectEAL = (sc?.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor;
-  const supplyChainEAL = scDirectEAL + scIndirectEAL;
+  const supplyChainEAL = (sc?.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor;
   const totalExposure = directExposure + supplyChainEAL;
 
   const mgmtTotalScore = company.managementScore?.totalScore ?? null;
@@ -56,7 +54,7 @@ function getCompanyMetrics(company: any) {
     : totalExposure;
 
   const directExposurePV = company.totalGeoRiskPV || 0;
-  const scPV = (sc?.directRisk?.expected_loss?.present_value_30yr || 0) * scScaleFactor;
+  const scPV = (sc?.indirectRisk?.expected_loss?.present_value_30yr || 0) * scScaleFactor;
   const totalExposurePV = directExposurePV + scPV;
   const adjustedExposurePV = mgmtScorePct != null
     ? totalExposurePV * (1 - 0.7 * mgmtScorePct)

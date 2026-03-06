@@ -37,9 +37,17 @@ A full-stack web application that quantifies and visualizes climate-related fina
 
 ## Supply Chain Risk Scaling
 - Supply Chain API returns expected loss per $1M of exposure
+- Only **indirect risk** is used from the Supply Chain API (direct climate risk is captured by Geographic Risk on actual assets)
 - Scale factor = supplierCosts / 1,000,000 (actual dollar exposure / $1M)
 - All stored supply chain EAL values are scaled to actual supplier exposure
 - If no supplier costs data available, falls back to raw per-$1M values (scale factor = 1)
+
+## Management Score Display
+- The Management API `totalScore` field IS the percentage (e.g. 27 means 27%), not a raw score to divide
+- `totalPossible` is always 26 (number of measures assessed)
+- Display `totalScore` directly as the percentage
+- For Adjusted Exposure calculation: `mgmtScorePct = totalScore / 100`
+- Name-matching fallback used when ISIN not found in Management API (e.g. Rio Tinto GB→AU, EQT SE→US)
 
 ## Key Features
 1. **Company Dashboard** (`/`) - Overview with add-by-ISIN, search, risk summary cards

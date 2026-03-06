@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  ArrowLeft, Play, Loader2, AlertTriangle, Droplets,
-  Flame, Thermometer, CloudRain, Waves, Shield,
+  ArrowLeft, Play, Loader2, AlertTriangle, Shield,
   Link2, Building2, MapPin, ChevronDown, ChevronRight,
   Globe,
 } from "lucide-react";
@@ -161,8 +160,8 @@ function getRiskLevel(score: number, max: number = 5): string {
   return "critical";
 }
 
-function directRiskPV(scRisk: any): number {
-  return (scRisk.directRisk as any)?.expected_loss?.present_value_30yr || 0;
+function indirectRiskPV(scRisk: any): number {
+  return (scRisk.indirectRisk as any)?.expected_loss?.present_value_30yr || 0;
 }
 
 function CollapsibleSection({
@@ -350,18 +349,15 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
 
 function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) {
   const scaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-  const directRisk = scRisk.directRisk as any;
-  const breakdown = directRisk?.expected_loss?.risk_breakdown;
+  const indirectRisk = scRisk.indirectRisk as any;
 
-  const hazards = [
-    { key: "hurricane", label: "Hurricane", icon: Waves },
-    { key: "flood", label: "Flood", icon: Droplets },
-    { key: "heat_stress", label: "Heat Stress", icon: Thermometer },
-    { key: "drought", label: "Drought", icon: Flame },
-    { key: "extreme_precipitation", label: "Extreme Precipitation", icon: CloudRain },
+  const riskDimensions = [
+    { key: "climate", label: "Climate" },
+    { key: "water_stress", label: "Water Stress" },
+    { key: "nature_loss", label: "Nature Loss" },
+    { key: "modern_slavery", label: "Modern Slavery" },
+    { key: "political", label: "Political" },
   ];
-
-  const totalDirectLoss = (directRisk?.expected_loss?.total_annual_loss || 1) * scaleFactor;
 
   return (
     <div className="space-y-4">
@@ -369,57 +365,44 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
         {scRisk.countryName} / {scRisk.sectorName}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border">
           <CardContent className="pt-4 pb-3">
-            <div className="text-xs text-muted-foreground mb-1">Direct Climate Risk (EAL)</div>
-            <div className="text-lg font-bold" data-testid="text-sc-direct-eal">
-              {formatCurrency((directRisk?.expected_loss?.total_annual_loss || 0) * scaleFactor)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {(directRisk?.expected_loss?.total_annual_loss_pct || 0).toFixed(2)}% per $1M exposure
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border">
-          <CardContent className="pt-4 pb-3">
-            <div className="text-xs text-muted-foreground mb-1">Indirect Climate Risk (EAL)</div>
+            <div className="text-xs text-muted-foreground mb-1">Indirect Supply Chain Risk (EAL)</div>
             <div className="text-lg font-bold" data-testid="text-sc-indirect-eal">
-              {formatCurrency(((scRisk.indirectRisk as any)?.expected_loss?.total_annual_loss || 0) * scaleFactor)}
+              {formatCurrency((indirectRisk?.expected_loss?.total_annual_loss || 0) * scaleFactor)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {((scRisk.indirectRisk as any)?.expected_loss?.total_annual_loss_pct || 0).toFixed(2)}% per $1M exposure
+              {(indirectRisk?.expected_loss?.total_annual_loss_pct || 0).toFixed(2)}% per $1M exposure
             </div>
           </CardContent>
         </Card>
         <Card className="border">
           <CardContent className="pt-4 pb-3">
-            <div className="text-xs text-muted-foreground mb-1">Total Climate Risk (EAL)</div>
+            <div className="text-xs text-muted-foreground mb-1">Scaling</div>
             <div className="text-lg font-bold" data-testid="text-sc-total-eal">
-              {formatCurrency(((directRisk?.expected_loss?.total_annual_loss || 0) + ((scRisk.indirectRisk as any)?.expected_loss?.total_annual_loss || 0)) * scaleFactor)}
+              {company.supplierCosts ? formatCurrency(company.supplierCosts) : "N/A"}
             </div>
             <div className="text-xs text-muted-foreground">
-              {company.supplierCosts ? `Scaled to ${formatCurrency(company.supplierCosts)} supplier exposure` : "Per $1M exposure (no supplier costs data)"}
+              {company.supplierCosts ? `Scale factor: ${scaleFactor.toFixed(3)}x` : "Per $1M exposure (no supplier costs data)"}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {breakdown && (
+      {indirectRisk && (
         <div>
-          <h4 className="text-sm font-medium mb-3">Direct Climate Risk Breakdown by Hazard</h4>
+          <h4 className="text-sm font-medium mb-3">Indirect Risk by Dimension</h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {hazards.map(({ key, label, icon: Icon }) => {
-              const hazardData = breakdown[key];
-              const loss = (hazardData?.annual_loss || 0) * scaleFactor;
-              const pct = totalDirectLoss > 0 ? (loss / totalDirectLoss) * 100 : 0;
+            {riskDimensions.map(({ key, label }) => {
+              const score = indirectRisk[key] || 0;
+              const pct = (score / 5) * 100;
               return (
-                <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-hazard-${key}`}>
-                  <Icon className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-dimension-${key}`}>
                   <div className="text-xs text-muted-foreground mb-1">{label}</div>
-                  <div className="text-sm font-bold">{formatCurrency(loss)}</div>
+                  <div className="text-sm font-bold">{score.toFixed(1)}</div>
                   <Progress value={pct} className="h-1.5 mt-1" />
-                  <div className="text-xs text-muted-foreground mt-1">{pct.toFixed(1)}% of direct</div>
+                  <div className="text-xs text-muted-foreground mt-1">{score.toFixed(1)} / 5.0</div>
                 </div>
               );
             })}
@@ -427,11 +410,11 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
         </div>
       )}
 
-      {directRiskPV(scRisk) > 0 && (
+      {indirectRiskPV(scRisk) > 0 && (
         <div className="border rounded-md p-3">
-          <div className="text-xs text-muted-foreground">30-Year Present Value (Direct)</div>
+          <div className="text-xs text-muted-foreground">30-Year Present Value (Indirect)</div>
           <div className="text-lg font-bold" data-testid="text-sc-pv30">
-            {formatCurrency(directRiskPV(scRisk) * scaleFactor)}
+            {formatCurrency(indirectRiskPV(scRisk) * scaleFactor)}
           </div>
         </div>
       )}
@@ -485,9 +468,8 @@ export default function CompanyDetail() {
 
   const totalGeoEAL = company.geoRisks?.length > 0 ? formatCurrency(company.totalGeoRisk) : "Not calculated";
   const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-  const scDirectEAL = scRisk ? (scRisk.directRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
   const scIndirectEAL = scRisk ? (scRisk.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
-  const totalScEAL = scRisk ? formatCurrency(scDirectEAL + scIndirectEAL) : "Not calculated";
+  const totalScEAL = scRisk ? formatCurrency(scIndirectEAL) : "Not calculated";
   const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}%` : "Not assessed";
 
   return (
