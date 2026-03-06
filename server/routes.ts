@@ -33,12 +33,23 @@ export async function registerRoutes(
             const totalGeoRisk = geoRisks.reduce((sum, r) => sum + (Number(r.expectedAnnualLoss) || 0), 0);
             const totalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (Number(r.presentValue30yr) || 0), 0);
 
+            const mgmtSummary = mgmtScore ? {
+              totalScore: mgmtScore.totalScore,
+              totalPossible: mgmtScore.totalPossible,
+            } : null;
+
+            const scSummary = scRisk ? {
+              directRisk: scRisk.directRisk,
+              indirectRisk: scRisk.indirectRisk,
+              totalRisk: scRisk.totalRisk,
+            } : null;
+
             return {
               ...company,
               totalGeoRisk,
               totalGeoRiskPV,
-              supplyChainRisk: scRisk,
-              managementScore: mgmtScore,
+              supplyChainRisk: scSummary,
+              managementScore: mgmtSummary,
               hasGeoRisks: geoRisks.length > 0,
               hasSupplyChainRisk: !!scRisk,
               hasManagementScore: !!mgmtScore,
