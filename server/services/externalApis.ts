@@ -316,7 +316,9 @@ interface BulkManagementResponse {
 
 let cachedBulkData: BulkManagementResponse | null = null;
 let cacheTimestamp: number = 0;
+let bulkFailedUntil: number = 0;
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const BULK_FAIL_COOLDOWN_MS = 10 * 60 * 1000;
 
 async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
   const now = Date.now();
@@ -324,26 +326,35 @@ async function fetchBulkManagementData(): Promise<BulkManagementResponse> {
     return cachedBulkData;
   }
 
-  const response = await fetchWithRetry(
-    `${MANAGEMENT_API_BASE}/api/export/json`,
-    undefined,
-    1,
-    45000
-  );
-  if (!response.ok) {
-    throw new Error(`Management bulk API error: ${response.status}`);
+  if (now < bulkFailedUntil) {
+    throw new Error("Bulk export recently failed, skipping for cooldown period");
   }
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    const text = await response.text();
-    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
-      throw new Error("Management API returned HTML instead of JSON - API may be unavailable");
+
+  try {
+    const response = await fetchWithRetry(
+      `${MANAGEMENT_API_BASE}/api/export/json`,
+      undefined,
+      1,
+      30000
+    );
+    if (!response.ok) {
+      throw new Error(`Management bulk API error: ${response.status}`);
     }
-    throw new Error(`Management API returned unexpected content-type: ${contentType}`);
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await response.text();
+      if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+        throw new Error("Management API returned HTML instead of JSON - API may be unavailable");
+      }
+      throw new Error(`Management API returned unexpected content-type: ${contentType}`);
+    }
+    cachedBulkData = await response.json() as BulkManagementResponse;
+    cacheTimestamp = now;
+    return cachedBulkData;
+  } catch (err) {
+    bulkFailedUntil = Date.now() + BULK_FAIL_COOLDOWN_MS;
+    throw err;
   }
-  cachedBulkData = await response.json() as BulkManagementResponse;
-  cacheTimestamp = now;
-  return cachedBulkData;
 }
 
 async function fetchManagementIndividual(
