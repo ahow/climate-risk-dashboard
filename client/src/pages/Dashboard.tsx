@@ -30,6 +30,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatPct(value: number): string {
+  if (value === 0) return "0%";
   if (value >= 10) return `${value.toFixed(0)}%`;
   if (value >= 1) return `${value.toFixed(1)}%`;
   return `${value.toFixed(2)}%`;
@@ -46,9 +47,8 @@ function getCompanyMetrics(company: any) {
   const totalExposure = directExposure + supplyChainEAL;
 
   const mgmtTotalScore = company.managementScore?.totalScore ?? null;
-  const mgmtTotalPossible = company.managementScore?.totalPossible ?? null;
-  const mgmtScorePct = mgmtTotalScore != null && mgmtTotalPossible && mgmtTotalPossible > 0
-    ? mgmtTotalScore / mgmtTotalPossible
+  const mgmtScorePct = mgmtTotalScore != null
+    ? mgmtTotalScore / 100
     : null;
 
   const adjustedExposure = mgmtScorePct != null
