@@ -17,6 +17,27 @@ export const db = drizzle(pool, { schema });
 export async function ensureSchemaUpdates() {
   const client = await pool.connect();
   try {
+    const tableCheck = await client.query(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='management_scores'`
+    );
+    if (tableCheck.rows.length === 0) {
+      console.log("[db] Creating management_scores table");
+      await client.query(`
+        CREATE TABLE management_scores (
+          id SERIAL PRIMARY KEY,
+          company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+          total_score INTEGER,
+          total_possible INTEGER,
+          summary TEXT,
+          analysis_status TEXT,
+          scores JSONB,
+          documents JSONB,
+          calculated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      console.log("[db] management_scores table created");
+    }
+
     const migrations = [
       {
         check: `SELECT column_name FROM information_schema.columns WHERE table_name='companies' AND column_name='supplier_costs'`,

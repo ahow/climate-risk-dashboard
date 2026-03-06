@@ -500,6 +500,44 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/debug/management-status", async (_req, res) => {
+    try {
+      const { pool } = await import("./db");
+      const client = await pool.connect();
+      try {
+        const tableExists = await client.query(
+          `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='management_scores'`
+        );
+        if (tableExists.rows.length === 0) {
+          return res.json({ error: "management_scores table does not exist!", tableExists: false });
+        }
+        const countResult = await client.query(`SELECT COUNT(*) as count FROM management_scores`);
+        const companyCount = await client.query(`SELECT COUNT(*) as count FROM companies`);
+        const sampleScores = await client.query(
+          `SELECT ms.id, ms.company_id, ms.total_score, ms.total_possible, c.company_name, c.isin
+           FROM management_scores ms JOIN companies c ON ms.company_id = c.id LIMIT 5`
+        );
+        const companiesWithoutScores = await client.query(
+          `SELECT c.id, c.company_name, c.isin FROM companies c
+           LEFT JOIN management_scores ms ON c.id = ms.company_id
+           WHERE ms.id IS NULL LIMIT 10`
+        );
+        res.json({
+          tableExists: true,
+          totalCompanies: parseInt(companyCount.rows[0].count),
+          managementScoresCount: parseInt(countResult.rows[0].count),
+          missingCount: parseInt(companyCount.rows[0].count) - parseInt(countResult.rows[0].count),
+          sampleScores: sampleScores.rows,
+          companiesWithoutScores: companiesWithoutScores.rows,
+        });
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message, stack: err.stack });
+    }
+  });
+
   app.post("/api/backfill-management", async (_req, res) => {
     try {
       const companies = await storage.getCompanies();
