@@ -234,14 +234,12 @@ function ManagementSummaryRow({ scores }: { scores: Record<string, any[]> }) {
 }
 
 function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
-  const scorePct = mgmtScore.totalPossible > 0
-    ? ((mgmtScore.totalScore / mgmtScore.totalPossible) * 100).toFixed(0)
-    : "0";
+  const scorePct = mgmtScore.totalScore != null ? mgmtScore.totalScore.toString() : "0";
 
   return (
     <CollapsibleSection
       icon={Shield}
-      title={`Management Performance (${mgmtScore.totalScore}/${mgmtScore.totalPossible})`}
+      title={`Management Performance (${mgmtScore.totalScore}%)`}
       summary={`${scorePct}%`}
       testId="section-management"
       alwaysVisibleContent={
@@ -490,7 +488,7 @@ export default function CompanyDetail() {
   const scDirectEAL = scRisk ? (scRisk.directRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
   const scIndirectEAL = scRisk ? (scRisk.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
   const totalScEAL = scRisk ? formatCurrency(scDirectEAL + scIndirectEAL) : "Not calculated";
-  const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}/${mgmtScore.totalPossible}` : "Not assessed";
+  const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}%` : "Not assessed";
 
   return (
     <div className="space-y-6" data-testid="company-detail-page">
@@ -560,7 +558,7 @@ export default function CompanyDetail() {
             </div>
             {mgmtScore && (
               <div className="text-xs text-muted-foreground mt-1">
-                {((mgmtScore.totalScore / mgmtScore.totalPossible) * 100).toFixed(0)}% coverage
+                {mgmtScore.totalScore}% coverage
               </div>
             )}
           </CardContent>

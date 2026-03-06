@@ -652,7 +652,7 @@ export async function registerRoutes(
           const scIndirectScaled = scIndirectRaw * scSf;
           const totalScRisk = scDirectScaled + scIndirectScaled;
           const mgmtScoreVal = mgmtScore
-            ? `${mgmtScore.totalScore}/${mgmtScore.totalPossible}`
+            ? `${mgmtScore.totalScore}%`
             : "N/A";
           const totalRisk = totalGeoRisk + totalScRisk;
 
