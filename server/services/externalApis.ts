@@ -158,14 +158,14 @@ export async function fetchAssetLocations(isin: string): Promise<AssetLocationRe
     latitude: a.latitude,
     longitude: a.longitude,
     coordinateCertainty: a.coordinateCertainty ?? a.coordinate_certainty ?? 0,
-    estimatedValueUsd: (a.valueUsd || a.estimated_value_usd || 0) * 1000,
+    estimatedValueUsd: a.valueUsd || a.estimated_value_usd || 0,
     valuationConfidence: a.valuationConfidence ?? a.valuation_confidence ?? 0,
     ownershipShare: a.ownershipShare ?? a.ownership_share ?? 100,
     dataSource: a.dataSource || a.data_source || "API",
   }));
 
   const totalEstimatedValue = raw.total_estimated_value
-    ? raw.total_estimated_value * 1000
+    ? raw.total_estimated_value
     : normalizedAssets.reduce((sum, a) => sum + a.estimatedValueUsd, 0);
 
   return {

@@ -29,11 +29,10 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - `company_list_uploads` - Metadata for uploaded company spreadsheets
 - `company_list_entries` - Individual company rows from uploaded spreadsheets
 
-## Unit Handling ($'000s Conversion)
-- Spreadsheet values (TotalValue, EV, SUPPLIERCOSTS) are in $'000s — multiplied by 1000 on upload to store as actual dollars
-- Asset API values (estimatedValueUsd) are in $'000s — multiplied by 1000 on ingestion to store as actual dollars
-- All internal storage and calculations use actual dollar values
-- Spreadsheet downloads (XLSX/CSV) convert back to $'000s for compatibility
+## Unit Handling
+- All financial values (spreadsheet uploads, Asset API, internal storage) are in actual US dollars — no unit conversions
+- Spreadsheet columns TotalValue, EV, SUPPLIERCOSTS are stored as-is
+- Asset API estimated_value_usd values are stored as-is
 
 ## Supply Chain Risk Scaling
 - Supply Chain API returns expected loss per $1M of exposure
