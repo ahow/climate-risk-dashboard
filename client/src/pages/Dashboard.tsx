@@ -385,17 +385,17 @@ export default function Dashboard() {
         </Card>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
-          <Table data-testid="table-companies">
+          <Table data-testid="table-companies" className="table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[180px]">Company</TableHead>
-                <TableHead className="text-right">Direct Exposure</TableHead>
-                <TableHead className="text-right">Supply Chain</TableHead>
-                <TableHead className="text-right">Total Exposure</TableHead>
-                <TableHead className="text-right">Mgmt Score</TableHead>
-                <TableHead className="text-right">Adjusted Exposure</TableHead>
-                <TableHead className="text-right">Valuation Exposure</TableHead>
-                <TableHead className="w-10"></TableHead>
+                <TableHead className="w-[22%]">Company</TableHead>
+                <TableHead className="text-right w-[11%]">Direct Exposure</TableHead>
+                <TableHead className="text-right w-[11%]">Supply Chain</TableHead>
+                <TableHead className="text-right w-[12%]">Total Exposure</TableHead>
+                <TableHead className="text-right w-[8%]">Mgmt Score</TableHead>
+                <TableHead className="text-right w-[13%]">Adjusted Exposure</TableHead>
+                <TableHead className="text-right w-[13%]">Valuation Exposure</TableHead>
+                <TableHead className="w-[4%]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -404,9 +404,9 @@ export default function Dashboard() {
                 const hasRisks = company.hasGeoRisks || company.hasSupplyChainRisk;
                 return (
                   <TableRow key={company.id} data-testid={`row-company-${company.id}`}>
-                    <TableCell>
+                    <TableCell className="overflow-hidden">
                       <Link href={`/company/${company.id}`}>
-                        <span className="font-semibold text-foreground hover:text-primary cursor-pointer" data-testid={`link-company-${company.id}`}>
+                        <span className="font-semibold text-foreground hover:text-primary cursor-pointer text-sm truncate block" data-testid={`link-company-${company.id}`} title={company.companyName}>
                           {company.companyName}
                         </span>
                       </Link>
