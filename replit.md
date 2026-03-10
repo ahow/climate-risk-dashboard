@@ -35,11 +35,14 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - Asset API estimated_value_usd values are stored as-is
 
 ## Supply Chain Risk Scaling
-- Supply Chain API returns expected loss per $1M of exposure
+- Supply Chain API returns expected loss per $1B of exposure
 - Only **indirect risk** is used from the Supply Chain API (direct climate risk is captured by Geographic Risk on actual assets)
-- Scale factor = supplierCosts / 1,000,000 (actual dollar exposure / $1M)
-- All stored supply chain EAL values are scaled to actual supplier exposure
-- If no supplier costs data available, falls back to raw per-$1M values (scale factor = 1)
+- Primary metric: `present_value` (PV) from the API, not `total_annual_loss`
+- Scale factor = supplierCosts / 1,000,000,000 (actual dollar exposure / $1B)
+- Hazard breakdown PVs available: flood, drought, heat_stress, wildfire, tropical_cyclone
+- `supplyChainTiers` JSONB column stores tier-level PV breakdowns
+- If no supplier costs data available, falls back to raw per-$1B values (scale factor = 1)
+- Dashboard and CompanyDetail display PV-based values throughout
 
 ## Management Score Display
 - The Management API `totalScore` field IS the percentage (e.g. 27 means 27%), not a raw score to divide

@@ -37,38 +37,31 @@ function formatPct(value: number): string {
 }
 
 function getCompanyMetrics(company: any) {
-  const directExposure = company.totalGeoRisk || 0;
-
   const sc = company.supplyChainRisk;
-  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-  const supplyChainEAL = (sc?.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor;
-  const totalExposure = directExposure + supplyChainEAL;
+  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
+  const supplyChainPV = (sc?.indirectRisk?.expected_loss?.present_value || 0) * scScaleFactor;
+
+  const directExposurePV = company.totalGeoRiskPV || 0;
+  const totalExposurePV = directExposurePV + supplyChainPV;
 
   const mgmtTotalScore = company.managementScore?.totalScore ?? null;
   const mgmtScorePct = mgmtTotalScore != null
     ? mgmtTotalScore / 100
     : null;
 
-  const adjustedExposure = mgmtScorePct != null
-    ? totalExposure * (1 - 0.7 * mgmtScorePct)
-    : totalExposure;
-
-  const directExposurePV = company.totalGeoRiskPV || 0;
-  const scPV = (sc?.indirectRisk?.expected_loss?.present_value_30yr || 0) * scScaleFactor;
-  const totalExposurePV = directExposurePV + scPV;
   const adjustedExposurePV = mgmtScorePct != null
     ? totalExposurePV * (1 - 0.7 * mgmtScorePct)
     : totalExposurePV;
 
   const ev = company.ev || 0;
-  const valuationExposurePct = ev > 0 ? (adjustedExposure / ev) * 100 : null;
+  const valuationExposurePct = ev > 0 ? (adjustedExposurePV / ev) * 100 : null;
 
   return {
-    directExposure,
-    supplyChainEAL,
-    totalExposure,
+    directExposurePV,
+    supplyChainPV,
+    totalExposurePV,
     mgmtScorePct,
-    adjustedExposure,
+    adjustedExposurePV,
     valuationExposurePct,
   };
 }
@@ -187,7 +180,7 @@ export default function Dashboard() {
   );
 
   const totalAssetValue = companies.reduce((sum: number, c: any) => sum + (c.totalAssetValue || 0), 0);
-  const totalGeoRisk = companies.reduce((sum: number, c: any) => sum + (c.totalGeoRisk || 0), 0);
+  const totalGeoRiskPV = companies.reduce((sum: number, c: any) => sum + (c.totalGeoRiskPV || 0), 0);
   const companiesWithRisks = companies.filter((c: any) => c.hasGeoRisks || c.hasSupplyChainRisk);
 
   return (
@@ -218,8 +211,8 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Total Direct Exposure</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-total-geo-risk">{formatCurrency(totalGeoRisk)}</div>
+            <div className="text-sm font-medium text-muted-foreground">Total Direct Exposure PV</div>
+            <div className="text-2xl font-bold mt-1" data-testid="text-total-geo-risk">{formatCurrency(totalGeoRiskPV)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -389,11 +382,11 @@ export default function Dashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[22%]">Company</TableHead>
-                <TableHead className="text-right w-[11%]">Direct Exposure</TableHead>
-                <TableHead className="text-right w-[11%]">Supply Chain</TableHead>
-                <TableHead className="text-right w-[12%]">Total Exposure</TableHead>
+                <TableHead className="text-right w-[11%]">Direct PV</TableHead>
+                <TableHead className="text-right w-[11%]">Supply Chain PV</TableHead>
+                <TableHead className="text-right w-[12%]">Total PV</TableHead>
                 <TableHead className="text-right w-[8%]">Mgmt Score</TableHead>
-                <TableHead className="text-right w-[13%]">Adjusted Exposure</TableHead>
+                <TableHead className="text-right w-[13%]">Adjusted PV</TableHead>
                 <TableHead className="text-right w-[13%]">Valuation Exposure</TableHead>
                 <TableHead className="w-[4%]"></TableHead>
               </TableRow>
@@ -422,19 +415,19 @@ export default function Dashboard() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-direct-exposure-${company.id}`}>
-                      {company.hasGeoRisks ? formatCurrency(m.directExposure) : "---"}
+                      {company.hasGeoRisks ? formatCurrency(m.directExposurePV) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-sc-risk-${company.id}`}>
-                      {company.hasSupplyChainRisk ? formatCurrency(m.supplyChainEAL) : "---"}
+                      {company.hasSupplyChainRisk ? formatCurrency(m.supplyChainPV) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold" data-testid={`text-total-exposure-${company.id}`}>
-                      {hasRisks ? formatCurrency(m.totalExposure) : "---"}
+                      {hasRisks ? formatCurrency(m.totalExposurePV) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-mgmt-score-${company.id}`}>
                       {m.mgmtScorePct != null ? formatPct(m.mgmtScorePct * 100) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold" data-testid={`text-adjusted-exposure-${company.id}`}>
-                      {hasRisks ? formatCurrency(m.adjustedExposure) : "---"}
+                      {hasRisks ? formatCurrency(m.adjustedExposurePV) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-valuation-exposure-${company.id}`}>
                       {m.valuationExposurePct != null ? formatPct(m.valuationExposurePct) : "---"}
