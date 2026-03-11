@@ -51,6 +51,10 @@ export async function ensureSchemaUpdates() {
         check: `SELECT column_name FROM information_schema.columns WHERE table_name='companies' AND column_name='ev'`,
         apply: `ALTER TABLE companies ADD COLUMN IF NOT EXISTS ev real`,
       },
+      {
+        check: `SELECT column_name FROM information_schema.columns WHERE table_name='supply_chain_risks' AND column_name='supply_chain_tiers'`,
+        apply: `ALTER TABLE supply_chain_risks ADD COLUMN IF NOT EXISTS supply_chain_tiers jsonb`,
+      },
     ];
 
     for (const migration of migrations) {
