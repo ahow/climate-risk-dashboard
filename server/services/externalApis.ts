@@ -223,8 +223,11 @@ export interface SupplyChainRiskResponse {
     expected_loss: {
       total_annual_loss: number;
       total_annual_loss_pct: number;
-      present_value_30yr: number;
-      risk_breakdown: Record<string, { annual_loss: number; annual_loss_pct: number }>;
+      present_value: number;
+      discount_rate: number;
+      growth_rate: number;
+      pv_horizon: number;
+      risk_breakdown: Record<string, { annual_loss: number; annual_loss_pct: number; present_value: number }>;
     };
   };
   indirect_risk: {
@@ -236,6 +239,11 @@ export interface SupplyChainRiskResponse {
     expected_loss: {
       total_annual_loss: number;
       total_annual_loss_pct: number;
+      present_value: number;
+      discount_rate: number;
+      growth_rate: number;
+      pv_horizon: number;
+      risk_breakdown: Record<string, { annual_loss: number; annual_loss_pct: number; present_value: number }>;
     };
   };
   total_risk: {
@@ -245,6 +253,35 @@ export interface SupplyChainRiskResponse {
     water_stress: number;
     nature_loss: number;
   };
+  supply_chain_tiers: Array<{
+    tier: number;
+    weight: number;
+    supplier_count: number;
+    risk: Record<string, number>;
+    expected_loss: {
+      total_annual_loss: number;
+      total_annual_loss_pct: number;
+      present_value: number;
+      discount_rate: number;
+      growth_rate: number;
+      pv_horizon: number;
+      risk_breakdown: Record<string, { annual_loss: number; annual_loss_pct: number; present_value: number }>;
+    };
+    suppliers: Array<{
+      country: string;
+      sector: string;
+      coefficient: number;
+      country_name: string;
+      sector_name: string;
+      tier: number;
+      direct_risk: Record<string, number>;
+      risk_contribution: Record<string, number>;
+      expected_loss_contribution: {
+        annual_loss: number;
+        present_value: number;
+      };
+    }>;
+  }>;
   top_suppliers: Array<{
     country: string;
     sector: string;
@@ -255,7 +292,7 @@ export interface SupplyChainRiskResponse {
     risk_contribution: Record<string, number>;
     expected_loss_contribution: {
       annual_loss: number;
-      present_value_30yr: number;
+      present_value: number;
     };
   }>;
 }
