@@ -39,7 +39,7 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - Only **indirect risk** is used from the Supply Chain API (direct climate risk is captured by Geographic Risk on actual assets)
 - Primary metric: `present_value` (PV) from the API, not `total_annual_loss`
 - Scale factor = supplierCosts / 1,000,000,000 (actual dollar exposure / $1B)
-- Hazard breakdown PVs available: flood, drought, heat_stress, wildfire, tropical_cyclone
+- Hazard breakdown PVs available: flood, drought, heat_stress, hurricane, extreme_precipitation
 - `supplyChainTiers` JSONB column stores tier-level PV breakdowns
 - If no supplier costs data available, falls back to raw per-$1B values (scale factor = 1)
 - Dashboard and CompanyDetail display PV-based values throughout

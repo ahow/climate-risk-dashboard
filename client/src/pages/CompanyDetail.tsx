@@ -359,8 +359,8 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
     flood: "Flood",
     drought: "Drought",
     heat_stress: "Heat Stress",
-    wildfire: "Wildfire",
-    tropical_cyclone: "Tropical Cyclone",
+    hurricane: "Hurricane",
+    extreme_precipitation: "Extreme Precip.",
   };
 
   const riskDimensions = [
