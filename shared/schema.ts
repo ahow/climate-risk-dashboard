@@ -62,6 +62,7 @@ export const supplyChainRisks = pgTable("supply_chain_risks", {
   indirectRisk: jsonb("indirect_risk"),
   totalRisk: jsonb("total_risk"),
   topSuppliers: jsonb("top_suppliers"),
+  supplyChainTiers: jsonb("supply_chain_tiers"),
   directExpectedLoss: real("direct_expected_loss"),
   directExpectedLossPct: real("direct_expected_loss_pct"),
   indirectExpectedLoss: real("indirect_expected_loss"),

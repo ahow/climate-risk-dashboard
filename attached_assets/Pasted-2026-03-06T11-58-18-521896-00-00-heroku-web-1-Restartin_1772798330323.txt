@@ -1,0 +1,24 @@
+2026-03-06T11:58:18.521896+00:00 heroku[web.1]: Restarting
+2026-03-06T11:58:18.524142+00:00 heroku[web.1]: State changed from up to starting
+2026-03-06T11:58:19.182932+00:00 app[web.1]: 11:58:19 AM [express] Bulk: Geo risk error for asset China Resources Land Distribution Center - Beijing (lat:39.9042, lon:116.4074): Failed after 3 retries: https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com/assess
+2026-03-06T11:58:19.183705+00:00 app[web.1]: 11:58:19 AM [express] Bulk: Geo risk error for asset China Resources Land Logistics Park - Beijing (lat:39.81, lon:116.42): Failed after 3 retries: https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com/assess
+2026-03-06T11:58:19.184408+00:00 app[web.1]: 11:58:19 AM [express] Bulk: Geo risk error for asset China Resources Land Hotel - Shanghai (lat:31.2304, lon:121.4737): Failed after 3 retries: https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com/assess
+2026-03-06T11:58:19.184970+00:00 app[web.1]: 11:58:19 AM [express] Bulk: Geo risk error for asset China Resources Land Logistics Park - Chengdu (lat:30.57, lon:104): Failed after 3 retries: https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com/assess
+2026-03-06T11:58:19.185519+00:00 app[web.1]: 11:58:19 AM [express] Bulk: Geo risk error for asset China Resources Land Distribution Center - Guangzhou (lat:23.1291, lon:113.2644): Failed after 3 retries: https://climate-risk-api-v6-prob-be68437e49be.herokuapp.com/assess
+2026-03-06T11:58:19.266017+00:00 heroku[web.1]: Stopping all processes with SIGTERM
+2026-03-06T11:58:19.344470+00:00 heroku[web.1]: Process exited with status 143
+2026-03-06T11:58:21.000000+00:00 app[api]: Build succeeded
+2026-03-06T11:58:22.513803+00:00 app[api]: Log session created by user andywhowardw@gmail.com
+2026-03-06T11:58:26.104303+00:00 heroku[web.1]: Starting process with command `npm run start`
+2026-03-06T11:58:26.936575+00:00 app[web.1]: npm warn config production Use `--omit=dev` instead.
+2026-03-06T11:58:27.121544+00:00 app[web.1]: 
+2026-03-06T11:58:27.121547+00:00 app[web.1]: > rest-express@1.0.0 start
+2026-03-06T11:58:27.121548+00:00 app[web.1]: > NODE_ENV=production node dist/index.cjs
+2026-03-06T11:58:27.121548+00:00 app[web.1]: 
+2026-03-06T11:58:27.482767+00:00 app[web.1]: [db] Schema updates verified
+2026-03-06T11:58:27.500823+00:00 app[web.1]: 11:58:27 AM [express] serving on port 49958
+2026-03-06T11:58:27.742427+00:00 heroku[web.1]: State changed from starting to up
+2026-03-06T11:58:30.756042+00:00 app[web.1]: 11:58:30 AM [express] Recovering orphaned operation #107 (bulk_processing) - was running since Fri Mar 06 2026 11:57:33 GMT+0000 (Coordinated Universal Time)
+2026-03-06T11:58:30.759634+00:00 app[web.1]: 11:58:30 AM [express] Resuming bulk processing operation #107
+2026-03-06T11:58:30.760394+00:00 app[web.1]: 11:58:30 AM [express] Recovered 1 orphaned operation(s)
+2026-03-06T11:58:32.486945+00:00 app[web.1]: 11:58:32 AM [express] Bulk: Updated Power Assets Holdings Limited (HK0006000050) with EV=8692981, supplierCosts=73746.69

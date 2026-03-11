@@ -39,9 +39,8 @@ export async function registerRoutes(
             } : null;
 
             const scSummary = scRisk ? {
-              directRisk: scRisk.directRisk,
               indirectRisk: scRisk.indirectRisk,
-              totalRisk: scRisk.totalRisk,
+              supplyChainTiers: scRisk.supplyChainTiers,
             } : null;
 
             return {
@@ -644,15 +643,20 @@ export async function registerRoutes(
           const scRisk = await storage.getSupplyChainRisk(company.id);
           const mgmtScore = await storage.getManagementScore(company.id);
 
-          const totalGeoRisk = geoRisks.reduce((sum, r) => sum + (r.expectedAnnualLoss || 0), 0);
-          const scSf = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-          const scIndirectRaw = (scRisk?.indirectRisk as any)?.expected_loss?.total_annual_loss || 0;
-          const scIndirectScaled = scIndirectRaw * scSf;
-          const totalScRisk = scIndirectScaled;
+          const totalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (r.presentValue30yr || 0), 0);
+          const scSf = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
+          const scIndirectPV = ((scRisk?.indirectRisk as any)?.expected_loss?.present_value || 0) * scSf;
+          const totalExposurePV = totalGeoRiskPV + scIndirectPV;
           const mgmtScoreVal = mgmtScore
             ? `${mgmtScore.totalScore}%`
             : "N/A";
-          const totalRisk = totalGeoRisk + totalScRisk;
+          const mgmtScorePct = mgmtScore ? mgmtScore.totalScore / 100 : null;
+          const adjustedExposurePV = mgmtScorePct != null
+            ? totalExposurePV * (1 - 0.7 * mgmtScorePct)
+            : totalExposurePV;
+          const valuationPct = company.ev && company.ev > 0
+            ? ((adjustedExposurePV / company.ev) * 100).toFixed(2) + "%"
+            : "N/A";
 
           return {
             "Company Name": company.companyName,
@@ -663,11 +667,12 @@ export async function registerRoutes(
             "Supplier Costs": company.supplierCosts || 0,
             "EV": company.ev || 0,
             "Asset Count": company.assetCount || 0,
-            "Geographic Risk (EAL)": totalGeoRisk.toFixed(2),
-            "Supply Chain Risk (Indirect EAL)": scIndirectScaled.toFixed(2),
-            "Supply Chain Risk (Total EAL)": totalScRisk.toFixed(2),
+            "Geographic Risk PV": totalGeoRiskPV.toFixed(2),
+            "Supply Chain Risk PV (Indirect)": scIndirectPV.toFixed(2),
+            "Total Exposure PV": totalExposurePV.toFixed(2),
             "Management Score": mgmtScoreVal,
-            "Total Risk": totalRisk.toFixed(2),
+            "Adjusted Exposure PV": adjustedExposurePV.toFixed(2),
+            "Valuation Exposure %": valuationPct,
           };
         })
       );

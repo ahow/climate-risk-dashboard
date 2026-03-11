@@ -173,7 +173,7 @@ export async function processGeographicRisks(operationId: number, companyId: num
 }
 
 function scaleSupplyChainRisk(result: any, supplierCosts: number | null) {
-  const scaleFactor = supplierCosts ? supplierCosts / 1000000 : 1;
+  const scaleFactor = supplierCosts ? supplierCosts / 1_000_000_000 : 1;
 
   const directLossRaw = result.direct_risk.expected_loss?.total_annual_loss || 0;
   const directLossPctRaw = result.direct_risk.expected_loss?.total_annual_loss_pct || 0;
@@ -220,6 +220,7 @@ export async function processSupplyChainRisk(operationId: number, companyId: num
       indirectRisk: result.indirect_risk,
       totalRisk: result.total_risk,
       topSuppliers: result.top_suppliers,
+      supplyChainTiers: result.supply_chain_tiers,
       directExpectedLoss: scaled.directExpectedLoss,
       directExpectedLossPct: scaled.directExpectedLossPct,
       indirectExpectedLoss: scaled.indirectExpectedLoss,
@@ -367,6 +368,7 @@ export async function processAllRisks(operationId: number, companyId: number) {
           indirectRisk: scResult.indirect_risk,
           totalRisk: scResult.total_risk,
           topSuppliers: scResult.top_suppliers,
+          supplyChainTiers: scResult.supply_chain_tiers,
           directExpectedLoss: scaled.directExpectedLoss,
           directExpectedLossPct: scaled.directExpectedLossPct,
           indirectExpectedLoss: scaled.indirectExpectedLoss,
@@ -629,6 +631,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
               indirectRisk: scResult.indirect_risk,
               totalRisk: scResult.total_risk,
               topSuppliers: scResult.top_suppliers,
+              supplyChainTiers: scResult.supply_chain_tiers,
               directExpectedLoss: scaled.directExpectedLoss,
               directExpectedLossPct: scaled.directExpectedLossPct,
               indirectExpectedLoss: scaled.indirectExpectedLoss,

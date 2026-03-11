@@ -161,7 +161,7 @@ function getRiskLevel(score: number, max: number = 5): string {
 }
 
 function indirectRiskPV(scRisk: any): number {
-  return (scRisk.indirectRisk as any)?.expected_loss?.present_value_30yr || 0;
+  return (scRisk.indirectRisk as any)?.expected_loss?.present_value || 0;
 }
 
 function CollapsibleSection({
@@ -348,8 +348,20 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
 }
 
 function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) {
-  const scaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
+  const scaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
   const indirectRisk = scRisk.indirectRisk as any;
+  const tiers = (scRisk.supplyChainTiers || []) as any[];
+
+  const indirectPV = (indirectRisk?.expected_loss?.present_value || 0) * scaleFactor;
+
+  const hazardBreakdown = indirectRisk?.expected_loss?.risk_breakdown;
+  const hazardLabels: Record<string, string> = {
+    flood: "Flood",
+    drought: "Drought",
+    heat_stress: "Heat Stress",
+    wildfire: "Wildfire",
+    tropical_cyclone: "Tropical Cyclone",
+  };
 
   const riskDimensions = [
     { key: "climate", label: "Climate" },
@@ -368,31 +380,48 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border">
           <CardContent className="pt-4 pb-3">
-            <div className="text-xs text-muted-foreground mb-1">Indirect Supply Chain Risk (EAL)</div>
-            <div className="text-lg font-bold" data-testid="text-sc-indirect-eal">
-              {formatCurrency((indirectRisk?.expected_loss?.total_annual_loss || 0) * scaleFactor)}
+            <div className="text-xs text-muted-foreground mb-1">Indirect Supply Chain Risk (PV)</div>
+            <div className="text-lg font-bold" data-testid="text-sc-indirect-pv">
+              {formatCurrency(indirectPV)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {(indirectRisk?.expected_loss?.total_annual_loss_pct || 0).toFixed(2)}% per $1M exposure
+              Present value of expected loss
             </div>
           </CardContent>
         </Card>
         <Card className="border">
           <CardContent className="pt-4 pb-3">
-            <div className="text-xs text-muted-foreground mb-1">Scaling</div>
-            <div className="text-lg font-bold" data-testid="text-sc-total-eal">
+            <div className="text-xs text-muted-foreground mb-1">Supplier Costs / Scaling</div>
+            <div className="text-lg font-bold" data-testid="text-sc-supplier-costs">
               {company.supplierCosts ? formatCurrency(company.supplierCosts) : "N/A"}
             </div>
             <div className="text-xs text-muted-foreground">
-              {company.supplierCosts ? `Scale factor: ${scaleFactor.toFixed(3)}x` : "Per $1M exposure (no supplier costs data)"}
+              {company.supplierCosts ? `Scale factor: ${scaleFactor.toFixed(6)}x (per $1B)` : "Per $1B exposure (no supplier costs data)"}
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {hazardBreakdown && (
+        <div>
+          <h4 className="text-sm font-medium mb-3">PV by Hazard</h4>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {Object.entries(hazardLabels).map(([key, label]) => {
+              const hazardPV = (hazardBreakdown[key]?.present_value || 0) * scaleFactor;
+              return (
+                <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-hazard-${key}`}>
+                  <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                  <div className="text-sm font-bold">{formatCurrency(hazardPV)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {indirectRisk && (
         <div>
-          <h4 className="text-sm font-medium mb-3">Indirect Risk by Dimension</h4>
+          <h4 className="text-sm font-medium mb-3">Risk Dimensions (1-5 Score)</h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {riskDimensions.map(({ key, label }) => {
               const score = indirectRisk[key] || 0;
@@ -410,11 +439,24 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
         </div>
       )}
 
-      {indirectRiskPV(scRisk) > 0 && (
-        <div className="border rounded-md p-3">
-          <div className="text-xs text-muted-foreground">30-Year Present Value (Indirect)</div>
-          <div className="text-lg font-bold" data-testid="text-sc-pv30">
-            {formatCurrency(indirectRiskPV(scRisk) * scaleFactor)}
+      {tiers.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium mb-3">Supply Chain Tiers</h4>
+          <div className="space-y-2">
+            {tiers.map((tier: any, index: number) => {
+              const tierPV = (tier.expected_loss?.present_value || 0) * scaleFactor;
+              return (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-md" data-testid={`sc-tier-${index}`}>
+                  <div>
+                    <div className="text-sm font-medium">{tier.tier_name || `Tier ${index + 1}`}</div>
+                    {tier.description && (
+                      <div className="text-xs text-muted-foreground">{tier.description}</div>
+                    )}
+                  </div>
+                  <div className="text-sm font-bold">{formatCurrency(tierPV)}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -466,10 +508,10 @@ export default function CompanyDetail() {
   const mgmtScore = company.managementScore;
   const scRisk = company.supplyChainRisk;
 
-  const totalGeoEAL = company.geoRisks?.length > 0 ? formatCurrency(company.totalGeoRisk) : "Not calculated";
-  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
-  const scIndirectEAL = scRisk ? (scRisk.indirectRisk?.expected_loss?.total_annual_loss || 0) * scScaleFactor : 0;
-  const totalScEAL = scRisk ? formatCurrency(scIndirectEAL) : "Not calculated";
+  const totalGeoPV = company.totalGeoRiskPV > 0 ? formatCurrency(company.totalGeoRiskPV) : "Not calculated";
+  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
+  const scIndirectPV = scRisk ? (scRisk.indirectRisk?.expected_loss?.present_value || 0) * scScaleFactor : 0;
+  const totalScPV = scRisk ? formatCurrency(scIndirectPV) : "Not calculated";
   const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}%` : "Not assessed";
 
   return (
@@ -503,14 +545,14 @@ export default function CompanyDetail() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" /> Geographic Risk (EAL)
+              <AlertTriangle className="h-3 w-3" /> Geographic Risk (PV)
             </div>
             <div className="text-xl font-bold mt-1" data-testid="text-total-geo-risk">
-              {totalGeoEAL}
+              {totalGeoPV}
             </div>
-            {company.totalGeoRiskPV > 0 && (
+            {company.totalGeoRisk > 0 && (
               <div className="text-xs text-muted-foreground mt-1">
-                30yr PV: {formatCurrency(company.totalGeoRiskPV)}
+                EAL: {formatCurrency(company.totalGeoRisk)}
               </div>
             )}
           </CardContent>
@@ -518,14 +560,14 @@ export default function CompanyDetail() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <Link2 className="h-3 w-3" /> Supply Chain Climate Risk
+              <Link2 className="h-3 w-3" /> Supply Chain Risk (PV)
             </div>
             <div className="text-xl font-bold mt-1" data-testid="text-sc-climate">
-              {totalScEAL}
+              {totalScPV}
             </div>
             {scRisk && (
               <div className="text-xs text-muted-foreground mt-1">
-                EAL (Direct + Indirect)
+                Indirect risk present value
               </div>
             )}
           </CardContent>
@@ -570,7 +612,7 @@ export default function CompanyDetail() {
       <CollapsibleSection
         icon={Building2}
         title={`Asset Risk Breakdown (${company.assets?.length || 0} assets)`}
-        summary={`EAL: ${totalGeoEAL}`}
+        summary={`PV: ${totalGeoPV}`}
         testId="section-assets"
         alwaysVisibleContent={
           company.assets?.length > 0 ? (
@@ -635,7 +677,7 @@ export default function CompanyDetail() {
         <CollapsibleSection
           icon={Link2}
           title="Supply Chain Climate Risk Assessment"
-          summary={`EAL: ${totalScEAL}`}
+          summary={`PV: ${totalScPV}`}
           testId="section-supply-chain"
           alwaysVisibleContent={<SupplyChainSummary scRisk={scRisk} company={company} />}
         >
@@ -649,20 +691,18 @@ export default function CompanyDetail() {
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Country</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Sector</th>
                       <th className="text-right py-2 px-3 font-medium text-muted-foreground">I-O Coefficient</th>
-                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">Annual Loss ($)</th>
-                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">30yr PV ($)</th>
+                      <th className="text-right py-2 px-3 font-medium text-muted-foreground">PV ($)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
-                      const sf = company.supplierCosts ? company.supplierCosts / 1000000 : 1;
+                      const sf = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
                       return (
                         <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
                           <td className="py-2 px-3">{supplier.country_name}</td>
                           <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
                           <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.annual_loss || 0) * sf)}</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.present_value_30yr || 0) * sf)}</td>
+                          <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.present_value || 0) * sf)}</td>
                         </tr>
                       );
                     })}
