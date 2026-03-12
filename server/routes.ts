@@ -644,8 +644,14 @@ export async function registerRoutes(
           const mgmtScore = await storage.getManagementScore(company.id);
 
           const totalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (r.presentValue30yr || 0), 0);
-          const scSf = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
-          const scIndirectPV = ((scRisk?.indirectRisk as any)?.expected_loss?.present_value || 0) * scSf;
+          const SC_PV_FACTOR = 13.57;
+          const scEl = (scRisk?.indirectRisk as any)?.expected_loss;
+          const scHasNewAPI = scEl?.present_value != null;
+          const scSf = company.supplierCosts
+            ? company.supplierCosts / (scHasNewAPI ? 1_000_000_000 : 1_000_000)
+            : 1;
+          const scRawPV = scHasNewAPI ? scEl.present_value : (scEl?.total_annual_loss || 0) * SC_PV_FACTOR;
+          const scIndirectPV = scRawPV * scSf;
           const totalExposurePV = totalGeoRiskPV + scIndirectPV;
           const mgmtScoreVal = mgmtScore
             ? `${mgmtScore.totalScore}%`
