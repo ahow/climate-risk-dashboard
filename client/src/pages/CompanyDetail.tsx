@@ -347,12 +347,18 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
   );
 }
 
+const SC_PV_FACTOR = 13.57;
+
 function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) {
   const scaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
   const indirectRisk = scRisk.indirectRisk as any;
   const tiers = (scRisk.supplyChainTiers || []) as any[];
 
-  const indirectPV = (indirectRisk?.expected_loss?.present_value || 0) * scaleFactor;
+  const el = indirectRisk?.expected_loss;
+  const hasNewAPI = el?.present_value != null;
+  const effectiveScale = hasNewAPI ? scaleFactor : (company.supplierCosts ? company.supplierCosts / 1_000_000 : 1);
+  const rawPV = hasNewAPI ? el.present_value : (el?.total_annual_loss || 0) * SC_PV_FACTOR;
+  const indirectPV = rawPV * effectiveScale;
 
   const hazardBreakdown = indirectRisk?.expected_loss?.risk_breakdown;
   const hazardLabels: Record<string, string> = {
@@ -407,7 +413,9 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
           <h4 className="text-sm font-medium mb-3">PV by Hazard</h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {Object.entries(hazardLabels).map(([key, label]) => {
-              const hazardPV = (hazardBreakdown[key]?.present_value || 0) * scaleFactor;
+              const hb = hazardBreakdown[key];
+              const hazardRawPV = hasNewAPI ? (hb?.present_value || 0) : (hb?.annual_loss || 0) * SC_PV_FACTOR;
+              const hazardPV = hazardRawPV * effectiveScale;
               return (
                 <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-hazard-${key}`}>
                   <div className="text-xs text-muted-foreground mb-1">{label}</div>
@@ -444,7 +452,9 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
           <h4 className="text-sm font-medium mb-3">Supply Chain Tiers</h4>
           <div className="space-y-2">
             {tiers.map((tier: any, index: number) => {
-              const tierPV = (tier.expected_loss?.present_value || 0) * scaleFactor;
+              const tierEl = tier.expected_loss;
+              const tierRawPV = hasNewAPI ? (tierEl?.present_value || 0) : (tierEl?.total_annual_loss || 0) * SC_PV_FACTOR;
+              const tierPV = tierRawPV * effectiveScale;
               return (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-md" data-testid={`sc-tier-${index}`}>
                   <div>
@@ -509,8 +519,13 @@ export default function CompanyDetail() {
   const scRisk = company.supplyChainRisk;
 
   const totalGeoPV = company.totalGeoRiskPV > 0 ? formatCurrency(company.totalGeoRiskPV) : "Not calculated";
-  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
-  const scIndirectPV = scRisk ? (scRisk.indirectRisk?.expected_loss?.present_value || 0) * scScaleFactor : 0;
+  const scEl = scRisk?.indirectRisk?.expected_loss;
+  const scHasNewAPI = scEl?.present_value != null;
+  const scScaleFactor = company.supplierCosts
+    ? company.supplierCosts / (scHasNewAPI ? 1_000_000_000 : 1_000_000)
+    : 1;
+  const scRawPV = scHasNewAPI ? scEl.present_value : (scEl?.total_annual_loss || 0) * SC_PV_FACTOR;
+  const scIndirectPV = scRisk ? scRawPV * scScaleFactor : 0;
   const totalScPV = scRisk ? formatCurrency(scIndirectPV) : "Not calculated";
   const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}%` : "Not assessed";
 
@@ -696,13 +711,18 @@ export default function CompanyDetail() {
                   </thead>
                   <tbody>
                     {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
-                      const sf = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
+                      const supplierElc = supplier.expected_loss_contribution;
+                      const supplierHasNewAPI = supplierElc?.present_value != null;
+                      const sf = company.supplierCosts
+                        ? company.supplierCosts / (supplierHasNewAPI ? 1_000_000_000 : 1_000_000)
+                        : 1;
+                      const supplierRawPV = supplierHasNewAPI ? supplierElc.present_value : (supplierElc?.annual_loss || 0) * SC_PV_FACTOR;
                       return (
                         <tr key={idx} className="border-b border-border/50" data-testid={`row-supplier-${idx}`}>
                           <td className="py-2 px-3">{supplier.country_name}</td>
                           <td className="py-2 px-3 text-muted-foreground">{supplier.sector_name}</td>
                           <td className="py-2 px-3 text-right">{(supplier.coefficient * 100).toFixed(2)}%</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatCurrency((supplier.expected_loss_contribution?.present_value || 0) * sf)}</td>
+                          <td className="py-2 px-3 text-right font-mono">{formatCurrency(supplierRawPV * sf)}</td>
                         </tr>
                       );
                     })}

@@ -36,10 +36,23 @@ function formatPct(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
+const SC_PV_FACTOR = 13.57;
+
+function getSupplyChainPV(sc: any, supplierCosts: number | null) {
+  if (!sc?.indirectRisk?.expected_loss) return 0;
+  const el = sc.indirectRisk.expected_loss;
+  if (el.present_value != null) {
+    const scaleFactor = supplierCosts ? supplierCosts / 1_000_000_000 : 1;
+    return el.present_value * scaleFactor;
+  }
+  const scaleFactor = supplierCosts ? supplierCosts / 1_000_000 : 1;
+  const pvPerUnit = (el.total_annual_loss || 0) * SC_PV_FACTOR;
+  return pvPerUnit * scaleFactor;
+}
+
 function getCompanyMetrics(company: any) {
   const sc = company.supplyChainRisk;
-  const scScaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
-  const supplyChainPV = (sc?.indirectRisk?.expected_loss?.present_value || 0) * scScaleFactor;
+  const supplyChainPV = getSupplyChainPV(sc, company.supplierCosts);
 
   const directExposurePV = company.totalGeoRiskPV || 0;
   const totalExposurePV = directExposurePV + supplyChainPV;
