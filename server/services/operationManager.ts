@@ -5,7 +5,7 @@ import {
   fetchSupplyChainRisk,
   fetchManagementPerformance,
 } from "./externalApis";
-import { isinToIso3, sectorToIsic } from "../utils/mappings";
+import { isinToIso3, sectorToIsic, resolveSupplyChainCountry } from "../utils/mappings";
 import { log } from "../index";
 
 const BATCH_SIZE = 10;
@@ -202,7 +202,7 @@ export async function processSupplyChainRisk(operationId: number, companyId: num
       throw new Error("Company not found");
     }
 
-    const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
+    const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
     const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
 
     await storage.deleteSupplyChainRisk(companyId);
@@ -353,7 +353,7 @@ export async function processAllRisks(operationId: number, companyId: number) {
 
     const supplyChainTask = (async () => {
       try {
-        const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
+        const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
         const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
         await storage.deleteSupplyChainRisk(companyId);
         const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
@@ -615,7 +615,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
 
         const supplyChainTask = (async () => {
           try {
-            const countryCode = company.countryIso3 || isinToIso3(company.isin) || "USA";
+            const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
             const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
             await storage.deleteSupplyChainRisk(company.id);
             const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
