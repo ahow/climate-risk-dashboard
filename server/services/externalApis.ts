@@ -4,8 +4,8 @@ const SUPPLY_CHAIN_API_BASE = "https://supply-chain-risk-api-7567b2b7e4c5.heroku
 const MANAGEMENT_API_BASE = "https://climate-risk-replit-562361beb142.herokuapp.com";
 
 const circuitBreakers: Record<string, { failures: number; openUntil: number }> = {};
-const CIRCUIT_THRESHOLD = 3;
-const CIRCUIT_COOLDOWN_MS = 60000;
+const CIRCUIT_THRESHOLD = 10;
+const CIRCUIT_COOLDOWN_MS = 30000;
 
 function getCircuitKey(url: string): string {
   try {
@@ -202,7 +202,7 @@ export async function fetchClimateRisk(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ latitude, longitude, asset_value: assetValue }),
-  });
+  }, 3, 30000);
   if (!response.ok) {
     throw new Error(`Climate Risk API error: ${response.status}`);
   }
