@@ -30,9 +30,17 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - `company_list_entries` - Individual company rows from uploaded spreadsheets
 
 ## Unit Handling
-- All financial values (spreadsheet uploads, Asset API, internal storage) are in actual US dollars — no unit conversions
-- Spreadsheet columns TotalValue, EV, SUPPLIERCOSTS are stored as-is
-- Asset API estimated_value_usd values are stored as-is
+- **Spreadsheet values are in $000s** (thousands of USD): TotalValue, EV, SUPPLIERCOSTS cells contain values in thousands
+- `company_list_entries` table stores raw spreadsheet values (in $000s, NOT converted)
+- `companies` table stores converted values: spreadsheet values × 1000 = actual USD
+- Asset API `estimated_value_usd` values are stored as-is (already in actual USD)
+- `POST /api/fix-units` endpoint: one-time migration to update existing companies with ×1000 conversion
+
+## Geographic Risk Scaling
+- Asset API allocates synthetic per-facility values that can sum to much more than the company's actual total
+- Server-side geo scaling: `geoScaleFactor = company.totalAssetValue / SUM(asset.estimatedValueUsd)` when API total exceeds company total
+- Applied in `/api/companies` (batch), `/api/companies/:id` (detail), and `/api/export/csv`
+- This ensures geo risk PV is proportional to the company's actual asset value, not the API's synthetic allocation
 
 ## Supply Chain Risk Scaling
 - Supply Chain API returns expected loss per $1B of exposure
