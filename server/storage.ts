@@ -29,6 +29,7 @@ export interface IStorage {
   getGeoRisksByAsset(assetId: number): Promise<GeoRisk[]>;
   createGeoRisk(data: InsertGeoRisk): Promise<GeoRisk>;
   deleteGeoRisksByCompany(companyId: number): Promise<void>;
+  deleteGeoRisk(assetId: number): Promise<void>;
 
   getSupplyChainRisk(companyId: number): Promise<SupplyChainRisk | undefined>;
   createSupplyChainRisk(data: InsertSupplyChainRisk): Promise<SupplyChainRisk>;
@@ -109,6 +110,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGeoRisksByCompany(companyId: number): Promise<void> {
     await db.delete(geoRisks).where(eq(geoRisks.companyId, companyId));
+  }
+
+  async deleteGeoRisk(assetId: number): Promise<void> {
+    await db.delete(geoRisks).where(eq(geoRisks.assetId, assetId));
   }
 
   async getSupplyChainRisk(companyId: number): Promise<SupplyChainRisk | undefined> {

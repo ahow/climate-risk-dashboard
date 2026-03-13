@@ -10,7 +10,7 @@ import { log } from "../index";
 
 const BATCH_SIZE = 10;
 const DELAY_MS = 500;
-const GEO_CONCURRENCY = 5;
+const GEO_CONCURRENCY = 3;
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -118,6 +118,8 @@ export async function processGeographicRisks(operationId: number, companyId: num
     await storage.deleteGeoRisksByCompany(companyId);
     let processed = 0;
 
+    const failedAssetIds = new Set<number>();
+
     await processInBatches(assets, GEO_CONCURRENCY, async (asset) => {
       const operation = await storage.getOperation(operationId);
       if (!operation || operation.status === "paused" || operation.status === "cancelled") return;
@@ -141,6 +143,7 @@ export async function processGeographicRisks(operationId: number, companyId: num
         });
       } catch (err: any) {
         log(`Error processing asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+        failedAssetIds.add(asset.id);
         await storage.createGeoRisk({
           assetId: asset.id,
           companyId: companyId,
@@ -157,9 +160,47 @@ export async function processGeographicRisks(operationId: number, companyId: num
       });
     });
 
+    if (failedAssetIds.size > 0) {
+      const failedAssets = assets.filter(a => failedAssetIds.has(a.id));
+      log(`Retrying ${failedAssets.length} failed assets after 5s cooldown...`);
+      await sleep(5000);
+
+      for (const asset of failedAssets) {
+        const operation = await storage.getOperation(operationId);
+        if (!operation || operation.status === "paused" || operation.status === "cancelled") break;
+
+        try {
+          const assetValue = asset.estimatedValueUsd || 1000000;
+          const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
+
+          await storage.deleteGeoRisk(asset.id);
+          await storage.createGeoRisk({
+            assetId: asset.id,
+            companyId: companyId,
+            expectedAnnualLoss: result.expected_annual_loss,
+            expectedAnnualLossPct: result.expected_annual_loss_pct,
+            presentValue30yr: result.present_value_30yr,
+            hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
+            floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
+            heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
+            droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
+            extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
+            modelVersion: result.model_version || "V6",
+          });
+          log(`Retry succeeded for ${asset.facilityName}`);
+        } catch (err: any) {
+          log(`Retry failed for ${asset.facilityName}: ${err.message}`);
+        }
+        await sleep(1000);
+      }
+    }
+
+    const finalGeoRisks = await storage.getGeoRisksByCompany(companyId);
+    const stillFailed = finalGeoRisks.filter((r: any) => r.modelVersion === "FAILED").length;
+
     await storage.updateOperation(operationId, {
       status: "completed",
-      statusMessage: `Completed - ${assets.length} assets processed`,
+      statusMessage: `Completed - ${assets.length} assets processed${stillFailed > 0 ? ` (${stillFailed} failed)` : ''}`,
       completedAt: new Date(),
     });
   } catch (err: any) {
@@ -590,6 +631,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
 
         const geoRiskTask = (async () => {
           await storage.deleteGeoRisksByCompany(company.id);
+          const bulkFailedIds = new Set<number>();
           await processInBatches(companyAssets, GEO_CONCURRENCY, async (asset) => {
             try {
               const assetValue = asset.estimatedValueUsd || 1000000;
@@ -609,6 +651,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
               });
             } catch (err: any) {
               log(`Bulk: Geo risk error for asset ${asset.facilityName} (lat:${asset.latitude}, lon:${asset.longitude}): ${err.message}`);
+              bulkFailedIds.add(asset.id);
               await storage.createGeoRisk({
                 assetId: asset.id,
                 companyId: company.id,
@@ -618,6 +661,35 @@ export async function processBulkFromList(operationId: number, uploadId: number)
               });
             }
           });
+          if (bulkFailedIds.size > 0) {
+            const failedAssets = companyAssets.filter(a => bulkFailedIds.has(a.id));
+            log(`Bulk: Retrying ${failedAssets.length} failed assets for ${company.companyName}...`);
+            await sleep(3000);
+            for (const asset of failedAssets) {
+              try {
+                const assetValue = asset.estimatedValueUsd || 1000000;
+                const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
+                await storage.deleteGeoRisk(asset.id);
+                await storage.createGeoRisk({
+                  assetId: asset.id,
+                  companyId: company.id,
+                  expectedAnnualLoss: result.expected_annual_loss,
+                  expectedAnnualLossPct: result.expected_annual_loss_pct,
+                  presentValue30yr: result.present_value_30yr,
+                  hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
+                  floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
+                  heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
+                  droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
+                  extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
+                  modelVersion: result.model_version || "V6",
+                });
+                log(`Bulk: Retry succeeded for ${asset.facilityName}`);
+              } catch (err: any) {
+                log(`Bulk: Retry failed for ${asset.facilityName}: ${err.message}`);
+              }
+              await sleep(1000);
+            }
+          }
         })();
 
         const supplyChainTask = (async () => {
