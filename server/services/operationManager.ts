@@ -41,8 +41,8 @@ export async function backfillCompanyFinancials() {
       const company = await storage.getCompanyByIsin(entry.isin.toUpperCase());
       if (!company) continue;
       const updates: any = {};
-      if (company.ev == null && entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev * 1000;
-      if (company.supplierCosts == null && entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts * 1000;
+      if (company.ev == null && entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+      if (company.supplierCosts == null && entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
       if (Object.keys(updates).length > 0) {
         await storage.updateCompany(company.id, updates);
         updated++;
@@ -447,9 +447,9 @@ export async function processBulkFromList(operationId: number, uploadId: number)
       if (!operation || operation.status === "paused" || operation.status === "cancelled") return;
 
       const isin = entry.isin.toUpperCase();
-      const entryTotalValue = (entry.totalValue != null && !isNaN(entry.totalValue)) ? entry.totalValue * 1000 : null;
-      const entryEv = (entry.ev != null && !isNaN(entry.ev)) ? entry.ev * 1000 : null;
-      const entrySupplierCosts = (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) ? entry.supplierCosts * 1000 : null;
+      const entryTotalValue = (entry.totalValue != null && !isNaN(entry.totalValue)) ? entry.totalValue : null;
+      const entryEv = (entry.ev != null && !isNaN(entry.ev)) ? entry.ev : null;
+      const entrySupplierCosts = (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) ? entry.supplierCosts : null;
 
       try {
         let company = await storage.getCompanyByIsin(isin);

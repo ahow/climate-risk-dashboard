@@ -767,30 +767,18 @@ export async function registerRoutes(
            WHERE cle.isin IS NOT NULL`
         );
         let updated = 0;
-        let skipped = 0;
         for (const entry of entriesResult.rows) {
           const tv = entry.total_value;
           const ev = entry.ev;
           const sc = entry.supplier_costs;
           if ((tv == null || isNaN(tv)) && (ev == null || isNaN(ev)) && (sc == null || isNaN(sc))) continue;
 
-          const companyResult = await client.query(
-            `SELECT total_asset_value, ev, supplier_costs FROM companies WHERE UPPER(isin) = $1`,
-            [entry.isin.toUpperCase()]
-          );
-          if (companyResult.rows.length === 0) continue;
-          const co = companyResult.rows[0];
-
-          const alreadyConverted = (tv != null && !isNaN(tv) && co.total_asset_value != null &&
-            Math.abs(co.total_asset_value - tv * 1000) < Math.abs(co.total_asset_value - tv) * 0.01);
-          if (alreadyConverted) { skipped++; continue; }
-
           const sets: string[] = [];
           const vals: any[] = [];
           let idx = 1;
-          if (tv != null && !isNaN(tv)) { sets.push(`total_asset_value = $${idx++}`); vals.push(tv * 1000); }
-          if (ev != null && !isNaN(ev)) { sets.push(`ev = $${idx++}`); vals.push(ev * 1000); }
-          if (sc != null && !isNaN(sc)) { sets.push(`supplier_costs = $${idx++}`); vals.push(sc * 1000); }
+          if (tv != null && !isNaN(tv)) { sets.push(`total_asset_value = $${idx++}`); vals.push(tv); }
+          if (ev != null && !isNaN(ev)) { sets.push(`ev = $${idx++}`); vals.push(ev); }
+          if (sc != null && !isNaN(sc)) { sets.push(`supplier_costs = $${idx++}`); vals.push(sc); }
 
           if (sets.length > 0) {
             vals.push(entry.isin.toUpperCase());
@@ -801,7 +789,7 @@ export async function registerRoutes(
             if (result.rowCount && result.rowCount > 0) updated++;
           }
         }
-        res.json({ success: true, companiesUpdated: updated, skippedAlreadyConverted: skipped, entriesScanned: entriesResult.rows.length });
+        res.json({ success: true, companiesUpdated: updated, entriesScanned: entriesResult.rows.length });
       } finally {
         client.release();
       }
