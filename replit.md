@@ -31,14 +31,22 @@ A full-stack web application that quantifies and visualizes climate-related fina
 
 ## Unit Handling
 - All financial values (spreadsheet uploads, Asset API, internal storage) are in actual US dollars — no unit conversions
-- Spreadsheet columns TotalValue, EV, SUPPLIERCOSTS are stored as-is
-- Asset API estimated_value_usd values are stored as-is
+- Spreadsheet columns TotalValue, EV, SUPPLIERCOSTS are stored as-is in both `company_list_entries` and `companies`
+- Asset API `estimated_value_usd` values are stored as-is
+- `POST /api/fix-units` endpoint: syncs company financial values (totalAssetValue, ev, supplierCosts) from the latest spreadsheet entries
+
+## Geographic Risk Scaling
+- Asset API allocates synthetic per-facility values that can sum to much more than the company's actual total
+- Server-side geo scaling: `geoScaleFactor = company.totalAssetValue / SUM(asset.estimatedValueUsd)` when API total exceeds company total
+- Applied in `/api/companies` (batch), `/api/companies/:id` (detail), and `/api/export/csv`
+- This ensures geo risk PV is proportional to the company's actual asset value, not the API's synthetic allocation
 
 ## Supply Chain Risk Scaling
 - Supply Chain API returns expected loss per $1B of exposure
 - Only **indirect risk** is used from the Supply Chain API (direct climate risk is captured by Geographic Risk on actual assets)
 - Primary metric: `present_value` (PV) from the API, not `total_annual_loss`
-- Scale factor = supplierCosts / 1,000,000,000 (actual dollar exposure / $1B)
+- **New API** (has `present_value` field): values are per $1B exposure → scale factor = supplierCosts / 1,000,000,000
+- **Old API** (no `present_value` field): values are per $1M exposure → scale factor = supplierCosts / 1,000,000; PV estimated as total_annual_loss × 13.57
 - Hazard breakdown PVs available: flood, drought, heat_stress, hurricane, extreme_precipitation
 - `supplyChainTiers` JSONB column stores tier-level PV breakdowns
 - If no supplier costs data available, falls back to raw per-$1B values (scale factor = 1)

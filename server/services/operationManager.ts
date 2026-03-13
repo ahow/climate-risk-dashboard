@@ -447,6 +447,10 @@ export async function processBulkFromList(operationId: number, uploadId: number)
       if (!operation || operation.status === "paused" || operation.status === "cancelled") return;
 
       const isin = entry.isin.toUpperCase();
+      const entryTotalValue = (entry.totalValue != null && !isNaN(entry.totalValue)) ? entry.totalValue : null;
+      const entryEv = (entry.ev != null && !isNaN(entry.ev)) ? entry.ev : null;
+      const entrySupplierCosts = (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) ? entry.supplierCosts : null;
+
       try {
         let company = await storage.getCompanyByIsin(isin);
 
@@ -461,8 +465,9 @@ export async function processBulkFromList(operationId: number, uploadId: number)
 
           if (hasSuccessfulGeoRisks && existingSCRisk && existingMgmt) {
             const updates: any = {};
-            if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
-            if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+            if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
+            if (entryEv != null) updates.ev = entryEv;
+            if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
             if (Object.keys(updates).length > 0) {
               await storage.updateCompany(company.id, updates);
             }
@@ -477,8 +482,9 @@ export async function processBulkFromList(operationId: number, uploadId: number)
 
           if (hasSuccessfulGeoRisks && existingSCRisk && !existingMgmt) {
             const updates: any = {};
-            if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
-            if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+            if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
+            if (entryEv != null) updates.ev = entryEv;
+            if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
             if (Object.keys(updates).length > 0) {
               await storage.updateCompany(company.id, updates);
             }
@@ -532,12 +538,12 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             companyName: assetData.companyName || entry.companyName,
             sector: assetData.sector || entry.level2Sector,
             country: assetData.assets[0]?.country || entry.geography || null,
-            totalAssetValue: entry.totalValue || assetData.totalEstimatedValue,
+            totalAssetValue: entryTotalValue || assetData.totalEstimatedValue,
             assetCount: assetData.assetCount,
             isicSectorCode: isicCode,
             countryIso3,
-            supplierCosts: entry.supplierCosts,
-            ev: entry.ev,
+            supplierCosts: entrySupplierCosts,
+            ev: entryEv,
           });
 
           const validAssets = assetData.assets.filter(a =>
@@ -565,8 +571,9 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           log(`Bulk: Added ${company.companyName} (${isin}) with ${validAssets.length} assets`);
         } else {
           const updates: any = {};
-          if (entry.supplierCosts != null && !isNaN(entry.supplierCosts)) updates.supplierCosts = entry.supplierCosts;
-          if (entry.ev != null && !isNaN(entry.ev)) updates.ev = entry.ev;
+          if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
+          if (entryEv != null) updates.ev = entryEv;
+          if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
           if (Object.keys(updates).length > 0) {
             company = await storage.updateCompany(company.id, updates);
             log(`Bulk: Updated ${company.companyName} (${isin}) with EV=${updates.ev}, supplierCosts=${updates.supplierCosts}`);
@@ -619,7 +626,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
             await storage.deleteSupplyChainRisk(company.id);
             const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
-            const supplierCostsForCompany = company.supplierCosts || entry.supplierCosts;
+            const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
             const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
             await storage.createSupplyChainRisk({
               companyId: company.id,
