@@ -13,6 +13,9 @@ import { isinToIso3, sectorToIsic } from "./utils/mappings";
 import { z } from "zod";
 import multer from "multer";
 import * as XLSX from "xlsx";
+import { db, pool } from "./db";
+import { geoRisks, supplyChainRisks, managementScores } from "@shared/schema";
+import { sql } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -23,52 +26,67 @@ export async function registerRoutes(
     try {
       const companies = await storage.getCompanies();
       console.log(`[companies] Found ${companies.length} companies in database`);
-      const enriched = await Promise.all(
-        companies.map(async (company) => {
-          try {
-            const geoRisks = await storage.getGeoRisksByCompany(company.id);
-            const scRisk = await storage.getSupplyChainRisk(company.id);
-            const mgmtScore = await storage.getManagementScore(company.id);
 
-            const totalGeoRisk = geoRisks.reduce((sum, r) => sum + (Number(r.expectedAnnualLoss) || 0), 0);
-            const totalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (Number(r.presentValue30yr) || 0), 0);
+      const client = await pool.connect();
+      try {
+        const [geoAgg, scAll, mgmtAll] = await Promise.all([
+          client.query(`
+            SELECT company_id,
+              COALESCE(SUM(expected_annual_loss), 0) as total_geo_risk,
+              COALESCE(SUM(present_value_30yr), 0) as total_geo_risk_pv,
+              COUNT(*) as risk_count
+            FROM geo_risks GROUP BY company_id
+          `),
+          client.query(`SELECT company_id, indirect_risk, supply_chain_tiers FROM supply_chain_risks`),
+          client.query(`SELECT company_id, total_score, total_possible FROM management_scores`),
+        ]);
 
-            const mgmtSummary = mgmtScore ? {
-              totalScore: mgmtScore.totalScore,
-              totalPossible: mgmtScore.totalPossible,
-            } : null;
+        const geoMap = new Map<number, { totalGeoRisk: number; totalGeoRiskPV: number; count: number }>();
+        for (const row of geoAgg.rows) {
+          geoMap.set(row.company_id, {
+            totalGeoRisk: parseFloat(row.total_geo_risk) || 0,
+            totalGeoRiskPV: parseFloat(row.total_geo_risk_pv) || 0,
+            count: parseInt(row.risk_count) || 0,
+          });
+        }
 
-            const scSummary = scRisk ? {
-              indirectRisk: scRisk.indirectRisk,
-              supplyChainTiers: scRisk.supplyChainTiers,
-            } : null;
+        const scMap = new Map<number, { indirectRisk: any; supplyChainTiers: any }>();
+        for (const row of scAll.rows) {
+          scMap.set(row.company_id, {
+            indirectRisk: row.indirect_risk,
+            supplyChainTiers: row.supply_chain_tiers,
+          });
+        }
 
-            return {
-              ...company,
-              totalGeoRisk,
-              totalGeoRiskPV,
-              supplyChainRisk: scSummary,
-              managementScore: mgmtSummary,
-              hasGeoRisks: geoRisks.length > 0,
-              hasSupplyChainRisk: !!scRisk,
-              hasManagementScore: !!mgmtScore,
-            };
-          } catch (enrichErr: any) {
-            console.error(`[companies] Error enriching company ${company.id} (${company.isin}):`, enrichErr.message);
-            return {
-              ...company,
-              totalGeoRisk: 0,
-              totalGeoRiskPV: 0,
-              supplyChainRisk: null,
-              managementScore: null,
-              hasGeoRisks: false,
-              hasSupplyChainRisk: false,
-              hasManagementScore: false,
-            };
-          }
-        })
-      );
-      res.json(enriched);
+        const mgmtMap = new Map<number, { totalScore: number; totalPossible: number }>();
+        for (const row of mgmtAll.rows) {
+          mgmtMap.set(row.company_id, {
+            totalScore: row.total_score,
+            totalPossible: row.total_possible,
+          });
+        }
+
+        const enriched = companies.map((company) => {
+          const geo = geoMap.get(company.id);
+          const sc = scMap.get(company.id);
+          const mgmt = mgmtMap.get(company.id);
+
+          return {
+            ...company,
+            totalGeoRisk: geo?.totalGeoRisk || 0,
+            totalGeoRiskPV: geo?.totalGeoRiskPV || 0,
+            supplyChainRisk: sc ? { indirectRisk: sc.indirectRisk, supplyChainTiers: sc.supplyChainTiers } : null,
+            managementScore: mgmt ? { totalScore: mgmt.totalScore, totalPossible: mgmt.totalPossible } : null,
+            hasGeoRisks: (geo?.count || 0) > 0,
+            hasSupplyChainRisk: !!sc,
+            hasManagementScore: !!mgmt,
+          };
+        });
+
+        res.json(enriched);
+      } finally {
+        client.release();
+      }
     } catch (err: any) {
       console.error(`[companies] Fatal error loading companies:`, err.message);
       res.status(500).json({ error: err.message });
