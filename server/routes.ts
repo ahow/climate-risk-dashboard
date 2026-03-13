@@ -706,5 +706,54 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/diagnostics", async (_req, res) => {
+    try {
+      const { pool } = await import("./db");
+      const client = await pool.connect();
+      try {
+        const tables = ["companies", "assets", "geo_risks", "supply_chain_risks", "management_scores", "operations", "company_list_uploads", "company_list_entries"];
+        const counts: Record<string, number> = {};
+        for (const t of tables) {
+          try {
+            const r = await client.query(`SELECT COUNT(*) as cnt FROM ${t}`);
+            counts[t] = parseInt(r.rows[0].cnt);
+          } catch {
+            counts[t] = -1;
+          }
+        }
+
+        const companyCols = await client.query(
+          `SELECT column_name, data_type FROM information_schema.columns WHERE table_name='companies' ORDER BY ordinal_position`
+        );
+
+        const opCols = await client.query(
+          `SELECT column_name FROM information_schema.columns WHERE table_name='operations'`
+        );
+        const opColNames = opCols.rows.map((r: any) => r.column_name);
+        const opSelect = ["id", "type", "status", "status_message", "total_items", "processed_items"]
+          .filter(c => opColNames.includes(c.replace(/_/g, '_')))
+          .join(", ");
+        const recentOps = await client.query(
+          `SELECT ${opSelect || '*'} FROM operations ORDER BY id DESC LIMIT 5`
+        );
+
+        const sampleCompanies = await client.query(
+          `SELECT id, isin, company_name FROM companies LIMIT 5`
+        );
+
+        res.json({
+          tableCounts: counts,
+          companyColumns: companyCols.rows.map((r: any) => `${r.column_name} (${r.data_type})`),
+          recentOperations: recentOps.rows,
+          sampleCompanies: sampleCompanies.rows,
+        });
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return httpServer;
 }
