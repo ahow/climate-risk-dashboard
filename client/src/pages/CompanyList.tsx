@@ -14,7 +14,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Download, FileSpreadsheet, Link2, Copy, Trash2, Loader2, Search, Play, ExternalLink } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, Link2, Copy, Trash2, Loader2, Search, Play, ExternalLink, Eraser } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface CompanyListUpload {
   id: number;
@@ -136,6 +147,24 @@ export default function CompanyList() {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to start", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const clearDataMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/clear-risk-data");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      const { deleted } = data;
+      toast({
+        title: "Risk data cleared",
+        description: `Removed ${deleted.geoRisks.toLocaleString()} geo risks, ${deleted.supplyChainRisks.toLocaleString()} supply chain risks, ${deleted.managementScores.toLocaleString()} management scores`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to clear data", description: err.message, variant: "destructive" });
     },
   });
 
@@ -267,6 +296,39 @@ export default function CompanyList() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      disabled={isBulkRunning || clearDataMutation.isPending}
+                      data-testid="button-clear-data"
+                    >
+                      {clearDataMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Eraser className="h-4 w-4 mr-2" />
+                      )}
+                      Clear Risk Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear all risk data?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will delete all geographic risks, supply chain risks, and management scores for every company. Company records and assets will be kept. You can then reprocess all companies to get fresh data from the updated API.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => clearDataMutation.mutate()}
+                        data-testid="button-confirm-clear-data"
+                      >
+                        Clear All Risk Data
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button
                   onClick={() => processAllMutation.mutate()}
                   disabled={isBulkRunning || processAllMutation.isPending}

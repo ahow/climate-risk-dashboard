@@ -521,6 +521,26 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/clear-risk-data", async (_req, res) => {
+    try {
+      const ops = await storage.getOperations();
+      const running = ops.find(
+        (op) => op.status === "running" || op.status === "pending"
+      );
+      if (running) {
+        return res.status(409).json({ error: "Cannot clear data while a processing operation is running" });
+      }
+
+      const result = await storage.clearAllRiskData();
+      res.json({
+        message: "All risk data cleared successfully",
+        deleted: result,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/company-list/process-all", async (_req, res) => {
     try {
       const ops = await storage.getOperations();
