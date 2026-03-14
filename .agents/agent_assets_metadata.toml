@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "V6GYbpk4KjM5hsDd2Y3dE"
+uri = "file://Climate Risk Dashboard - Application Description.md"
+type = "text"
+title = "Climate Risk Dashboard - Application Description"
