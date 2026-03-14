@@ -45,6 +45,8 @@ export interface IStorage {
   updateOperation(id: number, data: Partial<Operation>): Promise<Operation>;
   deleteOperation(id: number): Promise<void>;
 
+  clearAllRiskData(): Promise<{ geoRisks: number; supplyChainRisks: number; managementScores: number }>;
+
   getLatestCompanyListUpload(): Promise<CompanyListUpload | undefined>;
   getCompanyListUploads(): Promise<CompanyListUpload[]>;
   createCompanyListUpload(data: InsertCompanyListUpload): Promise<CompanyListUpload>;
@@ -165,6 +167,23 @@ export class DatabaseStorage implements IStorage {
 
   async deleteOperation(id: number): Promise<void> {
     await db.delete(operations).where(eq(operations.id, id));
+  }
+
+  async clearAllRiskData(): Promise<{ geoRisks: number; supplyChainRisks: number; managementScores: number }> {
+    const { pool } = await import("./db");
+    const client = await pool.connect();
+    try {
+      const geoResult = await client.query("DELETE FROM geo_risks");
+      const scResult = await client.query("DELETE FROM supply_chain_risks");
+      const mgmtResult = await client.query("DELETE FROM management_scores");
+      return {
+        geoRisks: geoResult.rowCount || 0,
+        supplyChainRisks: scResult.rowCount || 0,
+        managementScores: mgmtResult.rowCount || 0,
+      };
+    } finally {
+      client.release();
+    }
   }
 
   async getLatestCompanyListUpload(): Promise<CompanyListUpload | undefined> {
