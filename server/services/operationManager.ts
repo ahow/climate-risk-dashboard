@@ -61,35 +61,17 @@ export async function recoverOrphanedOperations() {
     await backfillCompanyFinancials();
 
     const ops = await storage.getOperations();
-    const running = ops.filter(op => op.status === "running");
+    const running = ops.filter(op => op.status === "running" || op.status === "pending");
     for (const op of running) {
-      log(`Recovering orphaned operation #${op.id} (${op.type}) - was running since ${op.startedAt}`);
-      if (op.type === "bulk_processing") {
-        const latest = await storage.getLatestCompanyListUpload();
-        if (latest) {
-          log(`Resuming bulk processing operation #${op.id}`);
-          processBulkFromList(op.id, latest.id);
-        } else {
-          await storage.updateOperation(op.id, {
-            status: "failed",
-            statusMessage: "Orphaned: no upload found to resume",
-            completedAt: new Date(),
-          });
-        }
-      } else if (op.type === "full_assessment" && op.companyId) {
-        processAllRisks(op.id, op.companyId);
-      } else if (op.type === "geographic_risk" && op.companyId) {
-        processGeographicRisks(op.id, op.companyId);
-      } else {
-        await storage.updateOperation(op.id, {
-          status: "failed",
-          statusMessage: "Orphaned: server restarted during processing",
-          completedAt: new Date(),
-        });
-      }
+      log(`Found orphaned operation #${op.id} (${op.type}) - was running since ${op.startedAt}, progress: ${op.processedItems}/${op.totalItems}`);
+      await storage.updateOperation(op.id, {
+        status: "failed",
+        statusMessage: `Interrupted by server restart at ${op.processedItems}/${op.totalItems} — use "Clear Risk Data" then "Process All" to restart`,
+        completedAt: new Date(),
+      });
     }
     if (running.length > 0) {
-      log(`Recovered ${running.length} orphaned operation(s)`);
+      log(`Marked ${running.length} orphaned operation(s) as interrupted`);
     }
   } catch (err: any) {
     log(`Error recovering orphaned operations: ${err.message}`);
