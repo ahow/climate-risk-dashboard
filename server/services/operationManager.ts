@@ -529,6 +529,74 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             continue;
           }
 
+          if (hasSuccessfulGeoRisks && !existingSCRisk) {
+            const updates: any = {};
+            if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
+            if (entryEv != null) updates.ev = entryEv;
+            if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
+            if (Object.keys(updates).length > 0) {
+              await storage.updateCompany(company.id, updates);
+            }
+            const fillTasks: Promise<void>[] = [];
+            fillTasks.push((async () => {
+              try {
+                const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
+                const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+                const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+                const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
+                const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
+                await storage.createSupplyChainRisk({
+                  companyId: company.id,
+                  countryCode: scResult.country,
+                  countryName: scResult.country_name,
+                  sectorCode: scResult.sector,
+                  sectorName: scResult.sector_name,
+                  directRisk: scResult.direct_risk,
+                  indirectRisk: scResult.indirect_risk,
+                  totalRisk: scResult.total_risk,
+                  topSuppliers: scResult.top_suppliers,
+                  supplyChainTiers: scResult.supply_chain_tiers,
+                  directExpectedLoss: scaled.directExpectedLoss,
+                  directExpectedLossPct: scaled.directExpectedLossPct,
+                  indirectExpectedLoss: scaled.indirectExpectedLoss,
+                  indirectExpectedLossPct: scaled.indirectExpectedLossPct,
+                });
+                log(`Bulk: Backfilled supply chain risk for ${company.companyName}`);
+              } catch (err: any) {
+                log(`Bulk: Supply chain backfill error for ${company.companyName}: ${err.message}`);
+              }
+            })());
+            if (!existingMgmt) {
+              fillTasks.push((async () => {
+                try {
+                  const mgmtResult = await fetchManagementPerformance(company.isin, company.companyName);
+                  if (mgmtResult) {
+                    await storage.createManagementScore({
+                      companyId: company.id,
+                      totalScore: mgmtResult.company.totalScore,
+                      totalPossible: mgmtResult.company.totalPossible,
+                      summary: mgmtResult.company.summary,
+                      analysisStatus: mgmtResult.company.analysisStatus,
+                      scores: mgmtResult.scores,
+                      documents: mgmtResult.documents,
+                    });
+                    log(`Bulk: Backfilled management score for ${company.companyName}`);
+                  }
+                } catch (err: any) {
+                  log(`Bulk: Management backfill error for ${company.companyName}: ${err.message}`);
+                }
+              })());
+            }
+            await Promise.all(fillTasks);
+            processed++;
+            await storage.updateOperation(operationId, {
+              processedItems: processed,
+              statusMessage: `${processed}/${totalSteps}: ${company.companyName} - backfilled missing risk data`,
+            });
+            await sleep(100);
+            continue;
+          }
+
           if (hasSuccessfulGeoRisks && existingSCRisk && !existingMgmt) {
             const updates: any = {};
             if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
