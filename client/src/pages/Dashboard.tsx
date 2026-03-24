@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -19,7 +21,7 @@ import {
 import {
   Building2, Plus, Trash2, AlertTriangle, Shield, Link2,
   ChevronRight, Loader2, Search, Pause, Play, Square,
-  Activity,
+  Activity, Download, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 
 function formatCurrency(value: number): string {
@@ -29,11 +31,19 @@ function formatCurrency(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
+function formatCurrencyFull(value: number): string {
+  return value.toFixed(0);
+}
+
 function formatPct(value: number): string {
   if (value === 0) return "0%";
   if (value >= 10) return `${value.toFixed(0)}%`;
   if (value >= 1) return `${value.toFixed(1)}%`;
   return `${value.toFixed(2)}%`;
+}
+
+function formatPctRaw(value: number): string {
+  return value.toFixed(4);
 }
 
 const SC_PV_FACTOR = 13.57;
@@ -96,10 +106,31 @@ function formatDuration(start: string, end?: string | null): string {
   return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
 }
 
+type SortKey = "companyName" | "totalAssets" | "ev" | "directPV" | "scPV" | "totalPV" | "mgmt" | "adjustedPV" | "valuation";
+type SortDir = "asc" | "desc";
+
+function getSortValue(company: any, metrics: ReturnType<typeof getCompanyMetrics>, key: SortKey): number | string {
+  switch (key) {
+    case "companyName": return company.companyName.toLowerCase();
+    case "totalAssets": return company.totalAssetValue || 0;
+    case "ev": return company.ev || 0;
+    case "directPV": return metrics.directExposurePV;
+    case "scPV": return metrics.supplyChainPV;
+    case "totalPV": return metrics.totalExposurePV;
+    case "mgmt": return metrics.mgmtScorePct ?? -1;
+    case "adjustedPV": return metrics.adjustedExposurePV;
+    case "valuation": return metrics.valuationExposurePct ?? -1;
+    default: return 0;
+  }
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const [isinInput, setIsinInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFinancials, setShowFinancials] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const { data: companies = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/companies"],
@@ -186,11 +217,82 @@ export default function Dashboard() {
     },
   });
 
-  const filteredCompanies = companies.filter((c: any) =>
-    c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.isin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.sector || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCompanies = useMemo(() => {
+    let result = companies.filter((c: any) =>
+      c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.isin.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.sector || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (!showFinancials) {
+      result = result.filter((c: any) => (c.sector || "").toLowerCase() !== "financials");
+    }
+
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const mA = getCompanyMetrics(a);
+        const mB = getCompanyMetrics(b);
+        const vA = getSortValue(a, mA, sortKey);
+        const vB = getSortValue(b, mB, sortKey);
+        if (typeof vA === "string" && typeof vB === "string") {
+          return sortDir === "asc" ? vA.localeCompare(vB) : vB.localeCompare(vA);
+        }
+        const nA = vA as number;
+        const nB = vB as number;
+        return sortDir === "asc" ? nA - nB : nB - nA;
+      });
+    }
+
+    return result;
+  }, [companies, searchQuery, showFinancials, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      if (sortDir === "desc") {
+        setSortDir("asc");
+      } else {
+        setSortKey(null);
+        setSortDir("desc");
+      }
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortKey !== columnKey) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    if (sortDir === "desc") return <ArrowDown className="h-3 w-3 ml-1" />;
+    return <ArrowUp className="h-3 w-3 ml-1" />;
+  };
+
+  const downloadTableCsv = () => {
+    const headers = ["Company", "ISIN", "Sector", "Total Assets", "EV", "Direct PV", "Supply Chain PV", "Total PV", "Mgmt Score %", "Adjusted PV", "Valuation Exposure %"];
+    const rows = filteredCompanies.map((company: any) => {
+      const m = getCompanyMetrics(company);
+      return [
+        `"${(company.companyName || "").replace(/"/g, '""')}"`,
+        company.isin,
+        `"${(company.sector || "").replace(/"/g, '""')}"`,
+        formatCurrencyFull(company.totalAssetValue || 0),
+        formatCurrencyFull(company.ev || 0),
+        formatCurrencyFull(m.directExposurePV),
+        formatCurrencyFull(m.supplyChainPV),
+        formatCurrencyFull(m.totalExposurePV),
+        m.mgmtScorePct != null ? (m.mgmtScorePct * 100).toFixed(1) : "",
+        formatCurrencyFull(m.adjustedExposurePV),
+        m.valuationExposurePct != null ? formatPctRaw(m.valuationExposurePct) : "",
+      ].join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `climate-risk-dashboard${showFinancials ? "" : "-ex-financials"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const totalAssetValue = companies.reduce((sum: number, c: any) => sum + (c.totalAssetValue || 0), 0);
   const totalGeoRiskPV = companies.reduce((sum: number, c: any) => sum + (c.totalGeoRiskPV || 0), 0);
@@ -359,7 +461,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -370,9 +472,30 @@ export default function Dashboard() {
             data-testid="input-search"
           />
         </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-financials"
+            checked={showFinancials}
+            onCheckedChange={setShowFinancials}
+            data-testid="toggle-financials"
+          />
+          <Label htmlFor="show-financials" className="text-sm cursor-pointer">
+            Include Financials
+          </Label>
+        </div>
         <span className="text-sm text-muted-foreground">
           {filteredCompanies.length} companies
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={downloadTableCsv}
+          disabled={filteredCompanies.length === 0}
+          data-testid="button-download-csv"
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Download CSV
+        </Button>
       </div>
 
       {isLoading ? (
@@ -394,14 +517,51 @@ export default function Dashboard() {
           <Table data-testid="table-companies" className="table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[20%]">Company</TableHead>
-                <TableHead className="text-right w-[10%]">Total Assets</TableHead>
-                <TableHead className="text-right w-[10%]">Direct PV</TableHead>
-                <TableHead className="text-right w-[10%]">Supply Chain PV</TableHead>
-                <TableHead className="text-right w-[10%]">Total PV</TableHead>
-                <TableHead className="text-right w-[8%]">Mgmt Score</TableHead>
-                <TableHead className="text-right w-[11%]">Adjusted PV</TableHead>
-                <TableHead className="text-right w-[11%]">Valuation Exposure</TableHead>
+                <TableHead className="w-[18%]">
+                  <button onClick={() => handleSort("companyName")} className="flex items-center hover:text-foreground" data-testid="sort-company">
+                    Company <SortIcon columnKey="companyName" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[9%]">
+                  <button onClick={() => handleSort("totalAssets")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-total-assets">
+                    Total Assets <SortIcon columnKey="totalAssets" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[9%]">
+                  <button onClick={() => handleSort("ev")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-ev">
+                    EV <SortIcon columnKey="ev" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[9%]">
+                  <button onClick={() => handleSort("directPV")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-direct-pv">
+                    Direct PV <SortIcon columnKey="directPV" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[9%]">
+                  <button onClick={() => handleSort("scPV")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-sc-pv">
+                    SC PV <SortIcon columnKey="scPV" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[9%]">
+                  <button onClick={() => handleSort("totalPV")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-total-pv">
+                    Total PV <SortIcon columnKey="totalPV" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[7%]">
+                  <button onClick={() => handleSort("mgmt")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-mgmt">
+                    Mgmt <SortIcon columnKey="mgmt" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[10%]">
+                  <button onClick={() => handleSort("adjustedPV")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-adjusted-pv">
+                    Adjusted PV <SortIcon columnKey="adjustedPV" />
+                  </button>
+                </TableHead>
+                <TableHead className="text-right w-[10%]">
+                  <button onClick={() => handleSort("valuation")} className="flex items-center justify-end w-full hover:text-foreground" data-testid="sort-valuation">
+                    Val. Exp. <SortIcon columnKey="valuation" />
+                  </button>
+                </TableHead>
                 <TableHead className="w-[4%]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -430,6 +590,9 @@ export default function Dashboard() {
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-total-assets-${company.id}`}>
                       {company.totalAssetValue ? formatCurrency(company.totalAssetValue) : "---"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono" data-testid={`text-ev-${company.id}`}>
+                      {company.ev ? formatCurrency(company.ev) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-direct-exposure-${company.id}`}>
                       {company.hasGeoRisks ? formatCurrency(m.directExposurePV) : "---"}
