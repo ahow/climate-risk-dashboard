@@ -24,85 +24,84 @@ export async function registerRoutes(
 
   app.get("/api/companies", async (_req, res) => {
     try {
-      const companies = await storage.getCompanies();
-      console.log(`[companies] Found ${companies.length} companies in database`);
-
       const client = await pool.connect();
       try {
-        const [geoAgg, scAll, mgmtAll, assetAgg] = await Promise.all([
-          client.query(`
+        const result = await client.query(`
+          SELECT
+            c.id, c.isin, c.company_name, c.sector, c.country,
+            c.total_asset_value, c.asset_count, c.supplier_costs, c.ev,
+            COALESCE(g.total_geo_risk, 0) as raw_geo_risk,
+            COALESCE(g.total_geo_risk_pv, 0) as raw_geo_risk_pv,
+            COALESCE(g.risk_count, 0) as geo_risk_count,
+            COALESCE(a.total_api_asset_value, 0) as api_asset_total,
+            sc.indirect_risk -> 'expected_loss' as sc_expected_loss,
+            sc.indirect_risk -> 'climate' as sc_climate,
+            sc.indirect_risk -> 'political' as sc_political,
+            sc.indirect_risk -> 'nature_loss' as sc_nature_loss,
+            sc.indirect_risk -> 'water_stress' as sc_water_stress,
+            ms.total_score as mgmt_total_score,
+            ms.total_possible as mgmt_total_possible,
+            CASE WHEN sc.company_id IS NOT NULL THEN true ELSE false END as has_sc,
+            CASE WHEN ms.company_id IS NOT NULL THEN true ELSE false END as has_mgmt
+          FROM companies c
+          LEFT JOIN (
             SELECT company_id,
-              COALESCE(SUM(expected_annual_loss), 0) as total_geo_risk,
-              COALESCE(SUM(present_value_30yr), 0) as total_geo_risk_pv,
+              SUM(expected_annual_loss) as total_geo_risk,
+              SUM(present_value_30yr) as total_geo_risk_pv,
               COUNT(*) as risk_count
             FROM geo_risks GROUP BY company_id
-          `),
-          client.query(`SELECT company_id, indirect_risk FROM supply_chain_risks`),
-          client.query(`SELECT company_id, total_score, total_possible FROM management_scores`),
-          client.query(`SELECT company_id, COALESCE(SUM(estimated_value_usd), 0) as total_api_asset_value FROM assets GROUP BY company_id`),
-        ]);
+          ) g ON g.company_id = c.id
+          LEFT JOIN (
+            SELECT company_id, SUM(estimated_value_usd) as total_api_asset_value
+            FROM assets GROUP BY company_id
+          ) a ON a.company_id = c.id
+          LEFT JOIN supply_chain_risks sc ON sc.company_id = c.id
+          LEFT JOIN management_scores ms ON ms.company_id = c.id
+          ORDER BY c.id
+        `);
 
-        const geoMap = new Map<number, { totalGeoRisk: number; totalGeoRiskPV: number; count: number }>();
-        for (const row of geoAgg.rows) {
-          geoMap.set(row.company_id, {
-            totalGeoRisk: parseFloat(row.total_geo_risk) || 0,
-            totalGeoRiskPV: parseFloat(row.total_geo_risk_pv) || 0,
-            count: parseInt(row.risk_count) || 0,
-          });
-        }
-
-        const scMap = new Map<number, { indirectRisk: any }>();
-        for (const row of scAll.rows) {
-          scMap.set(row.company_id, {
-            indirectRisk: row.indirect_risk,
-          });
-        }
-
-        const mgmtMap = new Map<number, { totalScore: number; totalPossible: number }>();
-        for (const row of mgmtAll.rows) {
-          mgmtMap.set(row.company_id, {
-            totalScore: row.total_score,
-            totalPossible: row.total_possible,
-          });
-        }
-
-        const assetValMap = new Map<number, number>();
-        for (const row of assetAgg.rows) {
-          assetValMap.set(row.company_id, parseFloat(row.total_api_asset_value) || 0);
-        }
-
-        const enriched = companies.map((company) => {
-          const geo = geoMap.get(company.id);
-          const sc = scMap.get(company.id);
-          const mgmt = mgmtMap.get(company.id);
-
-          const rawGeoRiskPV = geo?.totalGeoRiskPV || 0;
-          const rawGeoRisk = geo?.totalGeoRisk || 0;
-          const apiAssetTotal = assetValMap.get(company.id) || 0;
-          const companyAssetVal = company.totalAssetValue || 0;
+        const enriched = result.rows.map((row: any) => {
+          const rawGeoRisk = parseFloat(row.raw_geo_risk) || 0;
+          const rawGeoRiskPV = parseFloat(row.raw_geo_risk_pv) || 0;
+          const apiAssetTotal = parseFloat(row.api_asset_total) || 0;
+          const companyAssetVal = parseFloat(row.total_asset_value) || 0;
           const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0 && companyAssetVal < apiAssetTotal)
             ? companyAssetVal / apiAssetTotal : 1;
 
+          let supplyChainRisk = null;
+          if (row.has_sc) {
+            supplyChainRisk = {
+              indirectRisk: {
+                expected_loss: row.sc_expected_loss,
+                climate: row.sc_climate,
+                political: row.sc_political,
+                nature_loss: row.sc_nature_loss,
+                water_stress: row.sc_water_stress,
+              }
+            };
+          }
+
           return {
-            id: company.id,
-            isin: company.isin,
-            companyName: company.companyName,
-            sector: company.sector,
-            country: company.country,
-            totalAssetValue: company.totalAssetValue,
-            assetCount: company.assetCount,
-            supplierCosts: company.supplierCosts,
-            ev: company.ev,
+            id: row.id,
+            isin: row.isin,
+            companyName: row.company_name,
+            sector: row.sector,
+            country: row.country,
+            totalAssetValue: companyAssetVal || null,
+            assetCount: row.asset_count,
+            supplierCosts: parseFloat(row.supplier_costs) || null,
+            ev: parseFloat(row.ev) || null,
             totalGeoRisk: rawGeoRisk * geoScaleFactor,
             totalGeoRiskPV: rawGeoRiskPV * geoScaleFactor,
-            supplyChainRisk: sc ? { indirectRisk: sc.indirectRisk } : null,
-            managementScore: mgmt ? { totalScore: mgmt.totalScore, totalPossible: mgmt.totalPossible } : null,
-            hasGeoRisks: (geo?.count || 0) > 0,
-            hasSupplyChainRisk: !!sc,
-            hasManagementScore: !!mgmt,
+            supplyChainRisk,
+            managementScore: row.has_mgmt ? { totalScore: row.mgmt_total_score, totalPossible: row.mgmt_total_possible } : null,
+            hasGeoRisks: parseInt(row.geo_risk_count) > 0,
+            hasSupplyChainRisk: row.has_sc,
+            hasManagementScore: row.has_mgmt,
           };
         });
 
+        console.log(`[companies] Returning ${enriched.length} companies`);
         res.json(enriched);
       } finally {
         client.release();
@@ -622,13 +621,18 @@ export async function registerRoutes(
 
   app.post("/api/backfill-management", async (_req, res) => {
     try {
-      const companies = await storage.getCompanies();
-      const missing: Array<{id: number, isin: string, name: string}> = [];
-      for (const company of companies) {
-        const mgmt = await storage.getManagementScore(company.id);
-        if (!mgmt) {
-          missing.push({ id: company.id, isin: company.isin, name: company.companyName });
-        }
+      const client = await pool.connect();
+      let missing: Array<{id: number, isin: string, name: string}> = [];
+      try {
+        const result = await client.query(`
+          SELECT c.id, c.isin, c.company_name
+          FROM companies c
+          LEFT JOIN management_scores ms ON ms.company_id = c.id
+          WHERE ms.company_id IS NULL
+        `);
+        missing = result.rows.map((r: any) => ({ id: r.id, isin: r.isin, name: r.company_name }));
+      } finally {
+        client.release();
       }
       if (missing.length === 0) {
         return res.json({ message: "All companies already have management scores", backfilled: 0 });
@@ -708,49 +712,70 @@ export async function registerRoutes(
 
   app.get("/api/export/csv", async (_req, res) => {
     try {
-      const companies = await storage.getCompanies();
-      const rows = await Promise.all(
-        companies.map(async (company) => {
-          const assetsList = await storage.getAssetsByCompany(company.id);
-          const geoRisks = await storage.getGeoRisksByCompany(company.id);
-          const scRisk = await storage.getSupplyChainRisk(company.id);
-          const mgmtScore = await storage.getManagementScore(company.id);
+      const client = await pool.connect();
+      try {
+        const result = await client.query(`
+          SELECT
+            c.id, c.isin, c.company_name, c.sector, c.country,
+            c.total_asset_value, c.supplier_costs, c.ev, c.asset_count,
+            COALESCE(g.total_geo_risk_pv, 0) as raw_geo_risk_pv,
+            COALESCE(a.total_api_asset_value, 0) as api_asset_total,
+            sc.indirect_risk -> 'expected_loss' as sc_expected_loss,
+            ms.total_score as mgmt_total_score,
+            ms.total_possible as mgmt_total_possible
+          FROM companies c
+          LEFT JOIN (
+            SELECT company_id, SUM(present_value_30yr) as total_geo_risk_pv
+            FROM geo_risks GROUP BY company_id
+          ) g ON g.company_id = c.id
+          LEFT JOIN (
+            SELECT company_id, SUM(estimated_value_usd) as total_api_asset_value
+            FROM assets GROUP BY company_id
+          ) a ON a.company_id = c.id
+          LEFT JOIN supply_chain_risks sc ON sc.company_id = c.id
+          LEFT JOIN management_scores ms ON ms.company_id = c.id
+          ORDER BY c.id
+        `);
 
-          const rawTotalGeoRiskPV = geoRisks.reduce((sum, r) => sum + (r.presentValue30yr || 0), 0);
-          const apiAssetTotal = assetsList.reduce((sum, a) => sum + (a.estimatedValueUsd || 0), 0);
-          const companyAssetVal = company.totalAssetValue || 0;
+        const SC_PV_FACTOR = 13.57;
+        const rows = result.rows.map((row: any) => {
+          const rawGeoRiskPV = parseFloat(row.raw_geo_risk_pv) || 0;
+          const apiAssetTotal = parseFloat(row.api_asset_total) || 0;
+          const companyAssetVal = parseFloat(row.total_asset_value) || 0;
+          const supplierCosts = parseFloat(row.supplier_costs) || 0;
+          const ev = parseFloat(row.ev) || 0;
           const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0 && companyAssetVal < apiAssetTotal)
             ? companyAssetVal / apiAssetTotal : 1;
-          const totalGeoRiskPV = rawTotalGeoRiskPV * geoScaleFactor;
-          const SC_PV_FACTOR = 13.57;
-          const scEl = (scRisk?.indirectRisk as any)?.expected_loss;
+          const totalGeoRiskPV = rawGeoRiskPV * geoScaleFactor;
+
+          const scEl = row.sc_expected_loss;
           const scHasNewAPI = scEl?.present_value != null;
-          const scSf = company.supplierCosts
-            ? company.supplierCosts / (scHasNewAPI ? 1_000_000_000 : 1_000_000)
+          const scSf = supplierCosts
+            ? supplierCosts / (scHasNewAPI ? 1_000_000_000 : 1_000_000)
             : 1;
           const scRawPV = scHasNewAPI ? scEl.present_value : (scEl?.total_annual_loss || 0) * SC_PV_FACTOR;
           const scIndirectPV = scRawPV * scSf;
           const totalExposurePV = totalGeoRiskPV + scIndirectPV;
-          const mgmtScoreVal = mgmtScore
-            ? `${mgmtScore.totalScore}%`
+          const mgmtScoreVal = row.mgmt_total_score != null
+            ? `${row.mgmt_total_score}%`
             : "N/A";
-          const mgmtScorePct = mgmtScore ? mgmtScore.totalScore / 100 : null;
+          const mgmtScorePct = row.mgmt_total_score != null ? row.mgmt_total_score / 100 : null;
           const adjustedExposurePV = mgmtScorePct != null
             ? totalExposurePV * (1 - 0.7 * mgmtScorePct)
             : totalExposurePV;
-          const valuationPct = company.ev && company.ev > 0
-            ? ((adjustedExposurePV / company.ev) * 100).toFixed(2) + "%"
+          const valuationPct = ev > 0
+            ? ((adjustedExposurePV / ev) * 100).toFixed(2) + "%"
             : "N/A";
 
           return {
-            "Company Name": company.companyName,
-            "ISIN": company.isin,
-            "Sector": company.sector || "",
-            "Country": company.country || "",
-            "Total Asset Value": company.totalAssetValue || 0,
-            "Supplier Costs": company.supplierCosts || 0,
-            "EV": company.ev || 0,
-            "Asset Count": company.assetCount || 0,
+            "Company Name": row.company_name,
+            "ISIN": row.isin,
+            "Sector": row.sector || "",
+            "Country": row.country || "",
+            "Total Asset Value": companyAssetVal || 0,
+            "Supplier Costs": supplierCosts || 0,
+            "EV": ev || 0,
+            "Asset Count": row.asset_count || 0,
             "Geographic Risk PV": totalGeoRiskPV.toFixed(2),
             "Supply Chain Risk PV (Indirect)": scIndirectPV.toFixed(2),
             "Total Exposure PV": totalExposurePV.toFixed(2),
@@ -758,27 +783,29 @@ export async function registerRoutes(
             "Adjusted Exposure PV": adjustedExposurePV.toFixed(2),
             "Valuation Exposure %": valuationPct,
           };
-        })
-      );
+        });
 
-      if (rows.length === 0) {
-        return res.status(404).json({ error: "No data to export" });
+        if (rows.length === 0) {
+          return res.status(404).json({ error: "No data to export" });
+        }
+
+        const headers = Object.keys(rows[0]);
+        const csvLines = [
+          headers.join(","),
+          ...rows.map((row) =>
+            headers.map((h) => {
+              const val = String((row as any)[h]);
+              return val.includes(",") ? `"${val}"` : val;
+            }).join(",")
+          ),
+        ];
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", "attachment; filename=climate-risk-export.csv");
+        res.send(csvLines.join("\n"));
+      } finally {
+        client.release();
       }
-
-      const headers = Object.keys(rows[0]);
-      const csvLines = [
-        headers.join(","),
-        ...rows.map((row) =>
-          headers.map((h) => {
-            const val = String((row as any)[h]);
-            return val.includes(",") ? `"${val}"` : val;
-          }).join(",")
-        ),
-      ];
-
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=climate-risk-export.csv");
-      res.send(csvLines.join("\n"));
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

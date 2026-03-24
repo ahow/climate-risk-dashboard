@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { ensureSchemaUpdates } from "./db";
+import { ensureSchemaUpdates, pool } from "./db";
 import { recoverOrphanedOperations } from "./services/operationManager";
 import { storage } from "./storage";
 import { fetchManagementPerformance } from "./services/externalApis";
@@ -112,75 +112,70 @@ app.use((req, res, next) => {
 async function backfillManagementScores() {
   try {
     log(`[startup] Starting management score backfill check...`);
-    const companies = await storage.getCompanies();
-    log(`[startup] Found ${companies.length} companies total`);
-    const missing: Array<{id: number, isin: string, name: string}> = [];
-    let hasScore = 0;
-    let corruptedCount = 0;
-    for (const company of companies) {
-      try {
-        const mgmt = await storage.getManagementScore(company.id);
-        if (!mgmt) {
-          missing.push({ id: company.id, isin: company.isin, name: company.companyName });
-        } else if (mgmt.totalScore == null || mgmt.totalPossible == null || mgmt.totalPossible !== 26) {
-          missing.push({ id: company.id, isin: company.isin, name: company.companyName });
-          corruptedCount++;
-        } else {
-          hasScore++;
-        }
-      } catch (checkErr: any) {
-        log(`[startup] Error checking management score for ${company.companyName} (id:${company.id}): ${checkErr.message}`);
-        missing.push({ id: company.id, isin: company.isin, name: company.companyName });
+    const client = await pool.connect();
+    try {
+      const missingResult = await client.query(`
+        SELECT c.id, c.isin, c.company_name
+        FROM companies c
+        LEFT JOIN management_scores ms ON ms.company_id = c.id
+        WHERE ms.company_id IS NULL
+          OR ms.total_score IS NULL
+          OR ms.total_possible IS NULL
+          OR ms.total_possible != 26
+      `);
+      const missing = missingResult.rows;
+      const totalCount = (await client.query(`SELECT COUNT(*) as cnt FROM companies`)).rows[0].cnt;
+      log(`[startup] Management score status: ${totalCount - missing.length} valid, ${missing.length} need repair`);
+      if (missing.length === 0) {
+        log(`[startup] All ${totalCount} companies have valid management scores`);
+        return;
       }
-    }
-    log(`[startup] Management score status: ${hasScore} valid, ${missing.length} need repair (${corruptedCount} corrupted, ${missing.length - corruptedCount} missing)`);
-    if (missing.length === 0) {
-      log(`[startup] All ${companies.length} companies have valid management scores`);
-      return;
-    }
-    log(`[startup] Backfilling management scores for ${missing.length} companies...`);
-    let success = 0;
-    let failed = 0;
-    let noData = 0;
-    for (const company of missing) {
-      try {
-        const mgmtResult = await fetchManagementPerformance(company.isin, company.name);
-        if (mgmtResult) {
-          try {
-            await storage.deleteManagementScore(company.id);
-          } catch (delErr: any) {
-            log(`[startup] Delete error for ${company.name}: ${delErr.message}`);
-          }
-          try {
-            await storage.createManagementScore({
-              companyId: company.id,
-              totalScore: mgmtResult.company.totalScore,
-              totalPossible: mgmtResult.company.totalPossible,
-              summary: mgmtResult.company.summary,
-              analysisStatus: mgmtResult.company.analysisStatus,
-              scores: mgmtResult.scores,
-              documents: mgmtResult.documents,
-            });
-            success++;
-            if (success % 10 === 0 || success <= 3) {
-              log(`[startup] Management score saved for ${company.name} (${success}/${missing.length})`);
+      log(`[startup] Backfilling management scores for ${missing.length} companies...`);
+      let success = 0;
+      let failed = 0;
+      let noData = 0;
+      for (const company of missing) {
+        try {
+          const mgmtResult = await fetchManagementPerformance(company.isin, company.company_name);
+          if (mgmtResult) {
+            try {
+              await storage.deleteManagementScore(company.id);
+            } catch (delErr: any) {
+              log(`[startup] Delete error for ${company.company_name}: ${delErr.message}`);
             }
-          } catch (createErr: any) {
-            failed++;
-            log(`[startup] CREATE FAILED for ${company.name}: ${createErr.message}`);
+            try {
+              await storage.createManagementScore({
+                companyId: company.id,
+                totalScore: mgmtResult.company.totalScore,
+                totalPossible: mgmtResult.company.totalPossible,
+                summary: mgmtResult.company.summary,
+                analysisStatus: mgmtResult.company.analysisStatus,
+                scores: mgmtResult.scores,
+                documents: mgmtResult.documents,
+              });
+              success++;
+              if (success % 10 === 0 || success <= 3) {
+                log(`[startup] Management score saved for ${company.company_name} (${success}/${missing.length})`);
+              }
+            } catch (createErr: any) {
+              failed++;
+              log(`[startup] CREATE FAILED for ${company.company_name}: ${createErr.message}`);
+            }
+          } else {
+            noData++;
+            if (noData <= 5) {
+              log(`[startup] No management data available for ${company.company_name} (${company.isin})`);
+            }
           }
-        } else {
-          noData++;
-          if (noData <= 5) {
-            log(`[startup] No management data available for ${company.name} (${company.isin})`);
-          }
+        } catch (err: any) {
+          failed++;
+          log(`[startup] Fetch error for ${company.company_name}: ${err.message}`);
         }
-      } catch (err: any) {
-        failed++;
-        log(`[startup] Fetch error for ${company.name}: ${err.message}`);
       }
+      log(`[startup] Management backfill complete: ${success} saved, ${noData} no data, ${failed} failed out of ${missing.length} missing`);
+    } finally {
+      client.release();
     }
-    log(`[startup] Management backfill complete: ${success} saved, ${noData} no data, ${failed} failed out of ${missing.length} missing`);
   } catch (err: any) {
     log(`[startup] Management backfill FATAL error: ${err.message}`);
     log(`[startup] Stack: ${err.stack}`);
