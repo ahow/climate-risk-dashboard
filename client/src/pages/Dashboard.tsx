@@ -394,13 +394,14 @@ export default function Dashboard() {
           <Table data-testid="table-companies" className="table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[22%]">Company</TableHead>
-                <TableHead className="text-right w-[11%]">Direct PV</TableHead>
-                <TableHead className="text-right w-[11%]">Supply Chain PV</TableHead>
-                <TableHead className="text-right w-[12%]">Total PV</TableHead>
+                <TableHead className="w-[20%]">Company</TableHead>
+                <TableHead className="text-right w-[10%]">Total Assets</TableHead>
+                <TableHead className="text-right w-[10%]">Direct PV</TableHead>
+                <TableHead className="text-right w-[10%]">Supply Chain PV</TableHead>
+                <TableHead className="text-right w-[10%]">Total PV</TableHead>
                 <TableHead className="text-right w-[8%]">Mgmt Score</TableHead>
-                <TableHead className="text-right w-[13%]">Adjusted PV</TableHead>
-                <TableHead className="text-right w-[13%]">Valuation Exposure</TableHead>
+                <TableHead className="text-right w-[11%]">Adjusted PV</TableHead>
+                <TableHead className="text-right w-[11%]">Valuation Exposure</TableHead>
                 <TableHead className="w-[4%]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -426,6 +427,9 @@ export default function Dashboard() {
                           </Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right font-mono" data-testid={`text-total-assets-${company.id}`}>
+                      {company.totalAssetValue ? formatCurrency(company.totalAssetValue) : "---"}
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-direct-exposure-${company.id}`}>
                       {company.hasGeoRisks ? formatCurrency(m.directExposurePV) : "---"}
