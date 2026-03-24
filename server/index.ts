@@ -103,8 +103,8 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
-      setTimeout(() => recoverOrphanedOperations(), 3000);
-      setTimeout(() => backfillManagementScores(), 10000);
+      setTimeout(() => recoverOrphanedOperations(), 5000);
+      setTimeout(() => backfillManagementScores(), 60000);
     },
   );
 })();

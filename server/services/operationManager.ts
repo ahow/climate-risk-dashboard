@@ -66,28 +66,12 @@ export async function recoverOrphanedOperations() {
       log(`Found orphaned operation #${op.id} (${op.type}) - was running since ${op.startedAt}, progress: ${op.processedItems}/${op.totalItems}`);
 
       if (op.type === "bulk_processing") {
-        const latest = await storage.getLatestCompanyListUpload();
-        if (latest) {
-          await storage.updateOperation(op.id, {
-            status: "failed",
-            statusMessage: `Interrupted by server restart at ${op.processedItems}/${op.totalItems} — auto-resuming as new operation`,
-            completedAt: new Date(),
-          });
-          const newOp = await storage.createOperation({
-            type: "bulk_processing",
-            status: "pending",
-            statusMessage: `Auto-resuming after server restart (continuing from ${op.processedItems}/${op.totalItems})`,
-            totalItems: op.totalItems,
-          });
-          log(`Auto-resuming bulk processing as new operation #${newOp.id} (previous: #${op.id} at ${op.processedItems}/${op.totalItems})`);
-          processBulkFromList(newOp.id, latest.id);
-        } else {
-          await storage.updateOperation(op.id, {
-            status: "failed",
-            statusMessage: `Interrupted by server restart — no upload found to resume`,
-            completedAt: new Date(),
-          });
-        }
+        await storage.updateOperation(op.id, {
+          status: "failed",
+          statusMessage: `Interrupted by server restart at ${op.processedItems}/${op.totalItems} — use "Process All" to resume`,
+          completedAt: new Date(),
+        });
+        log(`Marked orphaned bulk operation #${op.id} as failed (was at ${op.processedItems}/${op.totalItems}). Manual restart required to avoid crash loops.`);
       } else {
         await storage.updateOperation(op.id, {
           status: "failed",
