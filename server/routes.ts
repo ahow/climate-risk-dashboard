@@ -37,7 +37,7 @@ export async function registerRoutes(
               COUNT(*) as risk_count
             FROM geo_risks GROUP BY company_id
           `),
-          client.query(`SELECT company_id, indirect_risk, supply_chain_tiers FROM supply_chain_risks`),
+          client.query(`SELECT company_id, indirect_risk FROM supply_chain_risks`),
           client.query(`SELECT company_id, total_score, total_possible FROM management_scores`),
           client.query(`SELECT company_id, COALESCE(SUM(estimated_value_usd), 0) as total_api_asset_value FROM assets GROUP BY company_id`),
         ]);
@@ -51,11 +51,10 @@ export async function registerRoutes(
           });
         }
 
-        const scMap = new Map<number, { indirectRisk: any; supplyChainTiers: any }>();
+        const scMap = new Map<number, { indirectRisk: any }>();
         for (const row of scAll.rows) {
           scMap.set(row.company_id, {
             indirectRisk: row.indirect_risk,
-            supplyChainTiers: row.supply_chain_tiers,
           });
         }
 
@@ -85,10 +84,18 @@ export async function registerRoutes(
             ? companyAssetVal / apiAssetTotal : 1;
 
           return {
-            ...company,
+            id: company.id,
+            isin: company.isin,
+            companyName: company.companyName,
+            sector: company.sector,
+            country: company.country,
+            totalAssetValue: company.totalAssetValue,
+            assetCount: company.assetCount,
+            supplierCosts: company.supplierCosts,
+            ev: company.ev,
             totalGeoRisk: rawGeoRisk * geoScaleFactor,
             totalGeoRiskPV: rawGeoRiskPV * geoScaleFactor,
-            supplyChainRisk: sc ? { indirectRisk: sc.indirectRisk, supplyChainTiers: sc.supplyChainTiers } : null,
+            supplyChainRisk: sc ? { indirectRisk: sc.indirectRisk } : null,
             managementScore: mgmt ? { totalScore: mgmt.totalScore, totalPossible: mgmt.totalPossible } : null,
             hasGeoRisks: (geo?.count || 0) > 0,
             hasSupplyChainRisk: !!sc,
