@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Activity, Pause, Play, Trash2, Loader2, Clock, CheckCircle2,
-  XCircle, AlertCircle,
+  XCircle, AlertCircle, AlertTriangle, RefreshCw,
 } from "lucide-react";
 
 function formatDuration(start: string, end?: string | null): string {
@@ -42,6 +42,8 @@ const typeLabels: Record<string, string> = {
   supply_chain_risk: "Supply Chain Risk",
   management_score: "Management Score",
   full_assessment: "Full Assessment",
+  bulk_processing: "Bulk Processing",
+  process_missing: "Process Missing Data",
 };
 
 export default function CalculationMonitor() {
@@ -50,6 +52,46 @@ export default function CalculationMonitor() {
   const { data: operations = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/operations"],
     refetchInterval: 3000,
+  });
+
+  const { data: missingStatus } = useQuery<{
+    totalCompanies: number;
+    totalIncomplete: number;
+    missingGeo: number;
+    missingSC: number;
+    missingMgmt: number;
+  }>({
+    queryKey: ["/api/missing-data-status"],
+    refetchInterval: 10000,
+  });
+
+  const processMissingMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/process-missing");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/operations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/missing-data-status"] });
+      toast({ title: "Started processing companies with missing data" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const processAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/company-list/process-all");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/operations"] });
+      toast({ title: "Started full reprocessing of all companies" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
   });
 
   const pauseMutation = useMutation({
@@ -95,6 +137,66 @@ export default function CalculationMonitor() {
           Track and control long-running risk calculations
         </p>
       </div>
+
+      <Card data-testid="card-actions">
+        <CardContent className="py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              {missingStatus && missingStatus.totalIncomplete > 0 ? (
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground" data-testid="text-missing-count">
+                      {missingStatus.totalIncomplete} of {missingStatus.totalCompanies} companies have incomplete data
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Missing: {missingStatus.missingGeo > 0 && `${missingStatus.missingGeo} geo`}
+                      {missingStatus.missingGeo > 0 && missingStatus.missingSC > 0 && ", "}
+                      {missingStatus.missingSC > 0 && `${missingStatus.missingSC} supply chain`}
+                      {(missingStatus.missingGeo > 0 || missingStatus.missingSC > 0) && missingStatus.missingMgmt > 0 && ", "}
+                      {missingStatus.missingMgmt > 0 && `${missingStatus.missingMgmt} management`}
+                    </p>
+                  </div>
+                </div>
+              ) : missingStatus ? (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                  <p className="font-medium text-foreground">All {missingStatus.totalCompanies} companies have complete data</p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Loading status...</p>
+              )}
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                onClick={() => processMissingMutation.mutate()}
+                disabled={processMissingMutation.isPending || !missingStatus || missingStatus.totalIncomplete === 0 || activeOps.length > 0}
+                data-testid="button-process-missing"
+              >
+                {processMissingMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                )}
+                Process Missing
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => processAllMutation.mutate()}
+                disabled={processAllMutation.isPending || activeOps.length > 0}
+                data-testid="button-process-all"
+              >
+                {processAllMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Process All
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">

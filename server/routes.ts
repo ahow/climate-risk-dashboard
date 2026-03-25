@@ -8,6 +8,7 @@ import {
   processManagementScore,
   processAllRisks,
   processBulkFromList,
+  processMissingCompanies,
 } from "./services/operationManager";
 import { isinToIso3, sectorToIsic } from "./utils/mappings";
 import { z } from "zod";
@@ -367,6 +368,8 @@ export async function registerRoutes(
       } else if (op.type === "bulk_processing") {
         const latest = await storage.getLatestCompanyListUpload();
         if (latest) processBulkFromList(id, latest.id);
+      } else if (op.type === "process_missing") {
+        processMissingCompanies(id);
       }
 
       res.json(await storage.getOperation(id));
@@ -575,6 +578,63 @@ export async function registerRoutes(
       });
 
       processBulkFromList(operation.id, latest.id);
+      res.json(operation);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/missing-data-status", async (_req, res) => {
+    try {
+      const client = await pool.connect();
+      try {
+        const result = await client.query(`
+          SELECT
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE NOT EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id)) as missing_geo,
+            COUNT(*) FILTER (WHERE NOT EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id)) as missing_sc,
+            COUNT(*) FILTER (WHERE NOT EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id)) as missing_mgmt,
+            COUNT(*) FILTER (WHERE NOT (
+              EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id)
+              AND EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id)
+              AND EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id)
+            )) as total_incomplete
+          FROM companies c
+        `);
+        const row = result.rows[0];
+        res.json({
+          totalCompanies: parseInt(row.total),
+          totalIncomplete: parseInt(row.total_incomplete),
+          missingGeo: parseInt(row.missing_geo),
+          missingSC: parseInt(row.missing_sc),
+          missingMgmt: parseInt(row.missing_mgmt),
+        });
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/process-missing", async (_req, res) => {
+    try {
+      const ops = await storage.getOperations();
+      const existingBulk = ops.find(
+        (op) => (op.type === "bulk_processing" || op.type === "process_missing") && (op.status === "running" || op.status === "pending")
+      );
+      if (existingBulk) {
+        return res.status(409).json({ error: "A processing operation is already running", operation: existingBulk });
+      }
+
+      const operation = await storage.createOperation({
+        type: "process_missing",
+        status: "pending",
+        statusMessage: "Finding companies with missing data...",
+        totalItems: 0,
+      });
+
+      processMissingCompanies(operation.id);
       res.json(operation);
     } catch (err: any) {
       res.status(500).json({ error: err.message });

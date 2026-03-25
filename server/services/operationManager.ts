@@ -1,4 +1,5 @@
 import { storage } from "../storage";
+import { pool } from "../db";
 import {
   fetchAssetLocations,
   fetchClimateRisk,
@@ -830,6 +831,239 @@ export async function processBulkFromList(operationId: number, uploadId: number)
     });
   } catch (err: any) {
     log(`Bulk processing failed: ${err.message}`);
+    await storage.updateOperation(operationId, {
+      status: "failed",
+      statusMessage: `Failed: ${err.message}`,
+      completedAt: new Date(),
+    });
+  }
+}
+
+export async function processMissingCompanies(operationId: number) {
+  try {
+    const client = await pool.connect();
+    let missingCompanies: Array<{
+      id: number; isin: string; company_name: string; sector: string | null;
+      country: string | null; country_iso3: string | null; isic_sector_code: string | null;
+      supplier_costs: number | null; total_asset_value: number | null;
+      has_geo: boolean; has_sc: boolean; has_mgmt: boolean;
+      asset_count_db: string;
+    }>;
+    try {
+      const result = await client.query(`
+        SELECT
+          c.id, c.isin, c.company_name, c.sector, c.country,
+          c.country_iso3, c.isic_sector_code, c.supplier_costs, c.total_asset_value,
+          (SELECT COUNT(*) FROM assets WHERE company_id = c.id) as asset_count_db,
+          EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id) as has_geo,
+          EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id) as has_sc,
+          EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id) as has_mgmt
+        FROM companies c
+        WHERE NOT (
+          EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id)
+          AND EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id)
+          AND EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id)
+        )
+        ORDER BY c.id
+      `);
+      missingCompanies = result.rows;
+    } finally {
+      client.release();
+    }
+
+    if (missingCompanies.length === 0) {
+      await storage.updateOperation(operationId, {
+        status: "completed",
+        statusMessage: "All companies already have complete data",
+        totalItems: 0,
+        processedItems: 0,
+        completedAt: new Date(),
+      });
+      return;
+    }
+
+    const totalSteps = missingCompanies.length;
+    await storage.updateOperation(operationId, {
+      status: "running",
+      totalItems: totalSteps,
+      processedItems: 0,
+      statusMessage: `Processing 0/${totalSteps} companies with missing data...`,
+    });
+
+    let processed = 0;
+    let failed = 0;
+
+    for (const row of missingCompanies) {
+      const operation = await storage.getOperation(operationId);
+      if (!operation || operation.status === "paused" || operation.status === "cancelled") return;
+
+      try {
+        const company = await storage.getCompany(row.id);
+        if (!company) {
+          processed++;
+          continue;
+        }
+
+        const missingParts: string[] = [];
+        if (!row.has_geo) missingParts.push("geo");
+        if (!row.has_sc) missingParts.push("SC");
+        if (!row.has_mgmt) missingParts.push("mgmt");
+
+        await storage.updateOperation(operationId, {
+          statusMessage: `${processed + 1}/${totalSteps}: ${company.companyName} (missing: ${missingParts.join(", ")})`,
+        });
+
+        const tasks: Promise<void>[] = [];
+
+        if (!row.has_geo && parseInt(row.asset_count_db) > 0) {
+          tasks.push((async () => {
+            try {
+              const companyAssets = await storage.getAssetsByCompany(company.id);
+              await storage.deleteGeoRisksByCompany(company.id);
+              const bulkFailedIds = new Set<number>();
+              await processInBatches(companyAssets, GEO_CONCURRENCY, async (asset) => {
+                try {
+                  const assetValue = asset.estimatedValueUsd || 1000000;
+                  const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
+                  await storage.createGeoRisk({
+                    assetId: asset.id,
+                    companyId: company.id,
+                    expectedAnnualLoss: result.expected_annual_loss,
+                    expectedAnnualLossPct: result.expected_annual_loss_pct,
+                    presentValue30yr: result.present_value_30yr,
+                    hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
+                    floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
+                    heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
+                    droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
+                    extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
+                    modelVersion: result.model_version || "V6",
+                  });
+                } catch (err: any) {
+                  log(`Missing: Geo risk error for asset ${asset.facilityName}: ${err.message}`);
+                  bulkFailedIds.add(asset.id);
+                  await storage.createGeoRisk({
+                    assetId: asset.id, companyId: company.id,
+                    expectedAnnualLoss: 0, expectedAnnualLossPct: 0, presentValue30yr: 0,
+                    hurricaneLoss: 0, floodLoss: 0, heatStressLoss: 0, droughtLoss: 0, extremePrecipLoss: 0,
+                    modelVersion: "FAILED",
+                  });
+                }
+              });
+              if (bulkFailedIds.size > 0) {
+                const failedAssets = companyAssets.filter(a => bulkFailedIds.has(a.id));
+                log(`Missing: Retrying ${failedAssets.length} failed assets for ${company.companyName}...`);
+                await sleep(3000);
+                for (const asset of failedAssets) {
+                  try {
+                    const assetValue = asset.estimatedValueUsd || 1000000;
+                    const result = await fetchClimateRisk(asset.latitude, asset.longitude, assetValue);
+                    await storage.deleteGeoRisk(asset.id);
+                    await storage.createGeoRisk({
+                      assetId: asset.id, companyId: company.id,
+                      expectedAnnualLoss: result.expected_annual_loss,
+                      expectedAnnualLossPct: result.expected_annual_loss_pct,
+                      presentValue30yr: result.present_value_30yr,
+                      hurricaneLoss: result.risk_breakdown.hurricane?.annual_loss || 0,
+                      floodLoss: result.risk_breakdown.flood?.annual_loss || 0,
+                      heatStressLoss: result.risk_breakdown.heat_stress?.annual_loss || 0,
+                      droughtLoss: result.risk_breakdown.drought?.annual_loss || 0,
+                      extremePrecipLoss: result.risk_breakdown.extreme_precipitation?.annual_loss || 0,
+                      modelVersion: result.model_version || "V6",
+                    });
+                    log(`Missing: Retry succeeded for ${asset.facilityName}`);
+                  } catch (err: any) {
+                    log(`Missing: Retry failed for ${asset.facilityName}: ${err.message}`);
+                  }
+                  await sleep(1000);
+                }
+              }
+              log(`Missing: Completed geo risks for ${company.companyName}`);
+            } catch (err: any) {
+              log(`Missing: Geo risk failed for ${company.companyName}: ${err.message}`);
+            }
+          })());
+        }
+
+        if (!row.has_sc) {
+          tasks.push((async () => {
+            try {
+              const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
+              const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+              const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+              const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
+              await storage.createSupplyChainRisk({
+                companyId: company.id,
+                countryCode: scResult.country,
+                countryName: scResult.country_name,
+                sectorCode: scResult.sector,
+                sectorName: scResult.sector_name,
+                directRisk: scResult.direct_risk,
+                indirectRisk: scResult.indirect_risk,
+                totalRisk: scResult.total_risk,
+                topSuppliers: scResult.top_suppliers,
+                supplyChainTiers: scResult.supply_chain_tiers,
+                directExpectedLoss: scaled.directExpectedLoss,
+                directExpectedLossPct: scaled.directExpectedLossPct,
+                indirectExpectedLoss: scaled.indirectExpectedLoss,
+                indirectExpectedLossPct: scaled.indirectExpectedLossPct,
+              });
+              log(`Missing: Completed supply chain risk for ${company.companyName}`);
+            } catch (err: any) {
+              log(`Missing: Supply chain error for ${company.companyName}: ${err.message}`);
+            }
+          })());
+        }
+
+        if (!row.has_mgmt) {
+          tasks.push((async () => {
+            try {
+              const mgmtResult = await fetchManagementPerformance(company.isin, company.companyName);
+              if (mgmtResult) {
+                await storage.createManagementScore({
+                  companyId: company.id,
+                  totalScore: mgmtResult.company.totalScore,
+                  totalPossible: mgmtResult.company.totalPossible,
+                  summary: mgmtResult.company.summary,
+                  analysisStatus: mgmtResult.company.analysisStatus,
+                  scores: mgmtResult.scores,
+                  documents: mgmtResult.documents,
+                });
+                log(`Missing: Completed management score for ${company.companyName}`);
+              }
+            } catch (err: any) {
+              log(`Missing: Management score error for ${company.companyName}: ${err.message}`);
+            }
+          })());
+        }
+
+        await Promise.all(tasks);
+
+        processed++;
+        await storage.updateOperation(operationId, {
+          processedItems: processed,
+          statusMessage: `${processed}/${totalSteps}: Completed ${company.companyName}`,
+        });
+      } catch (err: any) {
+        failed++;
+        processed++;
+        log(`Missing: Failed to process ${row.company_name} (${row.isin}): ${err.message}`);
+        await storage.updateOperation(operationId, {
+          processedItems: processed,
+          statusMessage: `${processed}/${totalSteps}: Failed ${row.company_name} - ${err.message}`,
+        });
+      }
+
+      await sleep(200);
+    }
+
+    await storage.updateOperation(operationId, {
+      status: "completed",
+      processedItems: totalSteps,
+      statusMessage: `Complete: ${totalSteps - failed} succeeded, ${failed} failed out of ${totalSteps} companies with missing data`,
+      completedAt: new Date(),
+    });
+  } catch (err: any) {
+    log(`Process missing companies failed: ${err.message}`);
     await storage.updateOperation(operationId, {
       status: "failed",
       statusMessage: `Failed: ${err.message}`,

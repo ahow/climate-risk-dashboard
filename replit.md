@@ -62,7 +62,7 @@ A full-stack web application that quantifies and visualizes climate-related fina
 ## Key Features
 1. **Company Dashboard** (`/`) - Overview with add-by-ISIN, search, risk summary cards
 2. **Company Detail** (`/company/:id`) - Full risk breakdown with asset table, supply chain, management scores
-3. **Calculation Monitor** (`/monitor`) - Real-time progress tracking with pause/resume/delete
+3. **Calculation Monitor** (`/monitor`) - Real-time progress tracking with pause/resume/delete; "Process Missing" button for incomplete companies only; "Process All" button for full reprocessing
 4. **Company List** (`/company-list`) - Upload Excel spreadsheets, permanent download URLs for sharing
 5. **CSV Export** - Download all company risk data as CSV
 
