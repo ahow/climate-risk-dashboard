@@ -854,16 +854,16 @@ export async function processMissingCompanies(operationId: number) {
         SELECT
           c.id, c.isin, c.company_name, c.sector, c.country,
           c.country_iso3, c.isic_sector_code, c.supplier_costs, c.total_asset_value,
-          (SELECT COUNT(*) FROM assets WHERE company_id = c.id) as asset_count_db,
-          EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id) as has_geo,
-          EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id) as has_sc,
-          EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id) as has_mgmt
+          COALESCE(ac.asset_count_db, 0) as asset_count_db,
+          CASE WHEN g.company_id IS NOT NULL THEN true ELSE false END as has_geo,
+          CASE WHEN sc.company_id IS NOT NULL THEN true ELSE false END as has_sc,
+          CASE WHEN ms.company_id IS NOT NULL THEN true ELSE false END as has_mgmt
         FROM companies c
-        WHERE NOT (
-          EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id)
-          AND EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id)
-          AND EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id)
-        )
+        LEFT JOIN (SELECT company_id, COUNT(*) as asset_count_db FROM assets GROUP BY company_id) ac ON ac.company_id = c.id
+        LEFT JOIN (SELECT DISTINCT company_id FROM geo_risks) g ON g.company_id = c.id
+        LEFT JOIN supply_chain_risks sc ON sc.company_id = c.id
+        LEFT JOIN management_scores ms ON ms.company_id = c.id
+        WHERE g.company_id IS NULL OR sc.company_id IS NULL OR ms.company_id IS NULL
         ORDER BY c.id
       `);
       missingCompanies = result.rows;

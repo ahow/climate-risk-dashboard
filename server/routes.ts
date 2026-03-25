@@ -591,15 +591,14 @@ export async function registerRoutes(
         const result = await client.query(`
           SELECT
             COUNT(*) as total,
-            COUNT(*) FILTER (WHERE NOT EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id)) as missing_geo,
-            COUNT(*) FILTER (WHERE NOT EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id)) as missing_sc,
-            COUNT(*) FILTER (WHERE NOT EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id)) as missing_mgmt,
-            COUNT(*) FILTER (WHERE NOT (
-              EXISTS(SELECT 1 FROM geo_risks WHERE company_id = c.id)
-              AND EXISTS(SELECT 1 FROM supply_chain_risks WHERE company_id = c.id)
-              AND EXISTS(SELECT 1 FROM management_scores WHERE company_id = c.id)
-            )) as total_incomplete
+            COUNT(*) FILTER (WHERE g.company_id IS NULL) as missing_geo,
+            COUNT(*) FILTER (WHERE sc.company_id IS NULL) as missing_sc,
+            COUNT(*) FILTER (WHERE ms.company_id IS NULL) as missing_mgmt,
+            COUNT(*) FILTER (WHERE g.company_id IS NULL OR sc.company_id IS NULL OR ms.company_id IS NULL) as total_incomplete
           FROM companies c
+          LEFT JOIN (SELECT DISTINCT company_id FROM geo_risks) g ON g.company_id = c.id
+          LEFT JOIN supply_chain_risks sc ON sc.company_id = c.id
+          LEFT JOIN management_scores ms ON ms.company_id = c.id
         `);
         const row = result.rows[0];
         res.json({
