@@ -63,16 +63,21 @@ export async function recoverOrphanedOperations() {
 
     const ops = await storage.getOperations();
     const running = ops.filter(op => op.status === "running" || op.status === "pending");
+    let bulkToResume: { type: string; processedItems: number; totalItems: number; uploadId?: number } | null = null;
+
     for (const op of running) {
       log(`Found orphaned operation #${op.id} (${op.type}) - was running since ${op.startedAt}, progress: ${op.processedItems}/${op.totalItems}`);
 
-      if (op.type === "bulk_processing") {
+      if (op.type === "bulk_processing" || op.type === "process_missing") {
         await storage.updateOperation(op.id, {
           status: "failed",
-          statusMessage: `Interrupted by server restart at ${op.processedItems}/${op.totalItems} — use "Process All" to resume`,
+          statusMessage: `Interrupted by server restart at ${op.processedItems}/${op.totalItems} — auto-resuming as new operation`,
           completedAt: new Date(),
         });
-        log(`Marked orphaned bulk operation #${op.id} as failed (was at ${op.processedItems}/${op.totalItems}). Manual restart required to avoid crash loops.`);
+        if (!bulkToResume) {
+          bulkToResume = { type: op.type, processedItems: op.processedItems ?? 0, totalItems: op.totalItems ?? 0 };
+        }
+        log(`Marked orphaned ${op.type} operation #${op.id} as failed (was at ${op.processedItems}/${op.totalItems}). Will auto-resume.`);
       } else {
         await storage.updateOperation(op.id, {
           status: "failed",
@@ -83,6 +88,41 @@ export async function recoverOrphanedOperations() {
     }
     if (running.length > 0) {
       log(`Processed ${running.length} orphaned operation(s)`);
+    }
+
+    if (bulkToResume) {
+      log(`Auto-resuming interrupted processing (was at ${bulkToResume.processedItems}/${bulkToResume.totalItems})...`);
+      setTimeout(async () => {
+        try {
+          if (bulkToResume!.type === "process_missing") {
+            const newOp = await storage.createOperation({
+              type: "process_missing",
+              status: "pending",
+              statusMessage: "Auto-resuming after server restart — processing remaining companies with missing data",
+              totalItems: 0,
+            });
+            log(`Created auto-resume process_missing operation #${newOp.id}`);
+            processMissingCompanies(newOp.id);
+          } else {
+            const latest = await storage.getLatestCompanyListUpload();
+            if (latest) {
+              const entries = await storage.getCompanyListEntries(latest.id);
+              const newOp = await storage.createOperation({
+                type: "bulk_processing",
+                status: "pending",
+                statusMessage: `Auto-resuming after server restart — processing ${entries.length} companies (already-processed will be skipped)`,
+                totalItems: entries.length,
+              });
+              log(`Created auto-resume bulk operation #${newOp.id} for ${entries.length} companies`);
+              processBulkFromList(newOp.id, latest.id);
+            } else {
+              log(`Cannot auto-resume: no company list upload found`);
+            }
+          }
+        } catch (err: any) {
+          log(`Auto-resume failed: ${err.message}`);
+        }
+      }, 5000);
     }
   } catch (err: any) {
     log(`Error recovering orphaned operations: ${err.message}`);
