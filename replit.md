@@ -65,6 +65,12 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - ISIC code is recalculated and updated on the company record during "Process All" bulk reprocessing
 - Valid SC API ISIC codes: A01-A03, B05-B06, B07-B08, C10-C12, C16, C19-C30, D35, F, G45-G47, H49-H53, I, J58, J61, K64-K66, L68, M, N, O, P, Q
 
+## Supply Chain API Result Caching
+- Batch functions (`processBulkFromList`, `processMissingCompanies`) cache SC API results per country+sector key
+- `getCachedSupplyChainRisk(cache, countryCode, sectorCode)` returns cached result if same pair already queried in this batch run
+- Guarantees all companies with identical country+sector get identical raw SC risk values within a single processing run
+- Cache is a `Map<string, any>` scoped to each batch execution (not persistent across runs)
+
 ## Management Score Display
 - The Management API `totalScore` field IS the percentage (e.g. 27 means 27%), not a raw score to divide
 - `totalPossible` is always 26 (number of measures assessed)

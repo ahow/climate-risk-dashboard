@@ -13,6 +13,20 @@ const BATCH_SIZE = 10;
 const DELAY_MS = 500;
 const GEO_CONCURRENCY = 3;
 
+async function getCachedSupplyChainRisk(
+  cache: Map<string, any>,
+  countryCode: string,
+  sectorCode: string,
+): Promise<any> {
+  const key = `${countryCode}:${sectorCode}`;
+  if (cache.has(key)) {
+    return cache.get(key);
+  }
+  const result = await fetchSupplyChainRisk(countryCode, sectorCode);
+  cache.set(key, result);
+  return result;
+}
+
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -515,6 +529,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
     let added = 0;
     let skipped = 0;
     let failed = 0;
+    const scCache = new Map<string, any>();
 
     for (const entry of entries) {
       const operation = await storage.getOperation(operationId);
@@ -568,7 +583,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
               try {
                 const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
                 const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, entry.level4Sector, company.companyName);
-                const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+                const scResult = await getCachedSupplyChainRisk(scCache, countryCode, sectorCode);
                 const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
                 const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
                 await storage.createSupplyChainRisk({
@@ -789,7 +804,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
             const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, entry.level4Sector, company.companyName);
             await storage.deleteSupplyChainRisk(company.id);
-            const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+            const scResult = await getCachedSupplyChainRisk(scCache, countryCode, sectorCode);
             const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
             const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
             await storage.createSupplyChainRisk({
@@ -923,6 +938,7 @@ export async function processMissingCompanies(operationId: number) {
 
     let processed = 0;
     let failed = 0;
+    const scCache = new Map<string, any>();
 
     for (const row of missingCompanies) {
       const operation = await storage.getOperation(operationId);
@@ -1020,7 +1036,7 @@ export async function processMissingCompanies(operationId: number) {
             try {
               const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
               const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, null, company.companyName);
-              const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
+              const scResult = await getCachedSupplyChainRisk(scCache, countryCode, sectorCode);
               const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
               await storage.createSupplyChainRisk({
                 companyId: company.id,
