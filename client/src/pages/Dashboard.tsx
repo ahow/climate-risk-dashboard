@@ -129,6 +129,7 @@ export default function Dashboard() {
   const [isinInput, setIsinInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFinancials, setShowFinancials] = useState(false);
+  const [showIncomplete, setShowIncomplete] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -228,6 +229,10 @@ export default function Dashboard() {
       result = result.filter((c: any) => (c.sector || "").toLowerCase() !== "financials");
     }
 
+    if (!showIncomplete) {
+      result = result.filter((c: any) => c.totalAssetValue > 0 && c.supplierCosts > 0 && c.ev > 0);
+    }
+
     if (sortKey) {
       result = [...result].sort((a, b) => {
         const mA = getCompanyMetrics(a);
@@ -244,7 +249,7 @@ export default function Dashboard() {
     }
 
     return result;
-  }, [companies, searchQuery, showFinancials, sortKey, sortDir]);
+  }, [companies, searchQuery, showFinancials, showIncomplete, sortKey, sortDir]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -294,9 +299,9 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const totalAssetValue = companies.reduce((sum: number, c: any) => sum + (c.totalAssetValue || 0), 0);
-  const totalGeoRiskPV = companies.reduce((sum: number, c: any) => sum + (c.totalGeoRiskPV || 0), 0);
-  const companiesWithRisks = companies.filter((c: any) => c.hasGeoRisks || c.hasSupplyChainRisk);
+  const totalAssetValue = filteredCompanies.reduce((sum: number, c: any) => sum + (c.totalAssetValue || 0), 0);
+  const totalGeoRiskPV = filteredCompanies.reduce((sum: number, c: any) => sum + (c.totalGeoRiskPV || 0), 0);
+  const companiesWithRisks = filteredCompanies.filter((c: any) => c.hasGeoRisks || c.hasSupplyChainRisk);
 
   return (
     <div className="space-y-6" data-testid="dashboard-page">
@@ -481,6 +486,17 @@ export default function Dashboard() {
           />
           <Label htmlFor="show-financials" className="text-sm cursor-pointer">
             Include Financials
+          </Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-incomplete"
+            checked={showIncomplete}
+            onCheckedChange={setShowIncomplete}
+            data-testid="toggle-incomplete"
+          />
+          <Label htmlFor="show-incomplete" className="text-sm cursor-pointer">
+            Include Incomplete
           </Label>
         </div>
         <span className="text-sm text-muted-foreground">
