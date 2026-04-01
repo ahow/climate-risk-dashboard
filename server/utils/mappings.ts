@@ -41,7 +41,13 @@ const COUNTRY_NAME_TO_ISO3: Record<string, string> = {
   "qatar": "QAT", "kuwait": "KWT", "bahrain": "BHR",
   "egypt": "EGY", "nigeria": "NGA", "kenya": "KEN",
   "luxembourg": "LUX", "bermuda": "USA", "cayman islands": "USA",
-  "panama": "PAN",
+  "panama": "PAN", "hungary": "HUN", "romania": "ROU",
+  "jordan": "JOR", "pakistan": "PAK", "bangladesh": "BGD",
+  "sri lanka": "LKA", "myanmar": "MMR", "cambodia": "KHM",
+  "morocco": "MAR", "tunisia": "TUN", "ghana": "GHA",
+  "tanzania": "TZA", "uganda": "UGA", "ethiopia": "ETH",
+  "macau": "CHN", "puerto rico": "USA",
+  "czech": "CZE", "not specified": "USA",
 };
 
 export function countryNameToIso3(country: string | null | undefined): string | null {
@@ -67,13 +73,16 @@ export function resolveSupplyChainCountry(
   countryIso3: string | null | undefined,
   countryName: string | null | undefined
 ): string {
+  const fromName = countryNameToIso3(countryName);
+  if (fromName && !SC_API_UNSUPPORTED.has(fromName)) {
+    return fromName;
+  }
   const isinIso3 = countryIso3 || isinToIso3(isin);
   if (isinIso3 && !SC_API_UNSUPPORTED.has(isinIso3)) {
     return isinIso3;
   }
-  const fromName = countryNameToIso3(countryName);
-  if (fromName && !SC_API_UNSUPPORTED.has(fromName)) {
-    return fromName;
+  if (fromName && SC_API_FALLBACK[fromName]) {
+    return SC_API_FALLBACK[fromName];
   }
   if (isinIso3 && SC_API_FALLBACK[isinIso3]) {
     return SC_API_FALLBACK[isinIso3];

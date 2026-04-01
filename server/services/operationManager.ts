@@ -6,7 +6,7 @@ import {
   fetchSupplyChainRisk,
   fetchManagementPerformance,
 } from "./externalApis";
-import { isinToIso3, sectorToIsic, resolveSupplyChainCountry } from "../utils/mappings";
+import { isinToIso3, sectorToIsic, resolveSupplyChainCountry, countryNameToIso3 } from "../utils/mappings";
 import { log } from "../index";
 
 const BATCH_SIZE = 10;
@@ -672,8 +672,8 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             continue;
           }
 
-          const countryIso3 = isinToIso3(isin);
-          const isicCode = sectorToIsic(assetData.sector);
+          const countryIso3 = countryNameToIso3(entry.geography) || isinToIso3(isin);
+          const isicCode = sectorToIsic(entry.level2Sector || assetData.sector);
 
           company = await storage.createCompany({
             isin,
