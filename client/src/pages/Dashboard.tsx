@@ -301,6 +301,12 @@ export default function Dashboard() {
 
   const totalAssetValue = filteredCompanies.reduce((sum: number, c: any) => sum + (c.totalAssetValue || 0), 0);
   const totalGeoRiskPV = filteredCompanies.reduce((sum: number, c: any) => sum + (c.totalGeoRiskPV || 0), 0);
+  const totalSCPV = filteredCompanies.reduce((sum: number, c: any) => {
+    const m = getCompanyMetrics(c);
+    return sum + m.supplyChainPV;
+  }, 0);
+  const totalSupplierCosts = filteredCompanies.reduce((sum: number, c: any) => sum + (c.supplierCosts || 0), 0);
+  const totalExposure = totalGeoRiskPV + totalSCPV;
   const companiesWithRisks = filteredCompanies.filter((c: any) => c.hasGeoRisks || c.hasSupplyChainRisk);
 
   return (
@@ -316,11 +322,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm font-medium text-muted-foreground">Companies</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-company-count">{companies.length}</div>
+            <div className="text-2xl font-bold mt-1" data-testid="text-company-count">{filteredCompanies.length}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {companiesWithRisks.length} assessed
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -331,16 +340,32 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Total Direct Exposure PV</div>
+            <div className="text-sm font-medium text-muted-foreground">Direct Risk PV</div>
             <div className="text-2xl font-bold mt-1" data-testid="text-total-geo-risk">{formatCurrency(totalGeoRiskPV)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {totalExposure > 0 ? ((totalGeoRiskPV / totalExposure) * 100).toFixed(0) : 0}% of total
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Assessed</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-assessed-count">
-              {companiesWithRisks.length}/{companies.length}
+            <div className="text-sm font-medium text-muted-foreground">Supply Chain Risk PV</div>
+            <div className="text-2xl font-bold mt-1" data-testid="text-total-sc-risk">{formatCurrency(totalSCPV)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {totalExposure > 0 ? ((totalSCPV / totalExposure) * 100).toFixed(0) : 0}% of total
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm font-medium text-muted-foreground">Total Exposure PV</div>
+            <div className="text-2xl font-bold mt-1 text-primary" data-testid="text-total-exposure">{formatCurrency(totalExposure)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm font-medium text-muted-foreground">Supplier Costs</div>
+            <div className="text-2xl font-bold mt-1" data-testid="text-total-supplier-costs">{formatCurrency(totalSupplierCosts)}</div>
           </CardContent>
         </Card>
       </div>
