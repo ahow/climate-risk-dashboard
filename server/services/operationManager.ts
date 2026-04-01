@@ -277,7 +277,7 @@ export async function processSupplyChainRisk(operationId: number, companyId: num
     }
 
     const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
-    const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+    const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, null, company.companyName);
 
     await storage.deleteSupplyChainRisk(companyId);
 
@@ -428,7 +428,7 @@ export async function processAllRisks(operationId: number, companyId: number) {
     const supplyChainTask = (async () => {
       try {
         const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
-        const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+        const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, null, company.companyName);
         await storage.deleteSupplyChainRisk(companyId);
         const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
         const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
@@ -529,6 +529,21 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         let company = await storage.getCompanyByIsin(isin);
 
         if (company) {
+          const recalcIsic = sectorToIsic(company.sector, entry.level4Sector, company.companyName);
+          const baseUpdates: any = {};
+          if (recalcIsic !== company.isicSectorCode) {
+            baseUpdates.isicSectorCode = recalcIsic;
+          }
+          if (entrySupplierCosts != null) baseUpdates.supplierCosts = entrySupplierCosts;
+          if (entryEv != null) baseUpdates.ev = entryEv;
+          if (entryTotalValue != null) baseUpdates.totalAssetValue = entryTotalValue;
+          if (Object.keys(baseUpdates).length > 0) {
+            company = await storage.updateCompany(company.id, baseUpdates);
+            if (baseUpdates.isicSectorCode) {
+              log(`Bulk: ISIC code updated for ${company.companyName}: ${company.isicSectorCode} -> ${recalcIsic}`);
+            }
+          }
+
           const existingGeoRisks = await storage.getGeoRisksByCompany(company.id);
           const existingSCRisk = await storage.getSupplyChainRisk(company.id);
           const existingMgmt = await storage.getManagementScore(company.id);
@@ -538,13 +553,6 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             existingGeoRisks.some((r: any) => r.modelVersion !== "FAILED");
 
           if (hasSuccessfulGeoRisks && existingSCRisk && existingMgmt) {
-            const updates: any = {};
-            if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
-            if (entryEv != null) updates.ev = entryEv;
-            if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
-            if (Object.keys(updates).length > 0) {
-              await storage.updateCompany(company.id, updates);
-            }
             processed++;
             await storage.updateOperation(operationId, {
               processedItems: processed,
@@ -555,18 +563,11 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           }
 
           if (hasSuccessfulGeoRisks && !existingSCRisk) {
-            const updates: any = {};
-            if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
-            if (entryEv != null) updates.ev = entryEv;
-            if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
-            if (Object.keys(updates).length > 0) {
-              await storage.updateCompany(company.id, updates);
-            }
             const fillTasks: Promise<void>[] = [];
             fillTasks.push((async () => {
               try {
                 const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
-                const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+                const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, entry.level4Sector, company.companyName);
                 const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
                 const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
                 const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
@@ -673,11 +674,12 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           }
 
           const countryIso3 = countryNameToIso3(entry.geography) || isinToIso3(isin);
-          const isicCode = sectorToIsic(entry.level2Sector || assetData.sector);
+          const companyNameForIsic = entry.companyName || assetData.companyName;
+          const isicCode = sectorToIsic(entry.level2Sector || assetData.sector, entry.level4Sector, companyNameForIsic);
 
           company = await storage.createCompany({
             isin,
-            companyName: entry.companyName || assetData.companyName,
+            companyName: companyNameForIsic,
             sector: entry.level2Sector || assetData.sector,
             country: entry.geography || assetData.assets[0]?.country || null,
             totalAssetValue: entryTotalValue || assetData.totalEstimatedValue,
@@ -711,17 +713,6 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           }
           added++;
           log(`Bulk: Added ${company.companyName} (${isin}) with ${validAssets.length} assets`);
-        } else {
-          const updates: any = {};
-          if (entrySupplierCosts != null) updates.supplierCosts = entrySupplierCosts;
-          if (entryEv != null) updates.ev = entryEv;
-          if (entryTotalValue != null) updates.totalAssetValue = entryTotalValue;
-          if (Object.keys(updates).length > 0) {
-            company = await storage.updateCompany(company.id, updates);
-            log(`Bulk: Updated ${company.companyName} (${isin}) with EV=${updates.ev}, supplierCosts=${updates.supplierCosts}`);
-          } else {
-            log(`Bulk: ${company.companyName} (${isin}) already exists, running risk calculations`);
-          }
         }
 
         await storage.updateOperation(operationId, {
@@ -796,7 +787,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
         const supplyChainTask = (async () => {
           try {
             const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
-            const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+            const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, entry.level4Sector, company.companyName);
             await storage.deleteSupplyChainRisk(company.id);
             const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
             const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
@@ -1028,7 +1019,7 @@ export async function processMissingCompanies(operationId: number) {
           tasks.push((async () => {
             try {
               const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
-              const sectorCode = company.isicSectorCode || sectorToIsic(company.sector);
+              const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, null, company.companyName);
               const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
               const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
               await storage.createSupplyChainRisk({

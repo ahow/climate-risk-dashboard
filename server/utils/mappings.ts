@@ -95,7 +95,6 @@ export const SECTOR_TO_ISIC: Record<string, string> = {
   "Materials": "B07-B08",
   "Industrials": "C28",
   "Consumer Discretionary": "G47",
-  "Consumer Discretionary (Automotive & Energy)": "C29",
   "Consumer Staples": "C10-C12",
   "Health Care": "C21",
   "Healthcare": "C21",
@@ -111,33 +110,232 @@ export const SECTOR_TO_ISIC: Record<string, string> = {
   "Chemicals": "C20",
   "Pharmaceuticals": "C21",
   "Automotive": "C29",
+  "Automobiles": "C29",
+  "Automobiles & Parts": "C29",
   "Aerospace & Defense": "C30",
+  "Aerospace and Defense": "C30",
+  "Aerospace & Defence": "C30",
+  "Aerospace and Defence": "C30",
   "Construction": "F",
+  "Construction & Materials": "F",
   "Transportation": "H49",
   "Transportation & Infrastructure": "H49",
+  "Transportation/Infrastructure": "H49",
+  "Transportation Infrastructure": "H49",
+  "Infrastructure/Transportation": "H49",
+  "Airlines/Transportation": "H51",
+  "Airlines": "H51",
+  "Logistics": "H52",
+  "Logistics & Transportation": "H52",
   "Insurance": "K65",
   "Banking": "K64",
+  "Financial Services": "K64",
+  "Financial Technology": "K64",
+  "Financial Technology (Fintech)": "K64",
+  "Financial Technology (FinTech)": "K64",
+  "FinTech": "K64",
+  "Financial Data & Analytics": "K66",
   "Media": "J58",
   "Entertainment/Media": "J58",
   "Media & Entertainment": "J58",
+  "Entertainment": "J58",
   "Retail": "G47",
   "Food & Beverage": "C10-C12",
+  "Food Products": "C10-C12",
+  "Agribusiness & Food": "A01",
   "Agriculture": "A01",
-  "Conglomerate": "G47",
+  "Agricultural Chemicals": "C20",
+  "Conglomerate": "G46",
+  "Conglomerate (Diversified)": "G46",
+  "Conglomerate/General Trading": "G46",
+  "Conglomerate (Holding Companies)": "K64",
+  "Conglomerate (Integrated Trading and Investment)": "G46",
+  "Conglomerate (Energy, Petrochemicals, Retail, Telecommunications, Digital Services)": "C19",
+  "Conglomerate (Financial Services, Manufacturing, Resources, Real Estate, Engineering)": "G46",
   "Consumer Cyclicals": "G47",
+  "Consumer Cyclical": "G47",
   "Travel & Leisure": "I",
   "Travel and Leisure": "I",
-  "Financial Technology": "K64",
-  "FinTech": "K64",
+  "Leisure & Hospitality": "I",
+  "Hospitality": "I",
   "Consumer Healthcare": "C21",
+  "Healthcare Technology": "C26",
+  "Healthcare/Technology": "C26",
   "Transportation and Transportation Infrastructure": "H49",
+  "Basic Materials": "B07-B08",
+  "Basic Resources": "B07-B08",
+  "Basic Resources / Metals & Mining": "B07-B08",
+  "Natural Resources and Energy": "B06",
+  "Petrochemicals": "C19",
+  "Energy and Chemicals": "C19",
+  "Energy & Industrials": "B06",
+  "Energy Technology": "B06",
+  "Industrial Goods & Services": "C28",
+  "Consumer Goods": "C22",
+  "Consumer Products & Services": "C22",
+  "Consumer Services": "N",
+  "Business Services": "N",
+  "Professional Services": "M",
+  "Business Process Outsourcing (BPO) / Professional Services": "M",
+  "Information Services": "J58",
+  "Infrastructure": "H49",
+  "Infrastructure Investment": "H49",
+  "Infrastructure/Real Estate": "L68",
+  "Infrastructure/Industrials": "H49",
+  "Real Estate Investment Trust (REIT) - Communications Infrastructure": "L68",
+  "Real Estate Management & Services": "L68",
+  "Real Estate and Construction": "F",
+  "Personal Care, Drug & Grocery Stores": "G47",
+  "Telecommunication Services": "J61",
+  "Trading Companies / Industrials": "G46",
+  "Manufacturing": "C28",
+  "Technology/Industrials": "C26",
+  "Financials (Investment Holding)": "K64",
 };
 
-export function sectorToIsic(sector: string | null | undefined): string {
+const L4_TO_ISIC: Record<string, string> = {
+  "Aerospace & Defense": "C30",
+  "Aerospace & Defence": "C30",
+  "Ind. Transportation": "H49",
+  "Construction & Mats": "F",
+  "Elec. & Electrical Eq": "C27",
+  "General Industrials": "C28",
+  "Ind. Engineering": "C28",
+  "Ind. Support Services": "N",
+  "Travel & Leisure": "I",
+  "Waste & Disposal Svs": "N",
+  "Alternative Energy": "D35",
+  "Automobiles & Parts": "C29",
+  "Chemicals": "C20",
+  "Hhold Gds & Home Con.": "C22",
+  "Ind. Metals & Mining": "C24",
+  "Medical Eq. Services": "C26",
+  "Tech. Hardware, Equip": "C26",
+  "Consumer Svs: Misc.": "N",
+  "Oil, Gas and Coal": "B06",
+  "Oil Refining & Mkting": "C19",
+  "Integrated Oil & Gas": "B06",
+  "Oil: Crude Producers": "B06",
+  "Renewable Energy Eq.": "D35",
+  "Alternative Fuels": "D35",
+  "Coal": "B05",
+  "Pipelines": "H49",
+  "Oil Equipment & Svs": "B06",
+  "Offshore Drill & Svs": "B06",
+  "Beverages": "C10-C12",
+  "Food Producers": "C10-C12",
+  "Tobacco": "C10-C12",
+  "Drug & Grocery Stores": "G47",
+  "Banks": "K64",
+  "Inv. Banking & Broker": "K66",
+  "Non-life Insurance": "K65",
+  "Life Insurance": "K65",
+  "Finance & Credit Svs": "K64",
+  "Closed End Invest.": "K64",
+  "Mortgage REITs": "L68",
+  "Real Estate Inv & Svs": "L68",
+  "REITs": "L68",
+  "Software & Comp. Svs.": "C26",
+  "Tech. Hardware, Equip": "C26",
+  "Telecom. Equipment": "C26",
+  "Telecom. Svs. Prvds.": "J61",
+  "Personal Goods": "G47",
+  "Retailers": "G47",
+};
+
+const AUTO_KEYWORDS = [
+  "motor", "motors", "automobile", "automotive", "auto ", "autos",
+  "car ", "cars ", "vehicle", "bmw", "honda", "nissan", "suzuki",
+  "toyota", "hyundai", "kia", "ford", "ferrari", "porsche",
+  "mercedes", "volkswagen", "volvo", "mazda", "subaru",
+  "mitsubishi motor", "mahindra", "tata motor", "maruti",
+  "bajaj auto", "hero moto", "yamaha motor", "yadea",
+  "motocorp", "motoren", "otomotiv",
+];
+
+const AUTO_PARTS_KEYWORDS = [
+  "magna international", "michelin", "fuyao glass", "lkq ",
+  "continental ag", "shimano", "tire", "tyre", "bridgestone",
+  "denso", "aisin", "tuopu", "auto parts", "autozone",
+  "o'reilly auto",
+];
+
+const HOTEL_RESTAURANT_KEYWORDS = [
+  "hotel", "hotels", "marriott", "hilton", "hyatt", "accor",
+  "intercontinental", "whitbread", "mcdonald", "chipotle",
+  "darden", "restaurant", "restaurants", "starbucks",
+  "yum brands", "domino", "wingstop",
+  "minor international", "galaxy entertainment",
+  "oriental land", "flutter entertainment",
+  "lottery", "gaming", "casino",
+];
+
+const HOMEBUILDER_KEYWORDS = [
+  "barratt", "redrow", "pultegroup", "nvr, inc", "nvr inc",
+  "sekisui house", "lennar", "d.r. horton", "toll brothers",
+  "meritage", "homebuilder", "home builder",
+];
+
+const APPLIANCE_KEYWORDS = [
+  "haier", "midea", "electrolux", "whirlpool", "bsh ",
+  "home product center",
+];
+
+function classifyByCompanyName(name: string): string | null {
+  const lower = name.toLowerCase();
+
+  for (const kw of AUTO_KEYWORDS) {
+    if (lower.includes(kw.toLowerCase())) return "C29";
+  }
+  for (const kw of AUTO_PARTS_KEYWORDS) {
+    if (lower.includes(kw.toLowerCase())) return "C29";
+  }
+  for (const kw of HOTEL_RESTAURANT_KEYWORDS) {
+    if (lower.includes(kw.toLowerCase())) return "I";
+  }
+  for (const kw of HOMEBUILDER_KEYWORDS) {
+    if (lower.includes(kw.toLowerCase())) return "F";
+  }
+  for (const kw of APPLIANCE_KEYWORDS) {
+    if (lower.includes(kw.toLowerCase())) return "C27";
+  }
+
+  return null;
+}
+
+export function sectorToIsic(
+  sector: string | null | undefined,
+  l4Sector?: string | null,
+  companyName?: string | null,
+): string {
+  if (l4Sector) {
+    const trimmed = l4Sector.trim();
+    const l4Match = L4_TO_ISIC[trimmed];
+    if (l4Match) return l4Match;
+    for (const [key, value] of Object.entries(L4_TO_ISIC)) {
+      if (key.toLowerCase() === trimmed.toLowerCase()) return value;
+    }
+  }
+
   if (!sector) return "M";
-  for (const [key, value] of Object.entries(SECTOR_TO_ISIC)) {
-    if (sector.toLowerCase().includes(key.toLowerCase())) {
-      return value;
+
+  const sectorNorm = sector.toLowerCase().trim();
+  if (
+    companyName &&
+    (sectorNorm.includes("consumer discretionary") || sectorNorm.includes("industrials"))
+  ) {
+    const nameMatch = classifyByCompanyName(companyName);
+    if (nameMatch) return nameMatch;
+  }
+
+  const exact = SECTOR_TO_ISIC[sector];
+  if (exact) return exact;
+
+  const sectorLower = sector.toLowerCase();
+  const sortedKeys = Object.keys(SECTOR_TO_ISIC).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    if (sectorLower.includes(key.toLowerCase())) {
+      return SECTOR_TO_ISIC[key];
     }
   }
   return "M";

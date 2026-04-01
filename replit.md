@@ -52,6 +52,19 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - If no supplier costs data available, falls back to raw per-$1B values (scale factor = 1)
 - Dashboard and CompanyDetail display PV-based values throughout
 
+## ISIC Sector Code Classification
+- Three-tier classification: L4 sub-sector (from spreadsheet) → company name keywords → sector name mapping
+- `sectorToIsic(sector, l4Sector?, companyName?)` resolves the best ISIC code
+- **L4 sub-sector mapping**: Uses spreadsheet L4 fields (Industrials, Energy, Financials have L4 data)
+- **Company name keyword matching**: For Consumer Discretionary and Industrials without L4 data:
+  - Auto manufacturers/parts → C29 (Motor vehicles)
+  - Hotels/restaurants/gaming → I (Accommodation & food)
+  - Homebuilders → F (Construction)
+  - Home appliances → C27 (Electrical equipment)
+- **Direct sector name mapping**: 70+ sector name → ISIC code mappings, sorted by specificity (longest match first)
+- ISIC code is recalculated and updated on the company record during "Process All" bulk reprocessing
+- Valid SC API ISIC codes: A01-A03, B05-B06, B07-B08, C10-C12, C16, C19-C30, D35, F, G45-G47, H49-H53, I, J58, J61, K64-K66, L68, M, N, O, P, Q
+
 ## Management Score Display
 - The Management API `totalScore` field IS the percentage (e.g. 27 means 27%), not a raw score to divide
 - `totalPossible` is always 26 (number of measures assessed)
@@ -74,7 +87,7 @@ server/storage.ts          - Storage interface (CRUD)
 server/routes.ts           - API routes
 server/services/externalApis.ts    - External API integrations
 server/services/operationManager.ts - Batch processing engine
-server/utils/mappings.ts   - ISIN-to-ISO3 and sector-to-ISIC mappings
+server/utils/mappings.ts   - ISIN-to-ISO3, sector-to-ISIC, and company name classification
 client/src/App.tsx          - Routes & app shell
 client/src/components/Layout.tsx - Navigation header
 client/src/pages/Dashboard.tsx     - Main dashboard
