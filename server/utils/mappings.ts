@@ -108,14 +108,20 @@ export const SECTOR_TO_ISIC: Record<string, string> = {
   "Transportation & Infrastructure": "H49",
   "Insurance": "K65",
   "Banking": "K64",
-  "Media": "J58-J60",
-  "Entertainment/Media": "J58-J60",
+  "Media": "J58",
+  "Entertainment/Media": "J58",
+  "Media & Entertainment": "J58",
   "Retail": "G47",
   "Food & Beverage": "C10-C12",
   "Agriculture": "A01",
   "Conglomerate": "G47",
   "Consumer Cyclicals": "G47",
-  "Travel & Leisure": "I55",
+  "Travel & Leisure": "I",
+  "Travel and Leisure": "I",
+  "Financial Technology": "K64",
+  "FinTech": "K64",
+  "Consumer Healthcare": "C21",
+  "Transportation and Transportation Infrastructure": "H49",
 };
 
 export function sectorToIsic(sector: string | null | undefined): string {

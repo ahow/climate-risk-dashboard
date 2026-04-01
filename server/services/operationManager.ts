@@ -677,9 +677,9 @@ export async function processBulkFromList(operationId: number, uploadId: number)
 
           company = await storage.createCompany({
             isin,
-            companyName: assetData.companyName || entry.companyName,
-            sector: assetData.sector || entry.level2Sector,
-            country: assetData.assets[0]?.country || entry.geography || null,
+            companyName: entry.companyName || assetData.companyName,
+            sector: entry.level2Sector || assetData.sector,
+            country: entry.geography || assetData.assets[0]?.country || null,
             totalAssetValue: entryTotalValue || assetData.totalEstimatedValue,
             assetCount: assetData.assetCount,
             isicSectorCode: isicCode,
