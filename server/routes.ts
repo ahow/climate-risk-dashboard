@@ -769,7 +769,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/export/csv", async (_req, res) => {
+  app.get("/api/export/csv", async (req, res) => {
     try {
       const client = await pool.connect();
       try {
