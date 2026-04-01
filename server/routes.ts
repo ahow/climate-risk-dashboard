@@ -796,8 +796,25 @@ export async function registerRoutes(
           ORDER BY c.id
         `);
 
+        const excludeIncomplete = req.query.excludeIncomplete !== "false";
+        const excludeFinancials = req.query.excludeFinancials === "true";
+        let filteredRows = result.rows;
+        if (excludeIncomplete) {
+          filteredRows = filteredRows.filter((row: any) => {
+            const av = parseFloat(row.total_asset_value) || 0;
+            const sc = parseFloat(row.supplier_costs) || 0;
+            const ev = parseFloat(row.ev) || 0;
+            return av > 0 && sc > 0 && ev > 0;
+          });
+        }
+        if (excludeFinancials) {
+          filteredRows = filteredRows.filter((row: any) =>
+            (row.sector || "").toLowerCase() !== "financials"
+          );
+        }
+
         const SC_PV_FACTOR = 13.57;
-        const rows = result.rows.map((row: any) => {
+        const rows = filteredRows.map((row: any) => {
           const rawGeoRiskPV = parseFloat(row.raw_geo_risk_pv) || 0;
           const apiAssetTotal = parseFloat(row.api_asset_total) || 0;
           const companyAssetVal = parseFloat(row.total_asset_value) || 0;
