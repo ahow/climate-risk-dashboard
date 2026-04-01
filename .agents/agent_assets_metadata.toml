@@ -6,3 +6,9 @@ id = "V6GYbpk4KjM5hsDd2Y3dE"
 uri = "file://Climate Risk Dashboard - Application Description.md"
 type = "text"
 title = "Climate Risk Dashboard - Application Description"
+
+[[outputs]]
+id = "Obennw9YMo2XPt-SetMbs"
+uri = "file://Climate_Risk_Model_Documentation.md"
+type = "text"
+title = "Climate Risk Model - Detailed Documentation"

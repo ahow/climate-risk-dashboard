@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import CompanyDetail from "@/pages/CompanyDetail";
 import CalculationMonitor from "@/pages/CalculationMonitor";
 import CompanyList from "@/pages/CompanyList";
+import Information from "@/pages/Information";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/company/:id" component={CompanyDetail} />
         <Route path="/monitor" component={CalculationMonitor} />
         <Route path="/company-list" component={CompanyList} />
+        <Route path="/information" component={Information} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

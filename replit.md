@@ -81,6 +81,8 @@ client/src/pages/Dashboard.tsx     - Main dashboard
 client/src/pages/CompanyDetail.tsx - Company risk details
 client/src/pages/CalculationMonitor.tsx - Job monitoring
 client/src/pages/CompanyList.tsx       - Company list upload & management
+client/src/pages/Information.tsx       - Model methodology & documentation
+Climate_Risk_Model_Documentation.md   - Detailed model documentation
 ```
 
 ## User Preferences

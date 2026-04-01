@@ -31,10 +31,6 @@ function formatCurrency(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
-function formatCurrencyFull(value: number): string {
-  return value.toFixed(0);
-}
-
 function formatPct(value: number): string {
   if (value === 0) return "0%";
   if (value >= 10) return `${value.toFixed(0)}%`;
@@ -42,9 +38,6 @@ function formatPct(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
-function formatPctRaw(value: number): string {
-  return value.toFixed(4);
-}
 
 const SC_PV_FACTOR = 13.57;
 
@@ -271,33 +264,6 @@ export default function Dashboard() {
     return <ArrowUp className="h-3 w-3 ml-1" />;
   };
 
-  const downloadTableCsv = () => {
-    const headers = ["Company", "ISIN", "Sector", "Total Assets", "EV", "Direct PV", "Supply Chain PV", "Total PV", "Mgmt Score %", "Adjusted PV", "Valuation Exposure %"];
-    const rows = filteredCompanies.map((company: any) => {
-      const m = getCompanyMetrics(company);
-      return [
-        `"${(company.companyName || "").replace(/"/g, '""')}"`,
-        company.isin,
-        `"${(company.sector || "").replace(/"/g, '""')}"`,
-        formatCurrencyFull(company.totalAssetValue || 0),
-        formatCurrencyFull(company.ev || 0),
-        formatCurrencyFull(m.directExposurePV),
-        formatCurrencyFull(m.supplyChainPV),
-        formatCurrencyFull(m.totalExposurePV),
-        m.mgmtScorePct != null ? (m.mgmtScorePct * 100).toFixed(1) : "",
-        formatCurrencyFull(m.adjustedExposurePV),
-        m.valuationExposurePct != null ? formatPctRaw(m.valuationExposurePct) : "",
-      ].join(",");
-    });
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `climate-risk-dashboard${showFinancials ? "" : "-ex-financials"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const totalAssetValue = filteredCompanies.reduce((sum: number, c: any) => sum + (c.totalAssetValue || 0), 0);
   const totalGeoRiskPV = filteredCompanies.reduce((sum: number, c: any) => sum + (c.totalGeoRiskPV || 0), 0);
@@ -527,16 +493,6 @@ export default function Dashboard() {
         <span className="text-sm text-muted-foreground">
           {filteredCompanies.length} companies
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={downloadTableCsv}
-          disabled={filteredCompanies.length === 0}
-          data-testid="button-download-csv"
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Download CSV
-        </Button>
       </div>
 
       {isLoading ? (
