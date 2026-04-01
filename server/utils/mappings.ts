@@ -241,6 +241,15 @@ const L4_TO_ISIC: Record<string, string> = {
   "Telecom. Svs. Prvds.": "J61",
   "Personal Goods": "G47",
   "Retailers": "G47",
+  "Consumer Services": "N",
+  "Electricity": "D35",
+  "Gas, Water & Mul Util": "D35",
+  "Health Care Providers": "Q",
+  "Industrial Materials": "C24",
+  "Leisure Goods": "C22",
+  "Media": "J58",
+  "Pharm. & Biotech": "C21",
+  "Prec. Metals & Mining": "B07-B08",
 };
 
 const AUTO_KEYWORDS = [
@@ -281,6 +290,86 @@ const APPLIANCE_KEYWORDS = [
   "home product center",
 ];
 
+const ISIC_DESCRIPTIONS: Record<string, string[]> = {
+  "A01": ["crop", "animal", "agriculture", "farming", "livestock", "agribusiness", "plantation", "dairy"],
+  "A02": ["forestry", "logging", "timber", "wood", "pulp"],
+  "A03": ["fishing", "aquaculture", "seafood", "fish"],
+  "B05": ["coal", "lignite", "mining coal"],
+  "B06": ["oil", "gas", "petroleum", "crude", "drilling", "quarrying", "mining", "energy extraction", "natural gas", "upstream"],
+  "B07-B08": ["metal ore", "iron ore", "copper", "gold", "silver", "zinc", "nickel", "rare earth", "bauxite", "mining metal", "mineral", "basic resources", "precious metals"],
+  "C10-C12": ["food", "beverage", "tobacco", "brewery", "distillery", "snack", "dairy product", "meat", "bakery", "confectionery", "soft drink", "wine", "beer", "spirits"],
+  "C16": ["wood product", "lumber", "sawmill", "plywood", "veneer"],
+  "C19": ["petroleum refining", "coke", "petrochemical", "refinery", "bitumen", "fuel"],
+  "C20": ["chemical", "fertilizer", "pesticide", "specialty chemical", "industrial gas", "adhesive", "paint", "coating", "agrochemical"],
+  "C21": ["pharmaceutical", "biotech", "drug", "medicine", "vaccine", "therapeutic", "health care", "healthcare", "medical", "hospital", "clinic", "diagnostics"],
+  "C22": ["rubber", "plastic", "polymer", "packaging", "consumer goods", "household", "appliance small", "consumer product"],
+  "C23": ["glass", "ceramic", "cement", "concrete", "brick", "stone", "non-metallic mineral", "building material"],
+  "C24": ["steel", "aluminum", "aluminium", "smelting", "basic metal", "iron", "alloy", "foundry", "metallurgy"],
+  "C25": ["fabricated metal", "metalwork", "structural metal", "tank", "boiler", "cutlery", "tool"],
+  "C26": ["electronic", "semiconductor", "computer", "software", "technology", "it services", "information technology", "tech hardware", "instrument", "optical", "data processing", "cloud computing", "saas"],
+  "C27": ["electrical equipment", "battery", "cable", "wiring", "lighting", "electrical component", "motor electric", "generator", "transformer", "appliance"],
+  "C28": ["machinery", "industrial equipment", "engine", "turbine", "pump", "compressor", "general industrial", "conglomerate", "diversified industrial"],
+  "C29": ["motor vehicle", "automobile", "automotive", "car manufacturer", "truck", "bus", "auto part", "vehicle", "tire", "tyre"],
+  "C30": ["aerospace", "defense", "defence", "aircraft", "ship", "shipbuilding", "railway vehicle", "military", "spacecraft", "transport equipment"],
+  "D35": ["electricity", "utility", "power generation", "renewable energy", "solar", "wind", "nuclear", "gas distribution", "steam", "alternative energy"],
+  "F": ["construction", "building", "civil engineering", "contractor", "real estate development", "homebuilder", "infrastructure construction"],
+  "G45": ["motor vehicle trade", "car dealer", "auto dealer", "vehicle sale", "motorcycle sale"],
+  "G46": ["wholesale", "trading company", "general trading", "import export", "commodity trading", "distribution"],
+  "G47": ["retail", "store", "shop", "supermarket", "grocery", "e-commerce", "online retail", "department store", "consumer discretionary"],
+  "H49": ["rail", "railroad", "road transport", "pipeline", "land transport", "freight", "logistics land", "trucking", "port", "transport infrastructure"],
+  "H50": ["shipping", "water transport", "maritime", "container ship", "ferry", "marine"],
+  "H51": ["airline", "air transport", "aviation", "airport", "air freight", "air cargo"],
+  "H52": ["warehouse", "logistics", "supply chain", "freight forwarding", "cargo handling", "storage", "transport support"],
+  "H53": ["postal", "courier", "delivery", "express delivery", "parcel", "mail"],
+  "I": ["hotel", "restaurant", "accommodation", "food service", "hospitality", "catering", "resort", "gaming", "casino", "travel", "leisure", "entertainment venue"],
+  "J58": ["publishing", "media", "entertainment", "broadcast", "game", "content", "music", "film", "information service"],
+  "J61": ["telecom", "telecommunication", "mobile network", "internet provider", "broadband", "communication service", "5g", "wireless"],
+  "K64": ["bank", "financial service", "lending", "credit", "investment management", "asset management", "fintech", "payment"],
+  "K65": ["insurance", "reinsurance", "life insurance", "non-life insurance", "pension", "annuity"],
+  "K66": ["brokerage", "securities", "stock exchange", "financial advisory", "fund management", "capital market", "auxiliary financial"],
+  "L68": ["real estate", "property", "reit", "property management", "real estate investment"],
+  "M": ["professional service", "consulting", "legal", "accounting", "architectural", "engineering service", "scientific", "research", "advisory"],
+  "N": ["administrative", "support service", "security service", "cleaning", "temp agency", "staffing", "facility management", "waste", "outsourcing"],
+  "O": ["public administration", "government", "defence public", "social security"],
+  "P": ["education", "school", "university", "training"],
+  "Q": ["health", "social work", "care home", "elderly care", "welfare"],
+};
+
+function fuzzyMatchIsic(sector: string): string {
+  const inputLower = sector.toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
+  const tokens = inputLower.split(/\s+/).filter(t => t.length > 2);
+
+  let bestCode = "N";
+  let bestScore = 0;
+
+  for (const [code, keywords] of Object.entries(ISIC_DESCRIPTIONS)) {
+    let score = 0;
+    for (const kw of keywords) {
+      const kwParts = kw.split(/\s+/);
+      if (kwParts.length > 1) {
+        if (inputLower.includes(kw)) {
+          score += kwParts.length * 3;
+        }
+      } else {
+        for (const token of tokens) {
+          if (token === kw) {
+            score += 3;
+          } else if (token.length >= 4 && kw.length >= 4 && token.startsWith(kw.slice(0, 4))) {
+            score += 1;
+          }
+        }
+      }
+    }
+    const normalizedScore = keywords.length > 0 ? score / Math.sqrt(keywords.length) : 0;
+    if (normalizedScore > bestScore) {
+      bestScore = normalizedScore;
+      bestCode = code;
+    }
+  }
+
+  return bestCode;
+}
+
 function classifyByCompanyName(name: string): string | null {
   const lower = name.toLowerCase();
 
@@ -308,13 +397,17 @@ export function sectorToIsic(
   l4Sector?: string | null,
   companyName?: string | null,
 ): string {
-  if (l4Sector) {
+  if (l4Sector && l4Sector.trim() !== "NA") {
     const trimmed = l4Sector.trim();
     const l4Match = L4_TO_ISIC[trimmed];
     if (l4Match) return l4Match;
     for (const [key, value] of Object.entries(L4_TO_ISIC)) {
       if (key.toLowerCase() === trimmed.toLowerCase()) return value;
     }
+    const l4Fuzzy = fuzzyMatchIsic(trimmed);
+    L4_TO_ISIC[trimmed] = l4Fuzzy;
+    console.log(`[ISIC] Auto-mapped L4 sector "${trimmed}" -> ${l4Fuzzy} (fuzzy match)`);
+    return l4Fuzzy;
   }
 
   if (!sector) return "M";
@@ -338,5 +431,9 @@ export function sectorToIsic(
       return SECTOR_TO_ISIC[key];
     }
   }
-  return "M";
+
+  const fuzzyMatch = fuzzyMatchIsic(sector);
+  SECTOR_TO_ISIC[sector] = fuzzyMatch;
+  console.log(`[ISIC] Auto-mapped sector "${sector}" -> ${fuzzyMatch} (fuzzy match)`);
+  return fuzzyMatch;
 }

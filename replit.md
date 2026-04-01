@@ -62,6 +62,7 @@ A full-stack web application that quantifies and visualizes climate-related fina
   - Homebuilders → F (Construction)
   - Home appliances → C27 (Electrical equipment)
 - **Direct sector name mapping**: 70+ sector name → ISIC code mappings, sorted by specificity (longest match first)
+- **Fuzzy matching fallback**: When no exact/substring match exists, tokenizes sector name and scores against ISIC keyword descriptions (42 codes × ~8 keywords each). Uses exact-token matches (3 pts), multi-word phrase matches (3 pts × words), and stem-prefix matches for 4+ char tokens (1 pt). Scores normalized by √(keyword count). Best match auto-added to runtime mapping table and logged. Default fallback is `N` (Administrative services) if no keywords match at all
 - ISIC code is recalculated and updated on the company record during "Process All" bulk reprocessing
 - Valid SC API ISIC codes: A01-A03, B05-B06, B07-B08, C10-C12, C16, C19-C30, D35, F, G45-G47, H49-H53, I, J58, J61, K64-K66, L68, M, N, O, P, Q
 
