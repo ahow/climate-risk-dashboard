@@ -50,6 +50,8 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - Hazard breakdown PVs available: flood, drought, heat_stress, hurricane, extreme_precipitation
 - `supplyChainTiers` JSONB column stores tier-level PV breakdowns
 - If no supplier costs data available, falls back to raw per-$1B values (scale factor = 1)
+- **Saturation scaling**: When supplierCosts/EV > 1, applies exponential saturation: `EV × ratePerDollar × (1 - exp(-supplierCosts/EV))`
+- Applied consistently in backend (`scaleSupplyChainRisk()`), Dashboard (`getSaturationScale()`), and CompanyDetail
 - Dashboard and CompanyDetail display PV-based values throughout
 
 ## ISIC Sector Code Classification
@@ -78,6 +80,12 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - Display `totalScore` directly as the percentage
 - For Adjusted Exposure calculation: `mgmtScorePct = totalScore / 100`
 - Name-matching fallback used when ISIN not found in Management API (e.g. Rio Tinto GB→AU, EQT SE→US)
+
+## Data Quality Warnings
+- Both `/api/companies` (list) and `/api/companies/:id` (detail) return `warnings` array when data anomalies detected
+- Thresholds: EV < $10M (unusually low), EV > $5T (unusually high), supplierCosts > 100x EV, totalAssets > $1T
+- Dashboard: amber triangle icon next to company name with hover tooltip
+- CompanyDetail: amber banner at top of page listing all warnings
 
 ## Key Features
 1. **Company Dashboard** (`/`) - Overview with add-by-ISIN, search, risk summary cards

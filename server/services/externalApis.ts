@@ -425,15 +425,36 @@ export async function fetchManagementPerformance(
     );
     if (match) return match;
 
-    if (companyName) {
-      const normalizedName = companyName.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const nameMatch = bulkData.companies.find(c => {
-        const apiName = c.company.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        return apiName === normalizedName || apiName.includes(normalizedName) || normalizedName.includes(apiName);
-      });
-      if (nameMatch) {
-        console.log(`[mgmt] Found ${companyName} by name match (API ISIN: ${nameMatch.company.isin}, our ISIN: ${isin})`);
-        return nameMatch;
+    if (companyName && companyName.length >= 4) {
+      const normalizedName = companyName.toUpperCase().replace(/[^A-Z0-9\s]/g, '').trim();
+      const nameTokens = normalizedName.split(/\s+/).filter(t => t.length >= 2);
+
+      let bestMatch: ManagementPerformanceResponse | null = null;
+      let bestScore = 0;
+
+      for (const c of bulkData.companies) {
+        const apiName = c.company.name.toUpperCase().replace(/[^A-Z0-9\s]/g, '').trim();
+        const apiTokens = apiName.split(/\s+/).filter(t => t.length >= 2);
+
+        if (apiName === normalizedName) {
+          bestMatch = c;
+          break;
+        }
+
+        const matchingTokens = nameTokens.filter(t => apiTokens.includes(t));
+        const significantTokens = matchingTokens.filter(t => t.length >= 3);
+        if (significantTokens.length >= 2) {
+          const score = significantTokens.reduce((s, t) => s + t.length, 0);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = c;
+          }
+        }
+      }
+
+      if (bestMatch) {
+        console.log(`[mgmt] Found ${companyName} by name match (API: ${bestMatch.company.name}, API ISIN: ${bestMatch.company.isin}, our ISIN: ${isin})`);
+        return bestMatch;
       }
     }
   } catch (err: any) {

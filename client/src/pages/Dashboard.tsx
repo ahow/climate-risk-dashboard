@@ -41,21 +41,30 @@ function formatPct(value: number): string {
 
 const SC_PV_FACTOR = 13.57;
 
-function getSupplyChainPV(sc: any, supplierCosts: number | null) {
+function getSaturationScale(supplierCosts: number, ev: number, base: number): number {
+  const linear = supplierCosts / base;
+  if (ev > 0 && supplierCosts / ev > 1) {
+    const costToEV = supplierCosts / ev;
+    return (ev / base) * (1 - Math.exp(-costToEV));
+  }
+  return linear;
+}
+
+function getSupplyChainPV(sc: any, supplierCosts: number | null, ev?: number | null) {
   if (!sc?.indirectRisk?.expected_loss) return 0;
   const el = sc.indirectRisk.expected_loss;
   if (el.present_value != null) {
-    const scaleFactor = supplierCosts ? supplierCosts / 1_000_000_000 : 1;
-    return el.present_value * scaleFactor;
+    const sf = supplierCosts ? getSaturationScale(supplierCosts, ev || 0, 1_000_000_000) : 1;
+    return el.present_value * sf;
   }
-  const scaleFactor = supplierCosts ? supplierCosts / 1_000_000 : 1;
+  const sf = supplierCosts ? getSaturationScale(supplierCosts, ev || 0, 1_000_000) : 1;
   const pvPerUnit = (el.total_annual_loss || 0) * SC_PV_FACTOR;
-  return pvPerUnit * scaleFactor;
+  return pvPerUnit * sf;
 }
 
 function getCompanyMetrics(company: any) {
   const sc = company.supplyChainRisk;
-  const supplyChainPV = getSupplyChainPV(sc, company.supplierCosts);
+  const supplyChainPV = getSupplyChainPV(sc, company.supplierCosts, company.ev);
 
   const directExposurePV = company.totalGeoRiskPV || 0;
   const totalExposurePV = directExposurePV + supplyChainPV;
@@ -572,6 +581,9 @@ export default function Dashboard() {
                       <Link href={`/company/${company.id}`}>
                         <span className="font-semibold text-foreground hover:text-primary cursor-pointer text-sm truncate block" data-testid={`link-company-${company.id}`} title={company.companyName}>
                           {company.companyName}
+                          {company.warnings && (
+                            <AlertTriangle className="inline-block ml-1 h-3.5 w-3.5 text-amber-500" title={company.warnings.join('; ')} data-testid={`warning-${company.id}`} />
+                          )}
                         </span>
                       </Link>
                       <div className="flex items-center gap-2 mt-0.5">

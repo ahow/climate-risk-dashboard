@@ -6,7 +6,7 @@ import {
   fetchSupplyChainRisk,
   fetchManagementPerformance,
 } from "./externalApis";
-import { isinToIso3, sectorToIsic, resolveSupplyChainCountry, countryNameToIso3 } from "../utils/mappings";
+import { isinToIso3, sectorToIsic, resolveSupplyChainCountry, countryNameToIso3, validateCountryFromIsin } from "../utils/mappings";
 import { log } from "../index";
 
 const BATCH_SIZE = 10;
@@ -260,7 +260,7 @@ export async function processGeographicRisks(operationId: number, companyId: num
   }
 }
 
-function scaleSupplyChainRisk(result: any, supplierCosts: number | null) {
+function scaleSupplyChainRisk(result: any, supplierCosts: number | null, ev?: number | null) {
   const scaleFactor = supplierCosts ? supplierCosts / 1_000_000_000 : 1;
 
   const directLossRaw = result.direct_risk.expected_loss?.total_annual_loss || 0;
@@ -268,10 +268,19 @@ function scaleSupplyChainRisk(result: any, supplierCosts: number | null) {
   const indirectLossRaw = result.indirect_risk.expected_loss?.total_annual_loss || 0;
   const indirectLossPctRaw = result.indirect_risk.expected_loss?.total_annual_loss_pct || 0;
 
+  let effectiveScale = scaleFactor;
+  if (ev && ev > 0 && supplierCosts && supplierCosts > 0) {
+    const costToEV = supplierCosts / ev;
+    if (costToEV > 1) {
+      const ratePerDollar = 1 / 1_000_000_000;
+      effectiveScale = ev * ratePerDollar * (1 - Math.exp(-costToEV));
+    }
+  }
+
   return {
-    directExpectedLoss: directLossRaw * scaleFactor,
+    directExpectedLoss: directLossRaw * effectiveScale,
     directExpectedLossPct: directLossPctRaw,
-    indirectExpectedLoss: indirectLossRaw * scaleFactor,
+    indirectExpectedLoss: indirectLossRaw * effectiveScale,
     indirectExpectedLossPct: indirectLossPctRaw,
   };
 }
@@ -296,7 +305,7 @@ export async function processSupplyChainRisk(operationId: number, companyId: num
     await storage.deleteSupplyChainRisk(companyId);
 
     const result = await fetchSupplyChainRisk(countryCode, sectorCode);
-    const scaled = scaleSupplyChainRisk(result, company.supplierCosts);
+    const scaled = scaleSupplyChainRisk(result, company.supplierCosts, company.ev);
 
     await storage.createSupplyChainRisk({
       companyId,
@@ -445,7 +454,7 @@ export async function processAllRisks(operationId: number, companyId: number) {
         const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, null, company.companyName);
         await storage.deleteSupplyChainRisk(companyId);
         const scResult = await fetchSupplyChainRisk(countryCode, sectorCode);
-        const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
+        const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts, company.ev);
         await storage.createSupplyChainRisk({
           companyId,
           countryCode: scResult.country,
@@ -549,6 +558,18 @@ export async function processBulkFromList(operationId: number, uploadId: number)
           if (recalcIsic !== company.isicSectorCode) {
             baseUpdates.isicSectorCode = recalcIsic;
           }
+          const validatedCountry = validateCountryFromIsin(isin, entry.geography || company.country);
+          if (validatedCountry && validatedCountry !== company.country) {
+            baseUpdates.country = validatedCountry;
+            const newIso3 = countryNameToIso3(validatedCountry) || isinToIso3(isin);
+            if (newIso3) baseUpdates.countryIso3 = newIso3;
+          }
+          if (entry.companyName && entry.companyName !== company.companyName) {
+            baseUpdates.companyName = entry.companyName;
+          }
+          if (entry.level2Sector && entry.level2Sector !== company.sector) {
+            baseUpdates.sector = entry.level2Sector;
+          }
           if (entrySupplierCosts != null) baseUpdates.supplierCosts = entrySupplierCosts;
           if (entryEv != null) baseUpdates.ev = entryEv;
           if (entryTotalValue != null) baseUpdates.totalAssetValue = entryTotalValue;
@@ -585,7 +606,8 @@ export async function processBulkFromList(operationId: number, uploadId: number)
                 const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, entry.level4Sector, company.companyName);
                 const scResult = await getCachedSupplyChainRisk(scCache, countryCode, sectorCode);
                 const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
-                const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
+                const evForCompany = company.ev || entryEv;
+                const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany, evForCompany);
                 await storage.createSupplyChainRisk({
                   companyId: company.id,
                   countryCode: scResult.country,
@@ -688,7 +710,8 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             continue;
           }
 
-          const countryIso3 = countryNameToIso3(entry.geography) || isinToIso3(isin);
+          const validatedCountry = validateCountryFromIsin(isin, entry.geography || assetData.assets[0]?.country || null);
+          const countryIso3 = countryNameToIso3(validatedCountry) || isinToIso3(isin);
           const companyNameForIsic = entry.companyName || assetData.companyName;
           const isicCode = sectorToIsic(entry.level2Sector || assetData.sector, entry.level4Sector, companyNameForIsic);
 
@@ -696,7 +719,7 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             isin,
             companyName: companyNameForIsic,
             sector: entry.level2Sector || assetData.sector,
-            country: entry.geography || assetData.assets[0]?.country || null,
+            country: validatedCountry,
             totalAssetValue: entryTotalValue || assetData.totalEstimatedValue,
             assetCount: assetData.assetCount,
             isicSectorCode: isicCode,
@@ -806,7 +829,8 @@ export async function processBulkFromList(operationId: number, uploadId: number)
             await storage.deleteSupplyChainRisk(company.id);
             const scResult = await getCachedSupplyChainRisk(scCache, countryCode, sectorCode);
             const supplierCostsForCompany = company.supplierCosts || entrySupplierCosts;
-            const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany);
+            const evForCompany = company.ev || entryEv;
+            const scaled = scaleSupplyChainRisk(scResult, supplierCostsForCompany, evForCompany);
             await storage.createSupplyChainRisk({
               companyId: company.id,
               countryCode: scResult.country,
@@ -1037,7 +1061,7 @@ export async function processMissingCompanies(operationId: number) {
               const countryCode = resolveSupplyChainCountry(company.isin, company.countryIso3, company.country);
               const sectorCode = company.isicSectorCode || sectorToIsic(company.sector, null, company.companyName);
               const scResult = await getCachedSupplyChainRisk(scCache, countryCode, sectorCode);
-              const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts);
+              const scaled = scaleSupplyChainRisk(scResult, company.supplierCosts, company.ev);
               await storage.createSupplyChainRisk({
                 companyId: company.id,
                 countryCode: scResult.country,

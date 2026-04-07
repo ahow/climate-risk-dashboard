@@ -55,6 +55,39 @@ export function countryNameToIso3(country: string | null | undefined): string | 
   return COUNTRY_NAME_TO_ISO3[country.toLowerCase().trim()] || null;
 }
 
+const ISIN_PREFIX_TO_COUNTRY_NAME: Record<string, string> = {
+  US: "United States", GB: "United Kingdom", DE: "Germany", JP: "Japan",
+  FR: "France", CN: "China", AU: "Australia", BR: "Brazil", IN: "India",
+  CH: "Switzerland", CA: "Canada", KR: "South Korea", IT: "Italy",
+  ES: "Spain", NL: "Netherlands", SE: "Sweden", NO: "Norway", DK: "Denmark",
+  FI: "Finland", BE: "Belgium", AT: "Austria", IE: "Ireland", PT: "Portugal",
+  SG: "Singapore", HK: "Hong Kong", TW: "Taiwan", ZA: "South Africa",
+  MX: "Mexico", SA: "Saudi Arabia", AE: "United Arab Emirates", TH: "Thailand",
+  MY: "Malaysia", ID: "Indonesia", PH: "Philippines", PL: "Poland",
+  CZ: "Czech Republic", GR: "Greece", TR: "Turkey", IL: "Israel",
+  CL: "Chile", CO: "Colombia", PE: "Peru", AR: "Argentina", NZ: "New Zealand",
+  QA: "Qatar", EG: "Egypt", LU: "Luxembourg", HU: "Hungary", RO: "Romania",
+};
+
+const OFFSHORE_ISIN_PREFIXES = new Set(["KY", "BM", "VG", "JE", "GG", "PA"]);
+
+export function validateCountryFromIsin(isin: string, country: string | null | undefined): string | null {
+  if (!country) return null;
+  const prefix = isin.substring(0, 2).toUpperCase();
+  if (OFFSHORE_ISIN_PREFIXES.has(prefix)) return country;
+
+  const normalized = country.trim();
+  if (normalized === "USA") return "United States";
+
+  const expectedCountry = ISIN_PREFIX_TO_COUNTRY_NAME[prefix];
+  if (!expectedCountry) return normalized;
+
+  if (normalized.toLowerCase() === expectedCountry.toLowerCase()) return normalized;
+
+  console.log(`[country] Corrected country for ${isin}: "${normalized}" -> "${expectedCountry}" (from ISIN prefix)`);
+  return expectedCountry;
+}
+
 const SC_API_UNSUPPORTED: Set<string> = new Set(["BMU", "CYM", "HKG", "KWT", "VGB", "JEY", "GGY", "BHR"]);
 
 const SC_API_FALLBACK: Record<string, string> = {

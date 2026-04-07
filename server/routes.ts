@@ -66,8 +66,8 @@ export async function registerRoutes(
           const rawGeoRiskPV = parseFloat(row.raw_geo_risk_pv) || 0;
           const apiAssetTotal = parseFloat(row.api_asset_total) || 0;
           const companyAssetVal = parseFloat(row.total_asset_value) || 0;
-          const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0 && companyAssetVal < apiAssetTotal)
-            ? companyAssetVal / apiAssetTotal : 1;
+          const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0)
+            ? companyAssetVal / apiAssetTotal : (apiAssetTotal === 0 ? 0 : 1);
 
           let supplyChainRisk = null;
           if (row.has_sc) {
@@ -82,6 +82,14 @@ export async function registerRoutes(
             };
           }
 
+          const evVal = parseFloat(row.ev) || null;
+          const supplierCostsVal = parseFloat(row.supplier_costs) || null;
+          const warnings: string[] = [];
+          if (evVal != null && evVal < 10_000_000) warnings.push(`EV unusually low: $${(evVal / 1e6).toFixed(1)}M`);
+          if (evVal != null && evVal > 5_000_000_000_000) warnings.push(`EV unusually high: $${(evVal / 1e12).toFixed(1)}T`);
+          if (evVal && supplierCostsVal && supplierCostsVal / evVal > 100) warnings.push(`Supplier Costs ${(supplierCostsVal / evVal).toFixed(0)}x EV`);
+          if (companyAssetVal > 1_000_000_000_000) warnings.push(`Total Assets unusually high: $${(companyAssetVal / 1e12).toFixed(1)}T`);
+
           return {
             id: row.id,
             isin: row.isin,
@@ -90,8 +98,8 @@ export async function registerRoutes(
             country: row.country,
             totalAssetValue: companyAssetVal || null,
             assetCount: row.asset_count,
-            supplierCosts: parseFloat(row.supplier_costs) || null,
-            ev: parseFloat(row.ev) || null,
+            supplierCosts: supplierCostsVal,
+            ev: evVal,
             totalGeoRisk: rawGeoRisk * geoScaleFactor,
             totalGeoRiskPV: rawGeoRiskPV * geoScaleFactor,
             supplyChainRisk,
@@ -99,6 +107,7 @@ export async function registerRoutes(
             hasGeoRisks: parseInt(row.geo_risk_count) > 0,
             hasSupplyChainRisk: row.has_sc,
             hasManagementScore: row.has_mgmt,
+            warnings: warnings.length > 0 ? warnings : undefined,
           };
         });
 
@@ -128,8 +137,8 @@ export async function registerRoutes(
 
       const apiAssetTotal = assetsList.reduce((sum, a) => sum + (a.estimatedValueUsd || 0), 0);
       const companyAssetVal = company.totalAssetValue || 0;
-      const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0 && companyAssetVal < apiAssetTotal)
-        ? companyAssetVal / apiAssetTotal : 1;
+      const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0)
+        ? companyAssetVal / apiAssetTotal : (apiAssetTotal === 0 ? 0 : 1);
 
       const assetsWithRisks = assetsList.map(asset => {
         const risk = geoRisks.find(r => r.assetId === asset.id);
@@ -140,6 +149,14 @@ export async function registerRoutes(
         } : null;
         return { ...asset, geoRisk: scaledRisk };
       });
+
+      const warnings: string[] = [];
+      const evVal = company.ev || 0;
+      const supplierCostsVal = company.supplierCosts || 0;
+      if (evVal > 0 && evVal < 10_000_000) warnings.push(`EV unusually low: $${(evVal / 1e6).toFixed(1)}M`);
+      if (evVal > 5_000_000_000_000) warnings.push(`EV unusually high: $${(evVal / 1e12).toFixed(1)}T`);
+      if (evVal > 0 && supplierCostsVal > 0 && supplierCostsVal / evVal > 100) warnings.push(`Supplier Costs ${(supplierCostsVal / evVal).toFixed(0)}x EV`);
+      if (companyAssetVal > 1_000_000_000_000) warnings.push(`Total Assets unusually high: $${(companyAssetVal / 1e12).toFixed(1)}T`);
 
       res.json({
         ...company,
@@ -153,6 +170,7 @@ export async function registerRoutes(
         })),
         supplyChainRisk: scRisk,
         managementScore: mgmtScore,
+        warnings: warnings.length > 0 ? warnings : undefined,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -820,15 +838,20 @@ export async function registerRoutes(
           const companyAssetVal = parseFloat(row.total_asset_value) || 0;
           const supplierCosts = parseFloat(row.supplier_costs) || 0;
           const ev = parseFloat(row.ev) || 0;
-          const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0 && companyAssetVal < apiAssetTotal)
-            ? companyAssetVal / apiAssetTotal : 1;
+          const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0)
+            ? companyAssetVal / apiAssetTotal : (apiAssetTotal === 0 ? 0 : 1);
           const totalGeoRiskPV = rawGeoRiskPV * geoScaleFactor;
 
           const scEl = row.sc_expected_loss;
           const scHasNewAPI = scEl?.present_value != null;
-          const scSf = supplierCosts
+          let scSf = supplierCosts
             ? supplierCosts / (scHasNewAPI ? 1_000_000_000 : 1_000_000)
             : 1;
+          if (ev > 0 && supplierCosts > 0 && supplierCosts / ev > 1) {
+            const costToEV = supplierCosts / ev;
+            const ratePerDollar = 1 / (scHasNewAPI ? 1_000_000_000 : 1_000_000);
+            scSf = ev * ratePerDollar * (1 - Math.exp(-costToEV));
+          }
           const scRawPV = scHasNewAPI ? scEl.present_value : (scEl?.total_annual_loss || 0) * SC_PV_FACTOR;
           const scIndirectPV = scRawPV * scSf;
           const totalExposurePV = totalGeoRiskPV + scIndirectPV;

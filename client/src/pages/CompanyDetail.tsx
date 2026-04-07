@@ -349,14 +349,23 @@ function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
 
 const SC_PV_FACTOR = 13.57;
 
+function getSaturationScale(supplierCosts: number, ev: number, base: number): number {
+  const linear = supplierCosts / base;
+  if (ev > 0 && supplierCosts / ev > 1) {
+    const costToEV = supplierCosts / ev;
+    return (ev / base) * (1 - Math.exp(-costToEV));
+  }
+  return linear;
+}
+
 function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) {
-  const scaleFactor = company.supplierCosts ? company.supplierCosts / 1_000_000_000 : 1;
   const indirectRisk = scRisk.indirectRisk as any;
   const tiers = (scRisk.supplyChainTiers || []) as any[];
 
   const el = indirectRisk?.expected_loss;
   const hasNewAPI = el?.present_value != null;
-  const effectiveScale = hasNewAPI ? scaleFactor : (company.supplierCosts ? company.supplierCosts / 1_000_000 : 1);
+  const base = hasNewAPI ? 1_000_000_000 : 1_000_000;
+  const effectiveScale = company.supplierCosts ? getSaturationScale(company.supplierCosts, company.ev || 0, base) : 1;
   const rawPV = hasNewAPI ? el.present_value : (el?.total_annual_loss || 0) * SC_PV_FACTOR;
   const indirectPV = rawPV * effectiveScale;
 
@@ -402,7 +411,7 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
               {company.supplierCosts ? formatCurrency(company.supplierCosts) : "N/A"}
             </div>
             <div className="text-xs text-muted-foreground">
-              {company.supplierCosts ? `Scale factor: ${scaleFactor.toFixed(6)}x (per $1B)` : "Per $1B exposure (no supplier costs data)"}
+              {company.supplierCosts ? `Scale factor: ${effectiveScale.toFixed(6)}x (per $1B)` : "Per $1B exposure (no supplier costs data)"}
             </div>
           </CardContent>
         </Card>
@@ -521,8 +530,9 @@ export default function CompanyDetail() {
   const totalGeoPV = company.totalGeoRiskPV > 0 ? formatCurrency(company.totalGeoRiskPV) : "Not calculated";
   const scEl = scRisk?.indirectRisk?.expected_loss;
   const scHasNewAPI = scEl?.present_value != null;
+  const scBase = scHasNewAPI ? 1_000_000_000 : 1_000_000;
   const scScaleFactor = company.supplierCosts
-    ? company.supplierCosts / (scHasNewAPI ? 1_000_000_000 : 1_000_000)
+    ? getSaturationScale(company.supplierCosts, company.ev || 0, scBase)
     : 1;
   const scRawPV = scHasNewAPI ? scEl.present_value : (scEl?.total_annual_loss || 0) * SC_PV_FACTOR;
   const scIndirectPV = scRisk ? scRawPV * scScaleFactor : 0;
@@ -546,6 +556,13 @@ export default function CompanyDetail() {
           </div>
         </div>
       </div>
+
+      {company.warnings && company.warnings.length > 0 && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm" data-testid="data-quality-warnings">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>Data quality: {company.warnings.join(' · ')}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -713,8 +730,9 @@ export default function CompanyDetail() {
                     {(scRisk.topSuppliers as any[]).map((supplier: any, idx: number) => {
                       const supplierElc = supplier.expected_loss_contribution;
                       const supplierHasNewAPI = supplierElc?.present_value != null;
+                      const supplierBase = supplierHasNewAPI ? 1_000_000_000 : 1_000_000;
                       const sf = company.supplierCosts
-                        ? company.supplierCosts / (supplierHasNewAPI ? 1_000_000_000 : 1_000_000)
+                        ? getSaturationScale(company.supplierCosts, company.ev || 0, supplierBase)
                         : 1;
                       const supplierRawPV = supplierHasNewAPI ? supplierElc.present_value : (supplierElc?.annual_loss || 0) * SC_PV_FACTOR;
                       return (
