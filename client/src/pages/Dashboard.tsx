@@ -132,6 +132,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFinancials, setShowFinancials] = useState(false);
   const [showIncomplete, setShowIncomplete] = useState(false);
+  const [showExtremeValues, setShowExtremeValues] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -235,6 +236,13 @@ export default function Dashboard() {
       result = result.filter((c: any) => c.totalAssetValue > 0 && c.supplierCosts > 0 && c.ev > 0);
     }
 
+    if (!showExtremeValues) {
+      result = result.filter((c: any) => {
+        const m = getCompanyMetrics(c);
+        return m.valuationExposurePct === null || m.valuationExposurePct <= 100;
+      });
+    }
+
     if (sortKey) {
       result = [...result].sort((a, b) => {
         const mA = getCompanyMetrics(a);
@@ -251,7 +259,7 @@ export default function Dashboard() {
     }
 
     return result;
-  }, [companies, searchQuery, showFinancials, showIncomplete, sortKey, sortDir]);
+  }, [companies, searchQuery, showFinancials, showIncomplete, showExtremeValues, sortKey, sortDir]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -497,6 +505,17 @@ export default function Dashboard() {
           />
           <Label htmlFor="show-incomplete" className="text-sm cursor-pointer">
             Include Incomplete
+          </Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-extreme"
+            checked={showExtremeValues}
+            onCheckedChange={setShowExtremeValues}
+            data-testid="toggle-extreme"
+          />
+          <Label htmlFor="show-extreme" className="text-sm cursor-pointer">
+            Include Val% &gt; 100%
           </Label>
         </div>
         <span className="text-sm text-muted-foreground">
