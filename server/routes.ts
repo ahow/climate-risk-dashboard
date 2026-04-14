@@ -951,6 +951,30 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/fix-countries", async (_req, res) => {
+    try {
+      const { validateCountryFromIsin } = await import("./utils/mappings");
+      const { pool } = await import("./db");
+      const client = await pool.connect();
+      try {
+        const result = await client.query(`SELECT id, isin, country FROM companies WHERE country IS NOT NULL`);
+        let updated = 0;
+        for (const row of result.rows) {
+          const corrected = validateCountryFromIsin(row.isin, row.country);
+          if (corrected && corrected !== row.country) {
+            await client.query(`UPDATE companies SET country = $1 WHERE id = $2`, [corrected, row.id]);
+            updated++;
+          }
+        }
+        res.json({ success: true, companiesUpdated: updated, totalScanned: result.rows.length });
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/diagnostics", async (_req, res) => {
     try {
       const { pool } = await import("./db");

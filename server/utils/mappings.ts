@@ -71,18 +71,28 @@ const ISIN_PREFIX_TO_COUNTRY_NAME: Record<string, string> = {
 
 const OFFSHORE_ISIN_PREFIXES = new Set(["KY", "BM", "VG", "JE", "GG", "PA"]);
 
+function normalizeCountryName(name: string): string {
+  const lower = name.toLowerCase().trim();
+  for (const entry of Object.values(ISIN_PREFIX_TO_COUNTRY_NAME)) {
+    if (entry.toLowerCase() === lower) return entry;
+  }
+  return name.trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export function validateCountryFromIsin(isin: string, country: string | null | undefined): string | null {
   if (!country) return null;
   const prefix = isin.substring(0, 2).toUpperCase();
-  if (OFFSHORE_ISIN_PREFIXES.has(prefix)) return country;
+  const normalized = normalizeCountryName(country);
 
-  const normalized = country.trim();
-  if (normalized === "USA") return "United States";
+  if (normalized === "Usa") return "United States";
+  if (country.trim() === "USA") return "United States";
+
+  if (OFFSHORE_ISIN_PREFIXES.has(prefix)) return normalized;
 
   const expectedCountry = ISIN_PREFIX_TO_COUNTRY_NAME[prefix];
   if (!expectedCountry) return normalized;
 
-  if (normalized.toLowerCase() === expectedCountry.toLowerCase()) return normalized;
+  if (normalized.toLowerCase() === expectedCountry.toLowerCase()) return expectedCountry;
 
   console.log(`[country] Corrected country for ${isin}: "${normalized}" -> "${expectedCountry}" (from ISIN prefix)`);
   return expectedCountry;
