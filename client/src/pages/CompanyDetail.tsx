@@ -378,14 +378,6 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
     extreme_precipitation: "Extreme Precip.",
   };
 
-  const riskDimensions = [
-    { key: "climate", label: "Climate" },
-    { key: "water_stress", label: "Water Stress" },
-    { key: "nature_loss", label: "Nature Loss" },
-    { key: "modern_slavery", label: "Modern Slavery" },
-    { key: "political", label: "Political" },
-  ];
-
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
@@ -429,26 +421,6 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
                 <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-hazard-${key}`}>
                   <div className="text-xs text-muted-foreground mb-1">{label}</div>
                   <div className="text-sm font-bold">{formatCurrency(hazardPV)}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {indirectRisk && (
-        <div>
-          <h4 className="text-sm font-medium mb-3">Risk Dimensions (1-5 Score)</h4>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {riskDimensions.map(({ key, label }) => {
-              const score = indirectRisk[key] || 0;
-              const pct = (score / 5) * 100;
-              return (
-                <div key={key} className="text-center p-3 border rounded-md" data-testid={`sc-dimension-${key}`}>
-                  <div className="text-xs text-muted-foreground mb-1">{label}</div>
-                  <div className="text-sm font-bold">{score.toFixed(1)}</div>
-                  <Progress value={pct} className="h-1.5 mt-1" />
-                  <div className="text-xs text-muted-foreground mt-1">{score.toFixed(1)} / 5.0</div>
                 </div>
               );
             })}
