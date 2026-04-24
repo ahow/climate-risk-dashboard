@@ -94,6 +94,13 @@ A full-stack web application that quantifies and visualizes climate-related fina
 4. **Company List** (`/company-list`) - Upload Excel spreadsheets, permanent download URLs for sharing
 5. **CSV Export** - Download all company risk data as CSV
 
+## Programmatic API Access
+- **Endpoint**: `GET /api/v1/company/:isin`
+- **Authentication**: `X-API-Key` header, validated against `DASHBOARD_API_KEY` env var
+- Returns full analysis: company info, financials, summary (totals, adjusted exposure, val%), per-asset geographic risk with hazards, supply chain risk (raw + scaled with saturation), management score, and warnings
+- Returns 503 if `DASHBOARD_API_KEY` not set, 401 on bad/missing key, 404 if ISIN not in DB
+- For Heroku deployment, set `DASHBOARD_API_KEY` config var matching the Replit secret
+
 ## File Structure
 ```
 shared/schema.ts           - Database schema & types

@@ -975,6 +975,148 @@ export async function registerRoutes(
     }
   });
 
+  const requireApiKey: import("express").RequestHandler = (req, res, next) => {
+    const expected = process.env.DASHBOARD_API_KEY;
+    if (!expected) {
+      return res.status(503).json({ error: "API access not configured. Set DASHBOARD_API_KEY env var." });
+    }
+    const provided = (req.header("x-api-key") || req.header("X-API-Key") || "").trim();
+    if (!provided || provided !== expected) {
+      return res.status(401).json({ error: "Invalid or missing API key. Provide via 'X-API-Key' header." });
+    }
+    next();
+  };
+
+  app.get("/api/v1/company/:isin", requireApiKey, async (req, res) => {
+    try {
+      const isin = req.params.isin.toUpperCase();
+      const company = await storage.getCompanyByIsin(isin);
+      if (!company) {
+        return res.status(404).json({ error: `No company found for ISIN ${isin}` });
+      }
+
+      const assetsList = await storage.getAssetsByCompany(company.id);
+      const geoRisksList = await storage.getGeoRisksByCompany(company.id);
+      const scRisk = await storage.getSupplyChainRisk(company.id);
+      const mgmtScore = await storage.getManagementScore(company.id);
+
+      const apiAssetTotal = assetsList.reduce((s, a) => s + (a.estimatedValueUsd || 0), 0);
+      const companyAssetVal = company.totalAssetValue || 0;
+      const geoScaleFactor = (apiAssetTotal > 0 && companyAssetVal > 0)
+        ? companyAssetVal / apiAssetTotal : (apiAssetTotal === 0 ? 0 : 1);
+
+      const totalGeoEAL = geoRisksList.reduce((s, r) => s + (r.expectedAnnualLoss || 0), 0) * geoScaleFactor;
+      const totalGeoPV = geoRisksList.reduce((s, r) => s + (r.presentValue30yr || 0), 0) * geoScaleFactor;
+
+      const ev = company.ev || 0;
+      const supplierCosts = company.supplierCosts || 0;
+      const indirectRisk: any = scRisk?.indirectRisk || null;
+      const rawScEAL = indirectRisk?.expected_loss?.total_annual_loss ?? null;
+      const rawScPV = indirectRisk?.present_value?.total ?? indirectRisk?.present_value ?? null;
+
+      const scaleFactor = supplierCosts ? supplierCosts / 1_000_000_000 : 1;
+      let effectiveScale = scaleFactor;
+      if (ev > 0 && supplierCosts > 0 && supplierCosts / ev > 1) {
+        effectiveScale = ev * (1 / 1_000_000_000) * (1 - Math.exp(-supplierCosts / ev));
+      }
+      const scaledScEAL = rawScEAL !== null ? rawScEAL * effectiveScale : null;
+      const scaledScPV = rawScPV !== null ? rawScPV * effectiveScale : null;
+
+      const mgmtPct = mgmtScore?.totalScore ?? null;
+      const mgmtMultiplier = mgmtPct !== null ? Math.max(0, 1 - mgmtPct / 100) : 1;
+
+      const totalEAL = totalGeoEAL + (scaledScEAL || 0);
+      const totalPV = totalGeoPV + (scaledScPV || 0);
+      const adjustedEAL = totalEAL * mgmtMultiplier;
+      const adjustedPV = totalPV * mgmtMultiplier;
+      const valuationExposurePct = ev > 0 ? (adjustedPV / ev) * 100 : null;
+
+      const warnings: string[] = [];
+      if (ev > 0 && ev < 10_000_000) warnings.push(`EV unusually low: $${(ev / 1e6).toFixed(1)}M`);
+      if (ev > 5_000_000_000_000) warnings.push(`EV unusually high: $${(ev / 1e12).toFixed(1)}T`);
+      if (ev > 0 && supplierCosts > 0 && supplierCosts / ev > 100) warnings.push(`Supplier Costs ${(supplierCosts / ev).toFixed(0)}x EV`);
+      if (companyAssetVal > 1_000_000_000_000) warnings.push(`Total Assets unusually high: $${(companyAssetVal / 1e12).toFixed(1)}T`);
+
+      res.json({
+        company: {
+          isin: company.isin,
+          companyName: company.companyName,
+          sector: company.sector,
+          isicSectorCode: company.isicSectorCode,
+          country: company.country,
+          countryIso3: company.countryIso3,
+        },
+        financials: {
+          totalAssetValue: company.totalAssetValue,
+          ev: company.ev,
+          supplierCosts: company.supplierCosts,
+          assetCount: company.assetCount,
+        },
+        summary: {
+          totalExpectedAnnualLoss: totalEAL,
+          totalPresentValue30yr: totalPV,
+          managementScorePct: mgmtPct,
+          adjustedExpectedAnnualLoss: adjustedEAL,
+          adjustedPresentValue30yr: adjustedPV,
+          valuationExposurePct,
+        },
+        geographicRisk: {
+          assetCount: assetsList.length,
+          apiAssetValueTotal: apiAssetTotal,
+          scaleFactor: geoScaleFactor,
+          totalExpectedAnnualLoss: totalGeoEAL,
+          totalPresentValue30yr: totalGeoPV,
+          assets: assetsList.map(a => {
+            const r = geoRisksList.find(x => x.assetId === a.id);
+            return {
+              facilityName: a.facilityName,
+              assetType: a.assetType,
+              city: a.city,
+              country: a.country,
+              latitude: a.latitude,
+              longitude: a.longitude,
+              estimatedValueUsd: a.estimatedValueUsd,
+              scaledEstimatedValueUsd: (a.estimatedValueUsd || 0) * geoScaleFactor,
+              hazards: r ? {
+                flood: r.flood,
+                drought: r.drought,
+                heatStress: r.heatStress,
+                hurricane: r.hurricane,
+                extremePrecipitation: r.extremePrecipitation,
+                expectedAnnualLoss: (r.expectedAnnualLoss || 0) * geoScaleFactor,
+                presentValue30yr: (r.presentValue30yr || 0) * geoScaleFactor,
+              } : null,
+            };
+          }),
+        },
+        supplyChainRisk: scRisk ? {
+          countryCode: scRisk.countryCode,
+          countryName: scRisk.countryName,
+          sectorCode: scRisk.sectorCode,
+          sectorName: scRisk.sectorName,
+          rawExpectedAnnualLossPer1B: rawScEAL,
+          rawPresentValue30yrPer1B: rawScPV,
+          scaleFactor: effectiveScale,
+          scaledExpectedAnnualLoss: scaledScEAL,
+          scaledPresentValue30yr: scaledScPV,
+          indirectRisk: scRisk.indirectRisk,
+          supplyChainTiers: scRisk.supplyChainTiers,
+          topSuppliers: scRisk.topSuppliers,
+        } : null,
+        managementScore: mgmtScore ? {
+          totalScore: mgmtScore.totalScore,
+          totalPossible: mgmtScore.totalPossible,
+          summary: mgmtScore.summary,
+          analysisStatus: mgmtScore.analysisStatus,
+          scores: mgmtScore.scores,
+        } : null,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/diagnostics", async (_req, res) => {
     try {
       const { pool } = await import("./db");
