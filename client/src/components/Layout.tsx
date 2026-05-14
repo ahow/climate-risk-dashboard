@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { BarChart3, Building2, Activity, Download, Moon, Sun, FileSpreadsheet, Info } from "lucide-react";
+import { BarChart3, Building2, Activity, Moon, Sun, FileSpreadsheet, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -55,17 +55,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  window.location.href = "/api/export/csv";
-                }}
-                data-testid="button-export-csv"
-              >
-                <Download className="h-4 w-4 mr-1" />
-                Export CSV
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"

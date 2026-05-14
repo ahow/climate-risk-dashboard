@@ -22,6 +22,7 @@ import {
   Building2, Plus, Trash2, AlertTriangle, Shield, Link2,
   ChevronRight, Loader2, Search, Pause, Play, Square,
   Activity, Download, ArrowUpDown, ArrowUp, ArrowDown,
+  Droplets, Sun, Thermometer, Wind, CloudRain,
 } from "lucide-react";
 
 function formatCurrency(value: number): string {
@@ -289,8 +290,37 @@ export default function Dashboard() {
     return sum + m.supplyChainPV;
   }, 0);
   const totalSupplierCosts = filteredCompanies.reduce((sum: number, c: any) => sum + (c.supplierCosts || 0), 0);
+  const totalEV = filteredCompanies.reduce((sum: number, c: any) => sum + (c.ev || 0), 0);
   const totalExposure = totalGeoRiskPV + totalSCPV;
   const companiesWithRisks = filteredCompanies.filter((c: any) => c.hasGeoRisks || c.hasSupplyChainRisk);
+
+  const HAZARDS = [
+    { key: "flood", label: "Flood", Icon: Droplets },
+    { key: "drought", label: "Drought", Icon: Sun },
+    { key: "heatStress", label: "Heat Stress", Icon: Thermometer },
+    { key: "hurricane", label: "Hurricane", Icon: Wind },
+    { key: "extremePrecipitation", label: "Extreme Precip.", Icon: CloudRain },
+  ] as const;
+
+  const hazardTotals = HAZARDS.map(h => {
+    let directPV = 0;
+    let scPV = 0;
+    for (const c of filteredCompanies) {
+      directPV += (c.geoHazardsPV?.[h.key] || 0);
+      const rawScPV = c.scHazardsRawPV?.[h.key];
+      if (rawScPV != null) {
+        const sf = c.supplierCosts ? getSaturationScale(c.supplierCosts, c.ev || 0, 1_000_000_000) : 1;
+        scPV += rawScPV * sf;
+      }
+    }
+    const total = directPV + scPV;
+    const pctOfEV = totalEV > 0 ? (total / totalEV) * 100 : 0;
+    const directPctOfEV = totalEV > 0 ? (directPV / totalEV) * 100 : 0;
+    const scPctOfEV = totalEV > 0 ? (scPV / totalEV) * 100 : 0;
+    return { ...h, directPV, scPV, total, pctOfEV, directPctOfEV, scPctOfEV };
+  });
+
+  const exportCsvUrl = `/api/export/csv?excludeIncomplete=${!showIncomplete}&excludeFinancials=${!showFinancials}&excludeExtremeValues=${!showExtremeValues}`;
 
   return (
     <div className="space-y-6" data-testid="dashboard-page">
@@ -351,6 +381,39 @@ export default function Dashboard() {
             <div className="text-2xl font-bold mt-1" data-testid="text-total-supplier-costs">{formatCurrency(totalSupplierCosts)}</div>
           </CardContent>
         </Card>
+      </div>
+
+      <div>
+        <div className="text-sm font-medium text-muted-foreground mb-2">
+          Hazard Exposure (PV of expected losses as % of total EV)
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {hazardTotals.map(h => {
+            const Icon = h.Icon;
+            return (
+              <Card key={h.key} data-testid={`card-hazard-${h.key}`}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-muted-foreground">{h.label}</div>
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="text-2xl font-bold mt-1">{formatPct(h.pctOfEV)}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{formatCurrency(h.total)}</div>
+                  <div className="mt-2 space-y-0.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Direct (Geo)</span>
+                      <span className="font-medium">{formatPct(h.directPctOfEV)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Supply Chain</span>
+                      <span className="font-medium">{formatPct(h.scPctOfEV)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {activeOps.length > 0 && (
@@ -521,6 +584,16 @@ export default function Dashboard() {
         <span className="text-sm text-muted-foreground">
           {filteredCompanies.length} companies
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={() => { window.location.href = exportCsvUrl; }}
+          data-testid="button-export-csv"
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Export CSV
+        </Button>
       </div>
 
       {isLoading ? (

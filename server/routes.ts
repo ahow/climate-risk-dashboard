@@ -34,6 +34,11 @@ export async function registerRoutes(
             COALESCE(g.total_geo_risk, 0) as raw_geo_risk,
             COALESCE(g.total_geo_risk_pv, 0) as raw_geo_risk_pv,
             COALESCE(g.risk_count, 0) as geo_risk_count,
+            COALESCE(g.flood_eal, 0) as geo_flood_eal,
+            COALESCE(g.drought_eal, 0) as geo_drought_eal,
+            COALESCE(g.heat_eal, 0) as geo_heat_eal,
+            COALESCE(g.hurricane_eal, 0) as geo_hurricane_eal,
+            COALESCE(g.extreme_eal, 0) as geo_extreme_eal,
             COALESCE(a.total_api_asset_value, 0) as api_asset_total,
             sc.indirect_risk -> 'expected_loss' as sc_expected_loss,
             sc.indirect_risk -> 'climate' as sc_climate,
@@ -49,6 +54,11 @@ export async function registerRoutes(
             SELECT company_id,
               SUM(expected_annual_loss) as total_geo_risk,
               SUM(present_value_30yr) as total_geo_risk_pv,
+              SUM(flood_loss) as flood_eal,
+              SUM(drought_loss) as drought_eal,
+              SUM(heat_stress_loss) as heat_eal,
+              SUM(hurricane_loss) as hurricane_eal,
+              SUM(extreme_precip_loss) as extreme_eal,
               COUNT(*) as risk_count
             FROM geo_risks GROUP BY company_id
           ) g ON g.company_id = c.id
@@ -82,6 +92,26 @@ export async function registerRoutes(
             };
           }
 
+          const totalGeoEAL = rawGeoRisk;
+          const totalGeoPVScaled = rawGeoRiskPV * geoScaleFactor;
+          const geoPvRatio = totalGeoEAL > 0 ? (rawGeoRiskPV / totalGeoEAL) : 0;
+          const geoHazards = {
+            flood: parseFloat(row.geo_flood_eal) * geoScaleFactor * geoPvRatio,
+            drought: parseFloat(row.geo_drought_eal) * geoScaleFactor * geoPvRatio,
+            heatStress: parseFloat(row.geo_heat_eal) * geoScaleFactor * geoPvRatio,
+            hurricane: parseFloat(row.geo_hurricane_eal) * geoScaleFactor * geoPvRatio,
+            extremePrecipitation: parseFloat(row.geo_extreme_eal) * geoScaleFactor * geoPvRatio,
+          };
+
+          const scBreakdown = row.sc_expected_loss?.risk_breakdown || null;
+          const scHazardsRawPV = scBreakdown ? {
+            flood: scBreakdown.flood?.present_value ?? null,
+            drought: scBreakdown.drought?.present_value ?? null,
+            heatStress: scBreakdown.heat_stress?.present_value ?? null,
+            hurricane: scBreakdown.hurricane?.present_value ?? null,
+            extremePrecipitation: scBreakdown.extreme_precipitation?.present_value ?? null,
+          } : null;
+
           const evVal = parseFloat(row.ev) || null;
           const supplierCostsVal = parseFloat(row.supplier_costs) || null;
           const warnings: string[] = [];
@@ -107,6 +137,8 @@ export async function registerRoutes(
             hasGeoRisks: parseInt(row.geo_risk_count) > 0,
             hasSupplyChainRisk: row.has_sc,
             hasManagementScore: row.has_mgmt,
+            geoHazardsPV: geoHazards,
+            scHazardsRawPV,
             warnings: warnings.length > 0 ? warnings : undefined,
           };
         });
@@ -816,6 +848,7 @@ export async function registerRoutes(
 
         const excludeIncomplete = req.query.excludeIncomplete !== "false";
         const excludeFinancials = req.query.excludeFinancials === "true";
+        const excludeExtremeValues = req.query.excludeExtremeValues !== "false";
         let filteredRows = result.rows;
         if (excludeIncomplete) {
           filteredRows = filteredRows.filter((row: any) => {
@@ -832,7 +865,7 @@ export async function registerRoutes(
         }
 
         const SC_PV_FACTOR = 13.57;
-        const rows = filteredRows.map((row: any) => {
+        let rows = filteredRows.map((row: any) => {
           const rawGeoRiskPV = parseFloat(row.raw_geo_risk_pv) || 0;
           const apiAssetTotal = parseFloat(row.api_asset_total) || 0;
           const companyAssetVal = parseFloat(row.total_asset_value) || 0;
@@ -862,11 +895,13 @@ export async function registerRoutes(
           const adjustedExposurePV = mgmtScorePct != null
             ? totalExposurePV * (1 - 0.7 * mgmtScorePct)
             : totalExposurePV;
-          const valuationPct = ev > 0
-            ? ((adjustedExposurePV / ev) * 100).toFixed(2) + "%"
+          const valuationPctNum = ev > 0 ? (adjustedExposurePV / ev) * 100 : null;
+          const valuationPct = valuationPctNum !== null
+            ? valuationPctNum.toFixed(2) + "%"
             : "N/A";
 
           return {
+            _valuationPctNum: valuationPctNum,
             "Company Name": row.company_name,
             "ISIN": row.isin,
             "Sector": row.sector || "",
@@ -882,6 +917,14 @@ export async function registerRoutes(
             "Adjusted Exposure PV": adjustedExposurePV.toFixed(2),
             "Valuation Exposure %": valuationPct,
           };
+        });
+
+        if (excludeExtremeValues) {
+          rows = rows.filter((r: any) => r._valuationPctNum === null || r._valuationPctNum <= 100);
+        }
+        rows = rows.map((r: any) => {
+          const { _valuationPctNum, ...rest } = r;
+          return rest;
         });
 
         if (rows.length === 0) {
