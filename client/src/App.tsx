@@ -9,6 +9,8 @@ import CompanyDetail from "@/pages/CompanyDetail";
 import CalculationMonitor from "@/pages/CalculationMonitor";
 import CompanyList from "@/pages/CompanyList";
 import Information from "@/pages/Information";
+import Admin from "@/pages/Admin";
+import PortfolioAnalysis from "@/pages/PortfolioAnalysis";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +18,8 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/portfolio" component={PortfolioAnalysis} />
+        <Route path="/admin" component={Admin} />
         <Route path="/company/:id" component={CompanyDetail} />
         <Route path="/monitor" component={CalculationMonitor} />
         <Route path="/company-list" component={CompanyList} />

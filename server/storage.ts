@@ -3,6 +3,7 @@ import { db } from "./db";
 import {
   companies, assets, geoRisks, supplyChainRisks, managementScores, operations,
   companyListUploads, companyListEntries,
+  portfolios, portfolioHoldings,
   type Company, type InsertCompany,
   type Asset, type InsertAsset,
   type GeoRisk, type InsertGeoRisk,
@@ -11,6 +12,8 @@ import {
   type Operation, type InsertOperation,
   type CompanyListUpload, type InsertCompanyListUpload,
   type CompanyListEntry, type InsertCompanyListEntry,
+  type Portfolio, type InsertPortfolio,
+  type PortfolioHolding, type InsertPortfolioHolding,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -53,6 +56,13 @@ export interface IStorage {
   deleteCompanyListUpload(id: number): Promise<void>;
   getCompanyListEntries(uploadId: number): Promise<CompanyListEntry[]>;
   createCompanyListEntries(entries: InsertCompanyListEntry[]): Promise<void>;
+
+  getPortfolios(): Promise<Portfolio[]>;
+  getPortfolio(id: number): Promise<Portfolio | undefined>;
+  createPortfolio(data: InsertPortfolio): Promise<Portfolio>;
+  deletePortfolio(id: number): Promise<void>;
+  getPortfolioHoldings(portfolioId: number): Promise<PortfolioHolding[]>;
+  createPortfolioHoldings(holdings: InsertPortfolioHolding[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -213,6 +223,36 @@ export class DatabaseStorage implements IStorage {
     const batchSize = 500;
     for (let i = 0; i < entries.length; i += batchSize) {
       await db.insert(companyListEntries).values(entries.slice(i, i + batchSize));
+    }
+  }
+
+  async getPortfolios(): Promise<Portfolio[]> {
+    return db.select().from(portfolios).orderBy(desc(portfolios.uploadedAt));
+  }
+
+  async getPortfolio(id: number): Promise<Portfolio | undefined> {
+    const [p] = await db.select().from(portfolios).where(eq(portfolios.id, id));
+    return p;
+  }
+
+  async createPortfolio(data: InsertPortfolio): Promise<Portfolio> {
+    const [p] = await db.insert(portfolios).values(data).returning();
+    return p;
+  }
+
+  async deletePortfolio(id: number): Promise<void> {
+    await db.delete(portfolios).where(eq(portfolios.id, id));
+  }
+
+  async getPortfolioHoldings(portfolioId: number): Promise<PortfolioHolding[]> {
+    return db.select().from(portfolioHoldings).where(eq(portfolioHoldings.portfolioId, portfolioId));
+  }
+
+  async createPortfolioHoldings(holdings: InsertPortfolioHolding[]): Promise<void> {
+    if (holdings.length === 0) return;
+    const batchSize = 500;
+    for (let i = 0; i < holdings.length; i += batchSize) {
+      await db.insert(portfolioHoldings).values(holdings.slice(i, i + batchSize));
     }
   }
 }

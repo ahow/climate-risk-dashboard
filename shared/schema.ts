@@ -116,6 +116,27 @@ export const companyListEntries = pgTable("company_list_entries", {
   supplierCosts: real("supplier_costs"),
 });
 
+export const portfolios = pgTable("portfolios", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const portfolioHoldings = pgTable("portfolio_holdings", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").notNull().references(() => portfolios.id, { onDelete: "cascade" }),
+  isin: varchar("isin", { length: 12 }).notNull(),
+  companyName: text("company_name"),
+  weight: real("weight").notNull(),
+});
+
+export const insertPortfolioSchema = createInsertSchema(portfolios).omit({ id: true, uploadedAt: true });
+export const insertPortfolioHoldingSchema = createInsertSchema(portfolioHoldings).omit({ id: true });
+export type Portfolio = typeof portfolios.$inferSelect;
+export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
+export type PortfolioHolding = typeof portfolioHoldings.$inferSelect;
+export type InsertPortfolioHolding = z.infer<typeof insertPortfolioHoldingSchema>;
+
 export const insertCompanyListUploadSchema = createInsertSchema(companyListUploads).omit({ id: true });
 export const insertCompanyListEntrySchema = createInsertSchema(companyListEntries).omit({ id: true });
 

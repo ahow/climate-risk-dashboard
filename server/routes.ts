@@ -1209,5 +1209,78 @@ export async function registerRoutes(
     }
   });
 
+  // ─── Portfolios ───────────────────────────────────────────────
+  app.get("/api/portfolios", async (_req, res) => {
+    try {
+      const list = await storage.getPortfolios();
+      res.json(list);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/portfolios/upload", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const name = (req.body.name || req.file.originalname.replace(/\.[^.]+$/, "")).trim();
+      if (!name) return res.status(400).json({ error: "Portfolio name required" });
+
+      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(ws);
+      if (rows.length === 0) return res.status(400).json({ error: "File is empty" });
+
+      // Detect ISIN and weight columns case-insensitively
+      const firstRow = rows[0];
+      const keys = Object.keys(firstRow);
+      const isinKey = keys.find(k => /^isin$/i.test(k.trim())) || keys.find(k => /isin/i.test(k));
+      const weightKey = keys.find(k => /^weight$/i.test(k.trim())) ||
+                        keys.find(k => /weight|%|allocation/i.test(k));
+      const nameKey = keys.find(k => /^(company|name|companyname)$/i.test(k.trim())) ||
+                      keys.find(k => /company|name/i.test(k));
+      if (!isinKey) return res.status(400).json({ error: "No ISIN column found" });
+      if (!weightKey) return res.status(400).json({ error: "No weight column found" });
+
+      const holdings = rows
+        .map((r: any) => ({
+          isin: String(r[isinKey] || "").trim().toUpperCase(),
+          companyName: nameKey ? String(r[nameKey] || "").trim() || null : null,
+          weight: Number(r[weightKey]),
+        }))
+        .filter((h: any) => h.isin.length === 12 && !isNaN(h.weight) && h.weight > 0);
+
+      if (holdings.length === 0) return res.status(400).json({ error: "No valid holdings found (need 12-char ISIN + numeric weight > 0)" });
+
+      const portfolio = await storage.createPortfolio({ name });
+      await storage.createPortfolioHoldings(
+        holdings.map(h => ({ ...h, portfolioId: portfolio.id }))
+      );
+      res.status(201).json({ ...portfolio, holdingsCount: holdings.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/portfolios/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const portfolio = await storage.getPortfolio(id);
+      if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
+      const holdings = await storage.getPortfolioHoldings(id);
+      res.json({ ...portfolio, holdings });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/portfolios/:id", async (req, res) => {
+    try {
+      await storage.deletePortfolio(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return httpServer;
 }

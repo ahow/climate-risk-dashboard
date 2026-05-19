@@ -326,61 +326,30 @@ export default function Dashboard() {
     <div className="space-y-6" data-testid="dashboard-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground" data-testid="text-page-title">
-            Climate Risk Dashboard
+          <h1 className="text-xl font-semibold tracking-tight text-foreground" data-testid="text-page-title">
+            Overview
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Quantify and visualize climate-related financial risks for publicly traded companies
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Climate-adjusted financial risk across the universe
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Companies</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-company-count">{filteredCompanies.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {companiesWithRisks.length} assessed
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Total Asset Value</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-total-assets">{formatCurrency(totalAssetValue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Direct Risk PV</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-total-geo-risk">{formatCurrency(totalGeoRiskPV)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {totalExposure > 0 ? ((totalGeoRiskPV / totalExposure) * 100).toFixed(0) : 0}% of total
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Supply Chain Risk PV</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-total-sc-risk">{formatCurrency(totalSCPV)}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {totalExposure > 0 ? ((totalSCPV / totalExposure) * 100).toFixed(0) : 0}% of total
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Total Exposure PV</div>
-            <div className="text-2xl font-bold mt-1 text-primary" data-testid="text-total-exposure">{formatCurrency(totalExposure)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-muted-foreground">Supplier Costs</div>
-            <div className="text-2xl font-bold mt-1" data-testid="text-total-supplier-costs">{formatCurrency(totalSupplierCosts)}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: "Companies", value: String(filteredCompanies.length), sub: `${companiesWithRisks.length} assessed`, testId: "text-company-count", accent: "text-primary" },
+          { label: "Total Asset Value", value: formatCurrency(totalAssetValue), sub: "", testId: "text-total-assets" },
+          { label: "Direct Risk PV", value: formatCurrency(totalGeoRiskPV), sub: `${totalExposure > 0 ? ((totalGeoRiskPV / totalExposure) * 100).toFixed(0) : 0}% of total`, testId: "text-total-geo-risk" },
+          { label: "Supply Chain PV", value: formatCurrency(totalSCPV), sub: `${totalExposure > 0 ? ((totalSCPV / totalExposure) * 100).toFixed(0) : 0}% of total`, testId: "text-total-sc-risk" },
+          { label: "Total Exposure", value: formatCurrency(totalExposure), sub: "", testId: "text-total-exposure", accent: "text-primary" },
+          { label: "Supplier Costs", value: formatCurrency(totalSupplierCosts), sub: "", testId: "text-total-supplier-costs" },
+        ].map(k => (
+          <div key={k.label} className="rounded-md border border-card-border bg-card px-3.5 py-3">
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{k.label}</div>
+            <div className={`text-xl font-bold font-mono mt-1 ${k.accent || ""}`} data-testid={k.testId}>{k.value}</div>
+            {k.sub && <div className="text-[10px] text-muted-foreground mt-0.5">{k.sub}</div>}
+          </div>
+        ))}
       </div>
 
       <div>
