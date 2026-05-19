@@ -101,6 +101,18 @@ A full-stack web application that quantifies and visualizes climate-related fina
 - Returns 503 if `DASHBOARD_API_KEY` not set, 401 on bad/missing key, 404 if ISIN not in DB
 - For Heroku deployment, set `DASHBOARD_API_KEY` config var matching the Replit secret
 
+## Portfolios (uploaded for analysis)
+- Tables: `portfolios` (id, name, uploadedAt), `portfolio_holdings` (id, portfolioId, isin, companyName?, weight)
+- Upload accepts xlsx/csv with `ISIN` + `Weight` columns (case-insensitive); optional `Company` column
+- API: `GET /api/portfolios`, `POST /api/portfolios/upload` (multipart), `GET /api/portfolios/:id` (with holdings), `DELETE /api/portfolios/:id`
+- Admin page (`/admin`) handles upload/list/delete
+- Portfolio Analysis page (`/portfolio`) compares two portfolios with sector + region (country) filters; weighted Adj Exposure / EV and weighted hazard bars
+
+## Design (Signal)
+- Global sidebar layout (220px, dark surface, teal accent #2dd4bf / hsl(174 72% 50%))
+- Dark mode default; light/dark toggle in header
+- Top-level routes: `/` Overview, `/portfolio` Portfolio Analysis, `/company-list` Company List, `/monitor` Calculations, `/information` Methodology, `/admin` Admin / Upload
+
 ## File Structure
 ```
 shared/schema.ts           - Database schema & types

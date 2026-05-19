@@ -1241,11 +1241,16 @@ export async function registerRoutes(
       if (!isinKey) return res.status(400).json({ error: "No ISIN column found" });
       if (!weightKey) return res.status(400).json({ error: "No weight column found" });
 
+      const parseWeight = (v: any): number => {
+        if (typeof v === "number") return v;
+        const s = String(v ?? "").trim().replace(/[%, ]+/g, "");
+        return Number(s);
+      };
       const holdings = rows
         .map((r: any) => ({
           isin: String(r[isinKey] || "").trim().toUpperCase(),
           companyName: nameKey ? String(r[nameKey] || "").trim() || null : null,
-          weight: Number(r[weightKey]),
+          weight: parseWeight(r[weightKey]),
         }))
         .filter((h: any) => h.isin.length === 12 && !isNaN(h.weight) && h.weight > 0);
 
