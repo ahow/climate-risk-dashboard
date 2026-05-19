@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Briefcase, Droplets, Sun, Thermometer, Wind, CloudRain, AlertTriangle } from "lucide-react";
+import { Briefcase, Droplets, Sun, Thermometer, Wind, CloudRain, AlertTriangle, Download } from "lucide-react";
 import { Link } from "wouter";
 import type { Portfolio, PortfolioHolding } from "@shared/schema";
 
@@ -57,13 +57,14 @@ function formatPct(v: number | null): string {
   return `${v.toFixed(2)}%`;
 }
 
-function aggregate(side: Side | null, companyByIsin: Map<string, any>, filters: { sector: string; region: string }) {
+function aggregate(side: Side | null, companyByIsin: Map<string, any>, filters: { sector: string; subSector: string; region: string }) {
   if (!side) return null;
   const filtered = side.holdings
     .map(h => ({ h, c: companyByIsin.get(h.isin) }))
     .filter(({ c }) => {
       if (!c) return false;
       if (filters.sector && c.sector !== filters.sector) return false;
+      if (filters.subSector && c.subSector !== filters.subSector) return false;
       if (filters.region && c.country !== filters.region) return false;
       return true;
     });
@@ -102,6 +103,7 @@ export default function PortfolioAnalysis() {
   const [aId, setAId] = useState<string>("");
   const [bId, setBId] = useState<string>("");
   const [sector, setSector] = useState<string>("__all__");
+  const [subSector, setSubSector] = useState<string>("__all__");
   const [region, setRegion] = useState<string>("__all__");
 
   const { data: portfolios = [] } = useQuery<Portfolio[]>({ queryKey: ["/api/portfolios"] });
@@ -123,26 +125,83 @@ export default function PortfolioAnalysis() {
   }, [companies]);
 
   const fSector = sector === "__all__" ? "" : sector;
+  const fSubSector = subSector === "__all__" ? "" : subSector;
   const fRegion = region === "__all__" ? "" : region;
 
-  const aggA = useMemo(() => aggregate(a as any, companyByIsin, { sector: fSector, region: fRegion }), [a, companyByIsin, fSector, fRegion]);
-  const aggB = useMemo(() => aggregate(b as any, companyByIsin, { sector: fSector, region: fRegion }), [b, companyByIsin, fSector, fRegion]);
+  const aggA = useMemo(() => aggregate(a as any, companyByIsin, { sector: fSector, subSector: fSubSector, region: fRegion }), [a, companyByIsin, fSector, fSubSector, fRegion]);
+  const aggB = useMemo(() => aggregate(b as any, companyByIsin, { sector: fSector, subSector: fSubSector, region: fRegion }), [b, companyByIsin, fSector, fSubSector, fRegion]);
 
   // Build filter options from all holdings of both portfolios (using company data)
-  const { sectorOpts, regionOpts } = useMemo(() => {
+  const { sectorOpts, subSectorOpts, regionOpts } = useMemo(() => {
     const sectors = new Set<string>();
+    const subSectors = new Set<string>();
     const regions = new Set<string>();
     const allHoldings = [...(a?.holdings || []), ...(b?.holdings || [])];
     for (const h of allHoldings) {
       const c = companyByIsin.get(h.isin);
       if (c?.sector) sectors.add(c.sector);
+      if (c?.subSector && (!fSector || c.sector === fSector)) subSectors.add(c.subSector);
       if (c?.country) regions.add(c.country);
     }
     return {
       sectorOpts: Array.from(sectors).sort(),
+      subSectorOpts: Array.from(subSectors).sort(),
       regionOpts: Array.from(regions).sort(),
     };
-  }, [a, b, companyByIsin]);
+  }, [a, b, companyByIsin, fSector]);
+
+  const handleExport = () => {
+    const sides: { label: string; side: Side | undefined; agg: ReturnType<typeof aggregate> }[] = [
+      { label: "A", side: a as any, agg: aggA },
+      { label: "B", side: b as any, agg: aggB },
+    ];
+    const header = [
+      "Portfolio", "Portfolio Name", "ISIN", "Company", "Sector", "Sub-Sector", "Country",
+      "Weight (%)", "EV (USD)", "Supplier Costs (USD)",
+      "Direct Geo PV (USD)", "Supply Chain PV (USD)",
+      "Total Climate PV (USD)", "Mgmt Score (%)", "Adjusted Exposure PV (USD)",
+      "Adj Exp / EV (%)",
+    ];
+    const rows: (string | number | null)[][] = [header];
+    for (const { label, side, agg } of sides) {
+      if (!side || !agg) continue;
+      for (const { h, c, m } of agg.rows) {
+        rows.push([
+          label, side.portfolio.name, c.isin, c.companyName,
+          c.sector || "", c.subSector || "", c.country || "",
+          h.weight, c.ev ?? "", c.supplierCosts ?? "",
+          Math.round(m.directPV), Math.round(m.scPV),
+          Math.round(m.totalPV), c.managementScore?.totalScore ?? "", Math.round(m.adjPV),
+          m.valPct != null ? m.valPct.toFixed(4) : "",
+        ]);
+      }
+    }
+    rows.push([]);
+    rows.push(["AGGREGATE (weighted)", "", "", "", fSector || "All", fSubSector || "All", fRegion || "All", "", "", "", "", "", "", "", "", ""]);
+    for (const { label, side, agg } of sides) {
+      if (!side || !agg) continue;
+      rows.push([
+        label, side.portfolio.name, "", `n=${agg.coverage}`, "", "", "",
+        agg.totalWeight.toFixed(2), "", "", "", "", "", "", "",
+        agg.valPctW != null ? agg.valPctW.toFixed(4) : "",
+      ]);
+    }
+    const filterTag = [fSector || "all", fSubSector || "all", fRegion || "all"].join("_").replace(/[^a-z0-9_-]/gi, "");
+    const text = rows.map(r => r.map(v => {
+      if (v == null) return "";
+      const s = String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(",")).join("\n");
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `portfolio-analysis_${filterTag}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const Side = ({ side, agg, label }: { side: Side | undefined; agg: ReturnType<typeof aggregate>; label: string }) => {
     if (!side) {
@@ -202,9 +261,21 @@ export default function PortfolioAnalysis() {
 
   return (
     <div className="space-y-6" data-testid="portfolio-analysis-page">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-page-title">Portfolio Analysis</h1>
-        <p className="text-sm text-muted-foreground mt-1">Compare two uploaded portfolios across sector and region cuts</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight" data-testid="text-page-title">Portfolio Analysis</h1>
+          <p className="text-sm text-muted-foreground mt-1">Compare two uploaded portfolios across sector, sub-sector and region cuts</p>
+        </div>
+        <Button
+          onClick={handleExport}
+          disabled={!a && !b}
+          variant="outline"
+          size="sm"
+          data-testid="button-export-csv"
+        >
+          <Download className="h-4 w-4 mr-1.5" />
+          Export CSV
+        </Button>
       </div>
 
       {portfolios.length < 2 && (
@@ -220,7 +291,7 @@ export default function PortfolioAnalysis() {
 
       <Card>
         <CardContent className="pt-5 pb-5">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Portfolio A</Label>
               <Select value={aId} onValueChange={setAId}>
@@ -245,11 +316,21 @@ export default function PortfolioAnalysis() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Sector</Label>
-              <Select value={sector} onValueChange={setSector}>
+              <Select value={sector} onValueChange={(v) => { setSector(v); setSubSector("__all__"); }}>
                 <SelectTrigger data-testid="select-sector"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">All sectors</SelectItem>
                   {sectorOpts.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Sub-sector</Label>
+              <Select value={subSector} onValueChange={setSubSector}>
+                <SelectTrigger data-testid="select-subsector"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All sub-sectors</SelectItem>
+                  {subSectorOpts.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -264,12 +345,13 @@ export default function PortfolioAnalysis() {
               </Select>
             </div>
           </div>
-          {(fSector || fRegion) && (
-            <div className="mt-3 flex items-center gap-2">
+          {(fSector || fSubSector || fRegion) && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">Active filters:</span>
               {fSector && <span className="text-xs px-2 py-0.5 rounded-md bg-primary/15 text-primary">Sector: {fSector}</span>}
+              {fSubSector && <span className="text-xs px-2 py-0.5 rounded-md bg-primary/15 text-primary">Sub-sector: {fSubSector}</span>}
               {fRegion && <span className="text-xs px-2 py-0.5 rounded-md bg-primary/15 text-primary">Region: {fRegion}</span>}
-              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setSector("__all__"); setRegion("__all__"); }} data-testid="button-reset-filters">Reset</Button>
+              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setSector("__all__"); setSubSector("__all__"); setRegion("__all__"); }} data-testid="button-reset-filters">Reset</Button>
             </div>
           )}
         </CardContent>

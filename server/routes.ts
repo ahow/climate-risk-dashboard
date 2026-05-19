@@ -31,6 +31,7 @@ export async function registerRoutes(
           SELECT
             c.id, c.isin, c.company_name, c.sector, c.country,
             c.total_asset_value, c.asset_count, c.supplier_costs, c.ev,
+            cle.level4_sector as sub_sector,
             COALESCE(g.total_geo_risk, 0) as raw_geo_risk,
             COALESCE(g.total_geo_risk_pv, 0) as raw_geo_risk_pv,
             COALESCE(g.risk_count, 0) as geo_risk_count,
@@ -50,6 +51,11 @@ export async function registerRoutes(
             CASE WHEN sc.company_id IS NOT NULL THEN true ELSE false END as has_sc,
             CASE WHEN ms.company_id IS NOT NULL THEN true ELSE false END as has_mgmt
           FROM companies c
+          LEFT JOIN LATERAL (
+            SELECT level4_sector FROM company_list_entries
+            WHERE isin = c.isin AND level4_sector IS NOT NULL
+            ORDER BY upload_id DESC LIMIT 1
+          ) cle ON true
           LEFT JOIN (
             SELECT company_id,
               SUM(expected_annual_loss) as total_geo_risk,
@@ -125,6 +131,7 @@ export async function registerRoutes(
             isin: row.isin,
             companyName: row.company_name,
             sector: row.sector,
+            subSector: row.sub_sector || null,
             country: row.country,
             totalAssetValue: companyAssetVal || null,
             assetCount: row.asset_count,

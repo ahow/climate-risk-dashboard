@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import {
-  Home, Briefcase, Settings, Activity, FileSpreadsheet, BookOpen,
+  Home, Briefcase, Layers, Settings, Activity, FileSpreadsheet, BookOpen,
   Moon, Sun, Menu, X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 const navItems = [
   { path: "/", label: "Overview", icon: Home },
   { path: "/portfolio", label: "Portfolio Analysis", icon: Briefcase },
+  { path: "/sector-analysis", label: "Sector Analysis", icon: Layers },
   { path: "/company-list", label: "Company List", icon: FileSpreadsheet },
   { path: "/monitor", label: "Calculations", icon: Activity },
   { path: "/information", label: "Methodology", icon: BookOpen },

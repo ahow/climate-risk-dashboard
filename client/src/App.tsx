@@ -11,6 +11,7 @@ import CompanyList from "@/pages/CompanyList";
 import Information from "@/pages/Information";
 import Admin from "@/pages/Admin";
 import PortfolioAnalysis from "@/pages/PortfolioAnalysis";
+import SectorAnalysis from "@/pages/SectorAnalysis";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/portfolio" component={PortfolioAnalysis} />
+        <Route path="/sector-analysis" component={SectorAnalysis} />
         <Route path="/admin" component={Admin} />
         <Route path="/company/:id" component={CompanyDetail} />
         <Route path="/monitor" component={CalculationMonitor} />
