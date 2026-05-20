@@ -7,6 +7,13 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function redirectToLoginIfNeeded(status: number) {
+  if (status !== 401) return;
+  if (typeof window === "undefined") return;
+  if (window.location.pathname === "/login") return;
+  window.location.href = "/login";
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -19,6 +26,10 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  // Don't redirect for the login call itself
+  if (!url.startsWith("/api/auth/")) {
+    redirectToLoginIfNeeded(res.status);
+  }
   await throwIfResNotOk(res);
   return res;
 }
@@ -29,12 +40,15 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    const res = await fetch(url, {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") return null;
+      // Auto-redirect any throwing 401 (except auth endpoints) to /login
+      if (!url.startsWith("/api/auth/")) redirectToLoginIfNeeded(401);
     }
 
     await throwIfResNotOk(res);

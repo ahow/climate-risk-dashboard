@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Upload, Download, FileSpreadsheet, Link2, Copy, Trash2, Loader2, Search, Play, ExternalLink, Eraser } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useRole";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +67,7 @@ interface BulkOperation {
 }
 
 export default function CompanyList() {
+  const isAdmin = useIsAdmin();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -223,18 +225,20 @@ export default function CompanyList() {
             onChange={handleFileSelect}
             data-testid="input-file-upload"
           />
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadMutation.isPending}
-            data-testid="button-upload"
-          >
-            {uploadMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4 mr-2" />
-            )}
-            {uploadMutation.isPending ? "Uploading..." : "Upload Spreadsheet"}
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadMutation.isPending}
+              data-testid="button-upload"
+            >
+              {uploadMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              {uploadMutation.isPending ? "Uploading..." : "Upload Spreadsheet"}
+            </Button>
+          )}
           {latestData && (
             <Button
               variant="outline"
@@ -296,6 +300,7 @@ export default function CompanyList() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                {isAdmin && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -329,6 +334,8 @@ export default function CompanyList() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                )}
+                {isAdmin && (
                 <Button
                   onClick={() => processAllMutation.mutate()}
                   disabled={isBulkRunning || processAllMutation.isPending}
@@ -341,6 +348,8 @@ export default function CompanyList() {
                   )}
                   {isBulkRunning ? "Processing..." : "Process All Companies"}
                 </Button>
+                )}
+                {isAdmin && (
                 <Button
                   variant="outline"
                   onClick={() => window.location.href = "/monitor"}
@@ -349,6 +358,7 @@ export default function CompanyList() {
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Monitor
                 </Button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -459,10 +469,14 @@ export default function CompanyList() {
             <p className="text-muted-foreground text-center max-w-md mb-4">
               Upload an Excel spreadsheet (.xlsx) containing your company universe. The file should include columns for ISIN, Company, Sector, Geography, and financial values.
             </p>
-            <Button onClick={() => fileInputRef.current?.click()} data-testid="button-upload-empty">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Spreadsheet
-            </Button>
+            {isAdmin ? (
+              <Button onClick={() => fileInputRef.current?.click()} data-testid="button-upload-empty">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Spreadsheet
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground">Ask an admin to upload the company list.</p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -496,7 +510,7 @@ export default function CompanyList() {
                       <p className="text-xs text-muted-foreground">{upload.rowCount} companies | {new Date(upload.uploadedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  {idx > 0 && (
+                  {idx > 0 && isAdmin && (
                     <Button
                       variant="ghost"
                       size="icon"

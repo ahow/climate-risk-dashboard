@@ -17,11 +17,19 @@ import * as XLSX from "xlsx";
 import { db, pool } from "./db";
 import { geoRisks, supplyChainRisks, managementScores } from "@shared/schema";
 import { sql } from "drizzle-orm";
+import { requireAuth, requireAdmin } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // Gate every /api route except auth + programmatic v1 (which uses X-API-Key)
+  app.use("/api", (req, res, next) => {
+    if (req.path.startsWith("/auth/")) return next();
+    if (req.path.startsWith("/v1/")) return next();
+    return requireAuth(req, res, next);
+  });
 
   app.get("/api/companies", async (_req, res) => {
     try {
@@ -216,7 +224,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/companies", async (req, res) => {
+  app.post("/api/companies", requireAdmin, async (req, res) => {
     try {
       const schema = z.object({
         isin: z.string().min(12).max(12),
@@ -282,7 +290,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/companies/:id", async (req, res) => {
+  app.delete("/api/companies/:id", requireAdmin, async (req, res) => {
     try {
       await storage.deleteCompany(parseInt(req.params.id));
       res.json({ success: true });
@@ -291,7 +299,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/companies/:id/calculate/geographic", async (req, res) => {
+  app.post("/api/companies/:id/calculate/geographic", requireAdmin, async (req, res) => {
     try {
       const companyId = parseInt(req.params.id);
       const company = await storage.getCompany(companyId);
@@ -311,7 +319,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/companies/:id/calculate/supply-chain", async (req, res) => {
+  app.post("/api/companies/:id/calculate/supply-chain", requireAdmin, async (req, res) => {
     try {
       const companyId = parseInt(req.params.id);
       const company = await storage.getCompany(companyId);
@@ -331,7 +339,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/companies/:id/calculate/management", async (req, res) => {
+  app.post("/api/companies/:id/calculate/management", requireAdmin, async (req, res) => {
     try {
       const companyId = parseInt(req.params.id);
       const company = await storage.getCompany(companyId);
@@ -351,7 +359,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/companies/:id/calculate/all", async (req, res) => {
+  app.post("/api/companies/:id/calculate/all", requireAdmin, async (req, res) => {
     try {
       const companyId = parseInt(req.params.id);
       const company = await storage.getCompany(companyId);
@@ -397,7 +405,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/operations/:id/pause", async (req, res) => {
+  app.post("/api/operations/:id/pause", requireAdmin, async (req, res) => {
     try {
       const op = await storage.updateOperation(parseInt(req.params.id), { status: "paused" });
       res.json(op);
@@ -406,7 +414,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/operations/:id/resume", async (req, res) => {
+  app.post("/api/operations/:id/resume", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const op = await storage.getOperation(id);
@@ -435,7 +443,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/operations/:id", async (req, res) => {
+  app.delete("/api/operations/:id", requireAdmin, async (req, res) => {
     try {
       const op = await storage.getOperation(parseInt(req.params.id));
       if (op && (op.status === "running" || op.status === "pending")) {
@@ -455,7 +463,7 @@ export async function registerRoutes(
 
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
-  app.post("/api/company-list/upload", upload.single("file"), async (req, res) => {
+  app.post("/api/company-list/upload", requireAdmin, upload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
@@ -587,7 +595,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/clear-risk-data", async (_req, res) => {
+  app.post("/api/clear-risk-data", requireAdmin, async (_req, res) => {
     try {
       const ops = await storage.getOperations();
       const running = ops.find(
@@ -607,7 +615,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/company-list/process-all", async (_req, res) => {
+  app.post("/api/company-list/process-all", requireAdmin, async (_req, res) => {
     try {
       const ops = await storage.getOperations();
       const existingBulk = ops.find(
@@ -673,7 +681,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/process-missing", async (_req, res) => {
+  app.post("/api/process-missing", requireAdmin, async (_req, res) => {
     try {
       const ops = await storage.getOperations();
       const existingBulk = ops.find(
@@ -735,7 +743,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/backfill-management", async (_req, res) => {
+  app.post("/api/backfill-management", requireAdmin, async (_req, res) => {
     try {
       const client = await pool.connect();
       let missing: Array<{id: number, isin: string, name: string}> = [];
@@ -817,7 +825,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/company-list/:id", async (req, res) => {
+  app.delete("/api/company-list/:id", requireAdmin, async (req, res) => {
     try {
       await storage.deleteCompanyListUpload(parseInt(req.params.id));
       res.json({ success: true });
@@ -960,7 +968,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/fix-units", async (_req, res) => {
+  app.post("/api/fix-units", requireAdmin, async (_req, res) => {
     try {
       const client = await pool.connect();
       try {
@@ -1001,7 +1009,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/fix-countries", async (_req, res) => {
+  app.post("/api/fix-countries", requireAdmin, async (_req, res) => {
     try {
       const { validateCountryFromIsin } = await import("./utils/mappings");
       const { pool } = await import("./db");
@@ -1226,7 +1234,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/portfolios/upload", upload.single("file"), async (req, res) => {
+  app.post("/api/portfolios/upload", requireAdmin, upload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       const name = (req.body.name || req.file.originalname.replace(/\.[^.]+$/, "")).trim();
@@ -1285,7 +1293,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/portfolios/:id", async (req, res) => {
+  app.delete("/api/portfolios/:id", requireAdmin, async (req, res) => {
     try {
       await storage.deletePortfolio(parseInt(req.params.id));
       res.json({ success: true });

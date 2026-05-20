@@ -6,6 +6,7 @@ import { ensureSchemaUpdates, pool } from "./db";
 import { recoverOrphanedOperations } from "./services/operationManager";
 import { storage } from "./storage";
 import { fetchManagementPerformance } from "./services/externalApis";
+import { setupAuth } from "./auth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -65,6 +66,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await ensureSchemaUpdates();
+  setupAuth(app);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

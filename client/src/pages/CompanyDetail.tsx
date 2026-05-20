@@ -13,6 +13,7 @@ import {
   Globe,
 } from "lucide-react";
 import { WORLD_PATHS } from "@/lib/worldMapPaths";
+import { useIsAdmin } from "@/hooks/useRole";
 
 function formatCurrency(value: number): string {
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
@@ -456,6 +457,7 @@ function SupplyChainSummary({ scRisk, company }: { scRisk: any; company: any }) 
 }
 
 export default function CompanyDetail() {
+  const isAdmin = useIsAdmin();
   const { toast } = useToast();
   const [, params] = useRoute("/company/:id");
   const companyId = parseInt(params?.id || "0");
@@ -593,6 +595,7 @@ export default function CompanyDetail() {
         </Card>
       </div>
 
+      {isAdmin && (
       <div className="flex gap-2 flex-wrap">
         <Button
           onClick={() => calcMutation.mutate("all")}
@@ -612,6 +615,7 @@ export default function CompanyDetail() {
           Management Score
         </Button>
       </div>
+      )}
 
       <CollapsibleSection
         icon={Building2}

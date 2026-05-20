@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsAdmin } from "@/hooks/useRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,6 +129,7 @@ function getSortValue(company: any, metrics: ReturnType<typeof getCompanyMetrics
 }
 
 export default function Dashboard() {
+  const isAdmin = useIsAdmin();
   const { toast } = useToast();
   const [isinInput, setIsinInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -467,6 +469,7 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {isAdmin && (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Add Company by ISIN</CardTitle>
@@ -505,6 +508,7 @@ export default function Dashboard() {
           </form>
         </CardContent>
       </Card>
+      )}
 
       <div className="flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 max-w-sm">
@@ -683,6 +687,7 @@ export default function Dashboard() {
                       {m.valuationExposurePct != null ? formatPct(m.valuationExposurePct) : "---"}
                     </TableCell>
                     <TableCell>
+                      {isAdmin && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -696,6 +701,7 @@ export default function Dashboard() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
