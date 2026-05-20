@@ -70,8 +70,6 @@ export function setupAuth(app: Express) {
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.session?.role === "admin" || req.session?.role === "viewer") return next();
-  // Programmatic API key path bypasses session auth
-  if (req.path.startsWith("/api/v1/") && req.header("x-api-key")) return next();
   return res.status(401).json({ error: "Authentication required" });
 }
 

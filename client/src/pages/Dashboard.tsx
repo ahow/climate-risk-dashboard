@@ -414,7 +414,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      {op.status === "running" && (
+                      {isAdmin && op.status === "running" && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -426,7 +426,7 @@ export default function Dashboard() {
                           Pause
                         </Button>
                       )}
-                      {op.status === "paused" && (
+                      {isAdmin && op.status === "paused" && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -438,6 +438,7 @@ export default function Dashboard() {
                           Resume
                         </Button>
                       )}
+                      {isAdmin && (
                       <Button
                         variant="destructive"
                         size="sm"
@@ -451,6 +452,7 @@ export default function Dashboard() {
                         <Square className="h-3 w-3 mr-1" />
                         Stop
                       </Button>
+                      )}
                     </div>
                   </div>
                   {op.totalItems > 0 && (

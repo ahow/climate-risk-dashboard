@@ -109,9 +109,14 @@ export default function CompanyList() {
       const res = await fetch("/api/company-list/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
+      if (res.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Session expired");
+      }
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Upload failed");
       }
       return res.json();
