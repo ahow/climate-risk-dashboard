@@ -79,13 +79,13 @@ export default function Layout({ children, role }: { children: React.ReactNode; 
         }`}
       >
         <div className="h-14 flex items-center gap-2 px-4 border-b border-[hsl(var(--sidebar-border))]">
-          <svg viewBox="0 0 28 28" className="w-7 h-7" aria-label="Signal logo">
+          <svg viewBox="0 0 28 28" className="w-7 h-7" aria-label="Climate Risk logo">
             <rect width="28" height="28" rx="6" fill="hsl(var(--sidebar))" />
             <path d="M7 20 L11 14 L15 17 L19 9 L22 12" stroke="hsl(var(--sidebar-primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             <circle cx="22" cy="12" r="2" fill="hsl(var(--sidebar-primary))" />
           </svg>
           <span className="text-[hsl(var(--sidebar-foreground))] font-semibold tracking-tight text-[15px]">
-            Sig<span className="text-[hsl(var(--sidebar-primary))]">nal</span>
+            Climate <span className="text-[hsl(var(--sidebar-primary))]">Risk</span>
           </span>
           <button
             className="ml-auto lg:hidden text-[hsl(var(--sidebar-foreground))]"
@@ -138,7 +138,7 @@ export default function Layout({ children, role }: { children: React.ReactNode; 
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
-            <span>Signal</span>
+            <span>Climate Risk</span>
             <span className="opacity-50">/</span>
             <span className="text-foreground font-medium" data-testid="text-breadcrumb">{currentLabel}</span>
           </div>

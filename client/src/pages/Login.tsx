@@ -33,13 +33,13 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-6 justify-center">
-          <svg viewBox="0 0 28 28" className="w-8 h-8" aria-label="Signal logo">
+          <svg viewBox="0 0 28 28" className="w-8 h-8" aria-label="Climate Risk logo">
             <rect width="28" height="28" rx="6" fill="hsl(var(--sidebar))" />
             <path d="M7 20 L11 14 L15 17 L19 9 L22 12" stroke="hsl(var(--sidebar-primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             <circle cx="22" cy="12" r="2" fill="hsl(var(--sidebar-primary))" />
           </svg>
           <span className="font-semibold tracking-tight text-lg">
-            Sig<span className="text-primary">nal</span>
+            Climate <span className="text-primary">Risk</span>
           </span>
         </div>
         <Card>
