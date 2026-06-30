@@ -218,14 +218,14 @@ export class DatabaseStorage implements IStorage {
     if (updates.length === 0) return 0;
     const ids = updates.map((u) => u.companyId);
     const weights = updates.map((u) => u.weighted);
-    await pool.query(
+    const result = await pool.query(
       `UPDATE management_scores ms
        SET weighted_score = v.w
        FROM (SELECT unnest($1::int[]) AS company_id, unnest($2::float8[]) AS w) v
        WHERE ms.company_id = v.company_id`,
       [ids, weights],
     );
-    return updates.length;
+    return result.rowCount ?? 0;
   }
 
   async getSetting(key: string): Promise<AppSetting | undefined> {
