@@ -1,12 +1,14 @@
 import { storage, setCachedWeightConfig } from "../storage";
 import {
   fetchManagementUniverse,
+  findInUniverse,
   getManagementSourceUrl,
   clearManagementSourceCache,
   MANAGEMENT_SOURCE_URL_KEY,
 } from "./externalApis";
 import {
   computeMeasureWeights,
+  computeWeightedScore,
   assignDisclosureDefaults,
   type WeightLevel,
   type WeightConfig,
@@ -131,6 +133,40 @@ export async function saveWeightConfig(
 
   await storage.setSetting(MANAGEMENT_WEIGHTS_KEY, config);
   setCachedWeightConfig(config);
-  const recomputed = await storage.recomputeWeightedScores();
+  const recomputed = await recomputeWeightedFromSource();
   return { config, recomputed };
+}
+
+/**
+ * Recompute every company's weighted management score from the configured source universe, matched
+ * by ISIN (with company-name fallback). This is authoritative: it does not depend on the per-company
+ * `scores` already stored in the DB, which may have been captured from a different source (e.g. the
+ * legacy Heroku API) whose measure IDs do not match the current weight config. Companies with no
+ * universe match get a null weighted score so read paths fall back to the equal-weighted total.
+ *
+ * Falls back to recomputing from stored scores when no source URL is configured.
+ */
+export async function recomputeWeightedFromSource(): Promise<number> {
+  const config = await getWeightConfig();
+  const universe = await fetchManagementUniverse(false);
+  if (!universe || !config || config.measures.length === 0) {
+    return storage.recomputeWeightedScores();
+  }
+
+  const companies = await storage.getCompanies();
+  const updates = companies.map((co) => {
+    const u = findInUniverse(universe, co.isin, co.companyName ?? undefined);
+    if (!u) return { companyId: co.id, weighted: null as number | null };
+    const measureScores: Record<string, number> = {};
+    for (const m of u.measureScores || []) {
+      if (m.measureId) measureScores[m.measureId] = m.score ?? 0;
+    }
+    const hasMatch = config.measures.some((w) => measureScores[w.measureId] != null);
+    return {
+      companyId: co.id,
+      weighted: hasMatch ? computeWeightedScore(measureScores, config.measures) : null,
+    };
+  });
+
+  return storage.bulkUpdateWeightedScores(updates);
 }

@@ -434,7 +434,7 @@ interface NewSourceMeasure {
   quotes?: Array<{ text?: string; source?: string; sourceUrl?: string }>;
 }
 
-interface NewSourceCompany {
+export interface NewSourceCompany {
   isin: string;
   companyName?: string;
   sector?: string;
@@ -552,7 +552,7 @@ function transformNewSourceCompany(r: NewSourceCompany): ManagementPerformanceRe
   };
 }
 
-function findInUniverse(
+export function findInUniverse(
   universe: NewSourceCompany[],
   isin: string,
   companyName?: string

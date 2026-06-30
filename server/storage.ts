@@ -1,5 +1,5 @@
 import { eq, desc } from "drizzle-orm";
-import { db } from "./db";
+import { db, pool } from "./db";
 import {
   companies, assets, geoRisks, supplyChainRisks, managementScores, operations,
   companyListUploads, companyListEntries,
@@ -39,6 +39,11 @@ function weightedScoreFromScores(scores: unknown): number | null {
       if (m && typeof m.measureId === "string") measureScores[m.measureId] = m.score ?? 0;
     }
   }
+  // If none of the configured measure IDs appear in the stored scores (e.g. scores were captured
+  // from a different source than the weight config was built from), return null so the read paths
+  // fall back to the equal-weighted total instead of showing a misleading 0%.
+  const matched = cachedWeightConfig.measures.some((m) => measureScores[m.measureId] != null);
+  if (!matched) return null;
   return computeWeightedScore(measureScores, cachedWeightConfig.measures);
 }
 
@@ -68,6 +73,7 @@ export interface IStorage {
   createManagementScore(data: InsertManagementScore): Promise<ManagementScore>;
   deleteManagementScore(companyId: number): Promise<void>;
   recomputeWeightedScores(): Promise<number>;
+  bulkUpdateWeightedScores(updates: { companyId: number; weighted: number | null }[]): Promise<number>;
 
   getSetting(key: string): Promise<AppSetting | undefined>;
   setSetting(key: string, value: unknown): Promise<AppSetting>;
@@ -204,6 +210,22 @@ export class DatabaseStorage implements IStorage {
       updated++;
     }
     return updated;
+  }
+
+  async bulkUpdateWeightedScores(
+    updates: { companyId: number; weighted: number | null }[],
+  ): Promise<number> {
+    if (updates.length === 0) return 0;
+    const ids = updates.map((u) => u.companyId);
+    const weights = updates.map((u) => u.weighted);
+    await pool.query(
+      `UPDATE management_scores ms
+       SET weighted_score = v.w
+       FROM (SELECT unnest($1::int[]) AS company_id, unnest($2::float8[]) AS w) v
+       WHERE ms.company_id = v.company_id`,
+      [ids, weights],
+    );
+    return updates.length;
   }
 
   async getSetting(key: string): Promise<AppSetting | undefined> {
