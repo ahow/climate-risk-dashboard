@@ -57,6 +57,18 @@ export async function ensureSchemaUpdates() {
         check: `SELECT column_name FROM information_schema.columns WHERE table_name='supply_chain_risks' AND column_name='supply_chain_tiers'`,
         apply: `ALTER TABLE supply_chain_risks ADD COLUMN IF NOT EXISTS supply_chain_tiers jsonb`,
       },
+      {
+        check: `SELECT column_name FROM information_schema.columns WHERE table_name='management_scores' AND column_name='weighted_score'`,
+        apply: `ALTER TABLE management_scores ADD COLUMN IF NOT EXISTS weighted_score real`,
+      },
+      {
+        check: `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='app_settings'`,
+        apply: `CREATE TABLE IF NOT EXISTS app_settings (
+          key TEXT PRIMARY KEY,
+          value JSONB,
+          updated_at TIMESTAMP DEFAULT NOW()
+        )`,
+      },
     ];
 
     for (const migration of migrations) {

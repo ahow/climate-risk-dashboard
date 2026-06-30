@@ -234,12 +234,13 @@ function ManagementSummaryRow({ scores }: { scores: Record<string, any[]> }) {
 }
 
 function ManagementSection({ mgmtScore }: { mgmtScore: any }) {
-  const scorePct = mgmtScore.totalScore != null ? mgmtScore.totalScore.toString() : "0";
+  const effectivePct = mgmtScore.weightedScore ?? mgmtScore.totalScore;
+  const scorePct = effectivePct != null ? Math.round(effectivePct).toString() : "0";
 
   return (
     <CollapsibleSection
       icon={Shield}
-      title={`Management Performance (${mgmtScore.totalScore}%)`}
+      title={`Management Performance (${scorePct}%)`}
       summary={`${scorePct}%`}
       testId="section-management"
       alwaysVisibleContent={
@@ -511,7 +512,9 @@ export default function CompanyDetail() {
   const scRawPV = scHasNewAPI ? scEl.present_value : (scEl?.total_annual_loss || 0) * SC_PV_FACTOR;
   const scIndirectPV = scRisk ? scRawPV * scScaleFactor : 0;
   const totalScPV = scRisk ? formatCurrency(scIndirectPV) : "Not calculated";
-  const mgmtSummaryScore = mgmtScore ? `${mgmtScore.totalScore}%` : "Not assessed";
+  const mgmtEffectivePct = mgmtScore ? (mgmtScore.weightedScore ?? mgmtScore.totalScore) : null;
+  const mgmtSummaryScore = mgmtEffectivePct != null ? `${Math.round(mgmtEffectivePct)}%` : "Not assessed";
+  const mgmtIsWeighted = mgmtScore && mgmtScore.weightedScore != null;
 
   return (
     <div className="space-y-6" data-testid="company-detail-page">
@@ -588,7 +591,7 @@ export default function CompanyDetail() {
             </div>
             {mgmtScore && (
               <div className="text-xs text-muted-foreground mt-1">
-                {mgmtScore.totalScore}% coverage
+                {mgmtIsWeighted ? `Equal-weighted: ${mgmtScore.totalScore}%` : `${mgmtScore.totalScore}% coverage`}
               </div>
             )}
           </CardContent>

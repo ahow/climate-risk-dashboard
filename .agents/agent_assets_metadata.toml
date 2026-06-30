@@ -12,3 +12,9 @@ id = "Obennw9YMo2XPt-SetMbs"
 uri = "file://Climate_Risk_Model_Documentation.md"
 type = "text"
 title = "Climate Risk Model - Detailed Documentation"
+
+[[outputs]]
+id = "IJ2Jq8WRKdYgQsH4qvBMz"
+uri = "file://sector_exposure_breakdown.md"
+type = "text"
+title = "Direct vs Supply Chain Exposure by Sector"

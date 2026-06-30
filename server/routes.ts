@@ -10,6 +10,13 @@ import {
   processBulkFromList,
   processMissingCompanies,
 } from "./services/operationManager";
+import {
+  getSourceUrl,
+  setManagementSourceUrl,
+  getWeightConfig,
+  buildMeasureRows,
+  saveWeightConfig,
+} from "./services/managementWeights";
 import { isinToIso3, sectorToIsic } from "./utils/mappings";
 import { z } from "zod";
 import multer from "multer";
@@ -54,7 +61,7 @@ export async function registerRoutes(
             sc.indirect_risk -> 'political' as sc_political,
             sc.indirect_risk -> 'nature_loss' as sc_nature_loss,
             sc.indirect_risk -> 'water_stress' as sc_water_stress,
-            ms.total_score as mgmt_total_score,
+            COALESCE(ms.weighted_score, ms.total_score) as mgmt_total_score,
             ms.total_possible as mgmt_total_possible,
             CASE WHEN sc.company_id IS NOT NULL THEN true ELSE false END as has_sc,
             CASE WHEN ms.company_id IS NOT NULL THEN true ELSE false END as has_mgmt
@@ -356,6 +363,79 @@ export async function registerRoutes(
       res.json(operation);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- Management score source URL ---
+  app.get("/api/settings/management-source", requireAuth, async (_req, res) => {
+    try {
+      const url = await getSourceUrl();
+      res.json({ url: url ?? "" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/settings/management-source", requireAdmin, async (req, res) => {
+    try {
+      const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+      if (url) {
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          return res.status(400).json({ error: "Invalid URL" });
+        }
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return res.status(400).json({ error: "URL must use http or https" });
+        }
+      }
+      await setManagementSourceUrl(url);
+      res.json({ url });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- Management weights ---
+  app.get("/api/management-weights", requireAuth, async (_req, res) => {
+    try {
+      const config = await getWeightConfig();
+      res.json(config ?? { measures: [], updatedAt: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Build the measure rows (with disclosure %) for the "Populate weights" dialog.
+  app.post("/api/management-weights/measures", requireAdmin, async (req, res) => {
+    try {
+      const forceRefresh = req.body?.refresh === true;
+      const measures = await buildMeasureRows(forceRefresh);
+      res.json({ measures });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Save chosen levels, generate weights, recompute all weighted scores.
+  app.put("/api/management-weights", requireAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        measures: z.array(z.object({
+          measureId: z.string(),
+          title: z.string().optional(),
+          category: z.string().optional(),
+          disclosurePct: z.number().optional(),
+          disclosureLevel: z.enum(["low", "medium", "high"]),
+          importanceLevel: z.enum(["low", "medium", "high"]),
+        })).min(1),
+      });
+      const parsed = schema.parse(req.body);
+      const { config, recomputed } = await saveWeightConfig(parsed.measures);
+      res.json({ config, recomputed });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
     }
   });
 
@@ -845,7 +925,7 @@ export async function registerRoutes(
             COALESCE(g.total_geo_risk_pv, 0) as raw_geo_risk_pv,
             COALESCE(a.total_api_asset_value, 0) as api_asset_total,
             sc.indirect_risk -> 'expected_loss' as sc_expected_loss,
-            ms.total_score as mgmt_total_score,
+            COALESCE(ms.weighted_score, ms.total_score) as mgmt_total_score,
             ms.total_possible as mgmt_total_possible
           FROM companies c
           LEFT JOIN (
@@ -1080,7 +1160,7 @@ export async function registerRoutes(
       const scaledScEAL = rawScEAL !== null ? rawScEAL * effectiveScale : null;
       const scaledScPV = rawScPV !== null ? rawScPV * effectiveScale : null;
 
-      const mgmtPct = mgmtScore?.totalScore ?? null;
+      const mgmtPct = mgmtScore ? (mgmtScore.weightedScore ?? mgmtScore.totalScore) : null;
       const mgmtMultiplier = mgmtPct !== null ? Math.max(0, 1 - mgmtPct / 100) : 1;
 
       const totalEAL = totalGeoEAL + (scaledScEAL || 0);
@@ -1162,7 +1242,9 @@ export async function registerRoutes(
           topSuppliers: scRisk.topSuppliers,
         } : null,
         managementScore: mgmtScore ? {
-          totalScore: mgmtScore.totalScore,
+          totalScore: mgmtPct,
+          equalWeightedScore: mgmtScore.totalScore,
+          weightedScore: mgmtScore.weightedScore,
           totalPossible: mgmtScore.totalPossible,
           summary: mgmtScore.summary,
           analysisStatus: mgmtScore.analysisStatus,

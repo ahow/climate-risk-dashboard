@@ -74,12 +74,19 @@ export const managementScores = pgTable("management_scores", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
   totalScore: integer("total_score"),
+  weightedScore: real("weighted_score"),
   totalPossible: integer("total_possible"),
   summary: text("summary"),
   analysisStatus: text("analysis_status"),
   scores: jsonb("scores"),
   documents: jsonb("documents"),
   calculatedAt: timestamp("calculated_at").defaultNow(),
+});
+
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const operations = pgTable("operations", {
@@ -151,6 +158,10 @@ export const insertGeoRiskSchema = createInsertSchema(geoRisks).omit({ id: true 
 export const insertSupplyChainRiskSchema = createInsertSchema(supplyChainRisks).omit({ id: true });
 export const insertManagementScoreSchema = createInsertSchema(managementScores).omit({ id: true });
 export const insertOperationSchema = createInsertSchema(operations).omit({ id: true });
+export const insertAppSettingSchema = createInsertSchema(appSettings).omit({ updatedAt: true });
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = z.infer<typeof insertAppSettingSchema>;
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;

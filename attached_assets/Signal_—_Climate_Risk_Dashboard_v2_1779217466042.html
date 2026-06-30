@@ -1,0 +1,3164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal — Climate Risk Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --bg:          #0d1117;
+  --surface:     #161b22;
+  --surface-2:   #21262d;
+  --border:      #30363d;
+  --text:        #e6edf3;
+  --text-muted:  #8b949e;
+  --accent:      #2dd4bf;
+  --accent-dim:  rgba(45,212,191,0.12);
+  --risk-high:   #f85149;
+  --risk-med:    #ffa657;
+  --risk-low:    #3fb950;
+  --risk-high-bg: rgba(248,81,73,0.12);
+  --risk-med-bg:  rgba(255,166,87,0.12);
+  --risk-low-bg:  rgba(63,185,80,0.12);
+  --radius:      8px;
+  --radius-sm:   4px;
+  --sidebar-w:   220px;
+  --header-h:    48px;
+  --filter-h:    52px;
+  --font-mono:   'JetBrains Mono', monospace;
+}
+
+/* ─── Light Mode ────────────────────────────────────────────────────────────── */
+body.light-mode {
+  --bg:          #f0f4f8;
+  --surface:     #ffffff;
+  --surface-2:   #f0f4f8;
+  --border:      #d0d7de;
+  --text:        #1f2937;
+  --text-muted:  #6b7280;
+  --accent:      #0891b2;
+  --accent-dim:  rgba(8,145,178,0.08);
+  --risk-high:   #dc2626;
+  --risk-med:    #d97706;
+  --risk-low:    #16a34a;
+  --risk-high-bg: rgba(220,38,38,0.10);
+  --risk-med-bg:  rgba(217,119,6,0.10);
+  --risk-low-bg:  rgba(22,163,74,0.10);
+}
+
+/* ─── Reset & Base ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Layout Grid ───────────────────────────────────────────────────────────── */
+.dashboard {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--header-h) var(--filter-h) 1fr;
+  height: 100dvh;
+}
+
+/* ─── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar {
+  grid-row: 1 / -1;
+  grid-column: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 20;
+  transition: transform 0.25s ease;
+}
+
+.sidebar-logo {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.logo-mark {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.logo-text span { color: var(--accent); }
+
+.sidebar-nav {
+  padding: 12px 0;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+  border-left: 2px solid transparent;
+  position: relative;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-dim);
+}
+.nav-item .nav-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 20px;
+}
+
+.sidebar-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────────── */
+.header {
+  grid-column: 2;
+  grid-row: 1;
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  z-index: 10;
+  position: sticky;
+  top: 0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  flex: 1;
+}
+.breadcrumb .crumb-active { color: var(--text); font-weight: 500; }
+.breadcrumb .sep { color: var(--border); }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── Theme Toggle ─────────────────────────────────────────────────────────── */
+.theme-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-muted);
+  background: var(--surface-2); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 20px;
+  cursor: pointer; transition: all 0.15s;
+  font-family: inherit;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* ─── Global Filter Bar ─────────────────────────────────────────────────────── */
+.filter-bar {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+  height: var(--filter-h);
+  flex-shrink: 0;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* iOS Toggle */
+.ios-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.ios-toggle input { display: none; }
+.toggle-track {
+  width: 36px;
+  height: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+.ios-toggle input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+.ios-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); background: white; }
+
+.filter-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-left: auto;
+}
+
+.universe-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.universe-count strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* ─── Main Content ──────────────────────────────────────────────────────────── */
+.main {
+  grid-column: 2;
+  grid-row: 3;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+}
+
+/* Page transitions */
+.page {
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
+.page.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Toast ─────────────────────────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: toastIn 0.25s ease, toastOut 0.25s ease 2.5s forwards;
+  max-width: 320px;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ─── KPI Cards ─────────────────────────────────────────────────────────────── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kpi-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.kpi-value.teal  { color: var(--accent); }
+.kpi-value.red   { color: var(--risk-high); }
+.kpi-value.amber { color: var(--risk-med); }
+.kpi-value.green { color: var(--risk-low); }
+.kpi-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+/* ─── Section Title ─────────────────────────────────────────────────────────── */
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-title .section-sub { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+
+/* ─── Cards ─────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.card-title { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+
+/* ─── Two-col layout ────────────────────────────────────────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 55% 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ─── Hazard Bars ───────────────────────────────────────────────────────────── */
+.hazard-list { display: flex; flex-direction: column; gap: 12px; }
+.hazard-row { display: flex; flex-direction: column; gap: 5px; }
+.hazard-header { display: flex; justify-content: space-between; align-items: center; }
+.hazard-name { font-size: 12.5px; color: var(--text); }
+.hazard-pct { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.hazard-bar-track {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hazard-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.6s cubic-bezier(.22,1,.36,1);
+}
+
+/* ─── Table ─────────────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin-top: 4px; }
+.table-wrapper { overflow-x: auto; margin-top: 4px; }
+table, .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+thead th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  text-align: left;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+tbody tr:hover { background: var(--surface-2); }
+tbody td {
+  padding: 10px 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.td-company { display: flex; align-items: center; gap: 8px; }
+.ticker-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.score-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 500;
+}
+.tier-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.tier-HIGH   { background: var(--risk-high-bg); color: var(--risk-high); border: 1px solid rgba(248,81,73,0.25); }
+.tier-MEDIUM { background: var(--risk-med-bg);  color: var(--risk-med);  border: 1px solid rgba(255,166,87,0.25); }
+.tier-LOW    { background: var(--risk-low-bg);  color: var(--risk-low);  border: 1px solid rgba(63,185,80,0.25); }
+
+.dl-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dl-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Search Input */
+.search-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+.search-wrap .search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  width: 14px;
+  height: 14px;
+}
+.search-input {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px 8px 32px;
+  border-radius: var(--radius);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent); }
+
+/* ─── Chart containers ───────────────────────────────────────────────────────── */
+.chart-container { position: relative; height: 220px; }
+
+/* ─── Page: Portfolio Analysis ──────────────────────────────────────────────── */
+.portfolio-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.portfolio-controls label { font-size: 12px; color: var(--text-muted); }
+.select-ctrl {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 28px 7px 12px;
+  border-radius: var(--radius);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath stroke='%238b949e' stroke-width='1.5' d='m1 1 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.15s;
+}
+.select-ctrl:focus { border-color: var(--accent); }
+.vs-label { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+
+.aggregate-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.agg-score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.agg-score-value { font-family: var(--font-mono); font-size: 36px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.agg-label { font-size: 12px; color: var(--text-muted); }
+.agg-delta { font-family: var(--font-mono); font-size: 28px; font-weight: 600; color: var(--risk-high); font-variant-numeric: tabular-nums; }
+.agg-delta-label { font-size: 11.5px; color: var(--text-muted); }
+.agg-note { font-size: 12px; color: var(--text-muted); padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm); border-left: 2px solid var(--risk-med); margin-top: 10px; }
+
+.hazard-compare-list { display: flex; flex-direction: column; gap: 14px; }
+.hc-row { display: flex; flex-direction: column; gap: 5px; }
+.hc-label { font-size: 12px; color: var(--text); margin-bottom: 3px; display: flex; justify-content: space-between; }
+.hc-bars { display: flex; flex-direction: column; gap: 4px; }
+.hc-bar-row { display: flex; align-items: center; gap: 8px; }
+.hc-bar-label { font-size: 10.5px; color: var(--text-muted); width: 68px; flex-shrink: 0; text-align: right; }
+.hc-bar-track { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.hc-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(.22,1,.36,1); }
+.hc-bar-fill.portfolio { background: var(--accent); }
+.hc-bar-fill.benchmark { background: var(--text-muted); opacity: 0.6; }
+.hc-bar-val { font-family: var(--font-mono); font-size: 10.5px; font-variant-numeric: tabular-nums; width: 24px; color: var(--text-muted); }
+
+.delta-positive { color: var(--risk-high); }
+.delta-negative { color: var(--risk-low); }
+.delta-neutral  { color: var(--text-muted); }
+
+.upload-prompt {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 16px;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+.upload-prompt:hover { border-color: var(--accent); color: var(--text); }
+.upload-prompt p { margin-top: 8px; font-size: 12px; }
+
+/* ─── Companies page ─────────────────────────────────────────────────────────── */
+.filter-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.chip {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+.company-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.company-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.company-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.cc-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.cc-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.cc-ticker { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.score-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.score-circle.high   { background: var(--risk-high-bg); color: var(--risk-high); border: 2px solid rgba(248,81,73,0.3); }
+.score-circle.medium { background: var(--risk-med-bg);  color: var(--risk-med);  border: 2px solid rgba(255,166,87,0.3); }
+.score-circle.low    { background: var(--risk-low-bg);  color: var(--risk-low);  border: 2px solid rgba(63,185,80,0.3); }
+.cc-sector-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  display: inline-block;
+}
+
+/* ─── Company Detail ─────────────────────────────────────────────────────────── */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.back-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.back-btn:hover { color: var(--accent); border-color: var(--accent); }
+.detail-title h1 { font-size: 20px; font-weight: 700; }
+.detail-title-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.country-tag {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.detail-actions { margin-left: auto; }
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(45,212,191,0.3);
+  color: var(--accent);
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: rgba(45,212,191,0.2); }
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.sc-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.sc-value { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.category-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.cat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cat-card:hover { border-color: rgba(45,212,191,0.4); }
+.cat-card.active { border-color: var(--accent); }
+.cat-name { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+.cat-score { font-family: var(--font-mono); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cat-card.risk-high .cat-score  { color: var(--risk-high); }
+.cat-card.risk-med .cat-score   { color: var(--risk-med); }
+.cat-card.risk-low .cat-score   { color: var(--risk-low); }
+
+.detail-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.panel-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+
+.map-placeholder {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.map-placeholder svg { width: 100%; height: 100%; }
+
+.hazard-scores-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.hazard-score-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+}
+.hs-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.hs-val { font-family: var(--font-mono); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ─── Methodology ────────────────────────────────────────────────────────────── */
+.methodology-body { max-width: 760px; }
+.methodology-body h2 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 10px; margin-top: 24px; }
+.methodology-body h2:first-child { margin-top: 0; }
+.methodology-body p { font-size: 13.5px; color: var(--text-muted); line-height: 1.7; margin-bottom: 10px; }
+.methodology-body ul { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.methodology-body li { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+.methodology-body li strong { color: var(--text); }
+.source-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px;
+}
+
+/* ─── Admin / Upload ─────────────────────────────────────────────────────────── */
+.admin-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 16px;
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--accent-dim); }
+.upload-zone p { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+.upload-zone small { font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px; }
+.format-note {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.portfolio-list { display: flex; flex-direction: column; gap: 8px; }
+.portfolio-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+.portfolio-item .name { color: var(--text); font-weight: 500; }
+.portfolio-item .meta { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+.status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.status-completed { background: var(--risk-low-bg); color: var(--risk-low); }
+.status-processing { background: var(--accent-dim); color: var(--accent); }
+.status-failed { background: var(--risk-high-bg); color: var(--risk-high); }
+
+.warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,166,87,0.08);
+  border: 1px solid rgba(255,166,87,0.25);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: var(--risk-med);
+  margin-top: 12px;
+}
+.dl-link {
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+}
+.dl-link:hover { text-decoration: underline; }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── Page Header Rows ───────────────────────────────────────────────────────── */
+.page-header-row {
+  margin-bottom: 20px;
+}
+.page-h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ─── Company Filter Page ────────────────────────────────────────────────────── */
+.filter-dropdowns {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.filter-dd-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dd-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.filter-dd-sep {
+  color: var(--text-muted);
+  font-size: 16px;
+  padding-bottom: 4px;
+  align-self: flex-end;
+  line-height: 32px;
+}
+.filter-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 7px 28px 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 160px;
+}
+.filter-select:focus { outline: none; border-color: var(--accent); }
+select.filter-select option { background: var(--surface); color: var(--text); }
+body.light-mode select.filter-select option { background: #ffffff; color: #1f2937; }
+
+.btn-secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--accent); }
+
+.btn-export {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-muted); font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500;
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.btn-export:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+
+/* ─── Financial Analysis Page ────────────────────────────────────────────────── */
+.seg-tabs {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  width: fit-content;
+}
+.seg-tab {
+  padding: 6px 18px;
+  border-radius: calc(var(--radius) - 2px);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  transition: all 0.15s;
+}
+.seg-tab.active {
+  background: var(--accent);
+  color: #0d1117;
+}
+.seg-tab:hover:not(.active) { color: var(--text); }
+
+.fin-chart-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.fin-chart-card {
+  padding: 16px;
+}
+.fin-chart-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+
+.info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(45,212,191,0.2);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.info-banner strong { color: var(--text); }
+
+/* ─── Responsive / Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .fin-chart-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-h) var(--filter-h) 1fr;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    transform: translateX(-100%);
+    z-index: 50;
+  }
+  .sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.6); }
+  .header, .filter-bar, .main {
+    grid-column: 1;
+  }
+  .hamburger { display: flex; }
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; }
+  .aggregate-two-col { grid-template-columns: 1fr; }
+  .category-row { grid-template-columns: repeat(3, 1fr); }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); }
+  .admin-two-col { grid-template-columns: 1fr; }
+  .company-grid { grid-template-columns: repeat(2, 1fr); }
+  .filter-chips { gap: 6px; }
+}
+
+@media (max-width: 480px) {
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .company-grid { grid-template-columns: 1fr; }
+  .category-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Overlay for mobile sidebar */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 40;
+}
+.sidebar-overlay.open { display: block; }
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <!-- SVG Logo Mark -->
+      <svg class="logo-mark" viewBox="0 0 28 28" fill="none" aria-label="Signal logo" xmlns="http://www.w3.org/2000/svg">
+        <rect width="28" height="28" rx="6" fill="#0d1117"/>
+        <path d="M7 20 L11 14 L15 17 L19 9 L22 12" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="22" cy="12" r="2" fill="#2dd4bf"/>
+        <circle cx="7" cy="20" r="1.5" fill="#8b949e"/>
+        <rect x="4" y="23" width="20" height="1.5" rx="0.75" fill="#30363d"/>
+      </svg>
+      <span class="logo-text">Sig<span>nal</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('overview')" data-page="overview">
+        <i data-lucide="home" class="nav-icon"></i>
+        Overview
+      </div>
+      <div class="nav-item" onclick="showPage('portfolio')" data-page="portfolio">
+        <i data-lucide="briefcase" class="nav-icon"></i>
+        Portfolio Analysis
+      </div>
+      <div class="nav-item" onclick="showPage('filter')" data-page="filter">
+        <i data-lucide="sliders-horizontal" class="nav-icon"></i>
+        Company Filter
+      </div>
+      <div class="nav-item" onclick="showPage('financial')" data-page="financial">
+        <i data-lucide="bar-chart-2" class="nav-icon"></i>
+        Financial Analysis
+      </div>
+      <div class="nav-item" onclick="showPage('companies')" data-page="companies">
+        <i data-lucide="grid-2x2" class="nav-icon"></i>
+        Companies
+      </div>
+      <div class="nav-item" onclick="showPage('methodology')" data-page="methodology">
+        <i data-lucide="book-open" class="nav-icon"></i>
+        Methodology
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" onclick="showPage('admin')" data-page="admin">
+        <i data-lucide="settings" class="nav-icon"></i>
+        Admin / Upload
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      v2.4.1 · Q1 2026 data
+    </div>
+  </aside>
+
+  <!-- Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- ─── Header ───────────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <i data-lucide="menu" style="width:20px;height:20px;"></i>
+    </button>
+    <div class="breadcrumb" id="breadcrumb">
+      <span>Signal</span>
+      <span class="sep">/</span>
+      <span class="crumb-active" id="breadcrumb-current">Overview</span>
+    </div>
+    <div class="header-actions">
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+        <i data-lucide="sun" id="themeIcon" style="width:15px;height:15px;"></i>
+        <span id="themeLabel">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Filter Bar ────────────────────────────────────────────────────────────── -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label class="ios-toggle" title="Include Financials">
+        <input type="checkbox" id="toggle-financials" onchange="applyFilter()">
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      </label>
+      <span>Include Financials</span>
+    </div>
+    <div class="filter-group">
+      <label class="ios-toggle" title="Include Auto">
+        <input type="checkbox" id="toggle-auto" onchange="applyFilter()">
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      </label>
+      <span>Include Auto</span>
+    </div>
+    <span class="universe-count">Universe: <strong id="universe-count">2,487</strong> companies</span>
+    <div class="filter-tag" id="filter-tag">
+      <i data-lucide="filter" style="width:11px;height:11px;"></i>
+      Financials &amp; Auto excluded
+    </div>
+  </div>
+
+  <!-- ─── Main Content ──────────────────────────────────────────────────────────── -->
+  <main class="main" id="mainContent">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: OVERVIEW
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page active" id="page-overview">
+
+      <!-- KPI Strip -->
+      <div class="kpi-strip">
+        <div class="kpi-card">
+          <div class="kpi-label">Universe</div>
+          <div class="kpi-value teal" id="kpi-universe">2,487</div>
+          <div class="kpi-sub">↑ 63 new this month</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">High Risk</div>
+          <div class="kpi-value red">314</div>
+          <div class="kpi-sub">12.6% of universe</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Avg Score</div>
+          <div class="kpi-value amber">38.4</div>
+          <div class="kpi-sub">↑ 1.2 vs prior year</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Low Risk</div>
+          <div class="kpi-value green">891</div>
+          <div class="kpi-sub">35.8% of universe</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Score Distribution — Universe</div>
+          <div class="chart-container">
+            <canvas id="distributionChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top Hazard Exposure</div>
+          <div class="hazard-list" id="hazard-list">
+            <!-- populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Company Table -->
+      <div class="card">
+        <div class="section-title">
+          Company Universe
+          <span class="section-sub" id="table-shown-count">8 of 2,487 shown</span>
+        </div>
+        <div class="search-wrap" style="display:flex;align-items:center;gap:10px;">
+          <div style="position:relative;flex:1;">
+            <i data-lucide="search" class="search-icon"></i>
+            <input class="search-input" type="text" id="overview-search" placeholder="Search companies, tickers…" oninput="filterTable()">
+          </div>
+          <button class="btn-export" onclick="exportCSV()" title="Download filtered universe as CSV">
+            <i data-lucide="download" style="width:13px;height:13px;"></i> Export CSV
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table id="overview-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Sector</th>
+                <th>Score</th>
+                <th>Tier</th>
+                <th>Flood</th>
+                <th>Drought</th>
+                <th>Heat</th>
+                <th>Hurricane</th>
+                <th>Precip.</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="overview-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: PORTFOLIO ANALYSIS
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-portfolio">
+      <div class="section-title" style="margin-bottom:16px;">Portfolio Analysis</div>
+
+      <div class="portfolio-controls">
+        <label>Portfolio:</label>
+        <select class="select-ctrl" id="portfolio-select" onchange="updatePortfolio()">
+          <option>Global Equity Core</option>
+          <option>ESG Leaders</option>
+          <option>Climate Transition Fund</option>
+        </select>
+        <span class="vs-label">vs.</span>
+        <label>Benchmark:</label>
+        <select class="select-ctrl" id="benchmark-select" onchange="updatePortfolio()">
+          <option>Benchmark (MSCI World)</option>
+          <option>ESG Benchmark</option>
+          <option>Universe Average</option>
+        </select>
+      </div>
+
+      <div class="aggregate-two-col">
+        <div class="card">
+          <div class="card-title">Aggregate Risk</div>
+          <div class="agg-score-row">
+            <div>
+              <div class="agg-label">Portfolio</div>
+              <div class="agg-score-value" style="color:var(--risk-med);">46.2</div>
+            </div>
+            <div style="margin:0 8px;color:var(--border);font-size:24px;">|</div>
+            <div>
+              <div class="agg-label">Benchmark</div>
+              <div class="agg-score-value" style="color:var(--risk-low);">34.8</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;">
+              <div class="agg-delta">+11.4</div>
+              <div class="agg-delta-label">vs benchmark</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:4px;">
+            <span class="tier-badge tier-MEDIUM">Medium</span>
+            <span style="color:var(--text-muted);font-size:11px;display:flex;align-items:center;">Portfolio</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:4px;">
+            <span class="tier-badge tier-LOW">Low</span>
+            <span style="color:var(--text-muted);font-size:11px;display:flex;align-items:center;">Benchmark</span>
+          </div>
+          <div class="agg-note">Portfolio carries higher climate risk than benchmark</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Hazard Breakdown vs Benchmark</div>
+          <div class="hazard-compare-list" id="hazard-compare">
+            <!-- populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Holdings Table -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Holdings</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Weight</th>
+                <th>Score</th>
+                <th>Tier</th>
+                <th>Contribution to Δ</th>
+              </tr>
+            </thead>
+            <tbody id="holdings-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="upload-prompt" onclick="showToast('Upload feature coming soon')">
+        <i data-lucide="upload" style="width:20px;height:20px;color:var(--text-muted);"></i>
+        <p style="font-weight:500;color:var(--text);">Analyse a different portfolio</p>
+        <p>Upload CSV or Excel to compare a custom set of holdings</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: COMPANY FILTER
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-filter">
+      <div class="page-header-row">
+        <div>
+          <h1 class="page-h1">Company Filter</h1>
+          <p class="page-subtitle">Filter the universe by sector classification and geography. Selections cascade sequentially.</p>
+        </div>
+      </div>
+
+      <!-- Filter Panel -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="section-title">Sector &amp; Region Filters</div>
+        <div class="filter-dropdowns">
+          <div class="filter-dd-group">
+            <label class="dd-label">Sector</label>
+            <select class="filter-select" id="sel-sector" onchange="onSectorChange()">
+              <option value="">All Sectors</option>
+              <!-- populated by JS -->
+            </select>
+          </div>
+          <div class="filter-dd-sep">›</div>
+          <div class="filter-dd-group">
+            <label class="dd-label">Sub-Sector</label>
+            <select class="filter-select" id="sel-subsector" onchange="onSubSectorChange()">
+              <option value="">All Sub-Sectors</option>
+            </select>
+          </div>
+          <div class="filter-dd-sep">›</div>
+          <div class="filter-dd-group">
+            <label class="dd-label">Industry</label>
+            <select class="filter-select" id="sel-industry" onchange="onIndustryChange()">
+              <option value="">All Industries</option>
+            </select>
+          </div>
+          <div class="filter-dd-sep">›</div>
+          <div class="filter-dd-group">
+            <label class="dd-label">Sub-Industry</label>
+            <select class="filter-select" id="sel-subindustry" onchange="applyFilterPage()">
+              <option value="">All Sub-Industries</option>
+            </select>
+          </div>
+          <div class="filter-dd-sep" style="color:var(--border)">|</div>
+          <div class="filter-dd-group">
+            <label class="dd-label">Region</label>
+            <select class="filter-select" id="sel-region" onchange="applyFilterPage()">
+              <option value="">All Regions</option>
+              <!-- populated by JS -->
+            </select>
+          </div>
+          <button class="btn-secondary" onclick="resetFilterPage()" style="margin-left:8px;align-self:flex-end;">Reset</button>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted)" id="filter-result-summary">
+          Showing 8 companies · All Sectors · All Regions
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="card">
+        <div class="section-title">
+          Results
+          <span class="section-sub" id="filter-count-badge">8 companies</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Company</th><th>Sector</th><th>Sub-Sector</th><th>Region</th>
+                <th>Score</th><th>Tier</th><th>Flood</th><th>Drought</th><th>Heat</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="filter-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: FINANCIAL ANALYSIS
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-financial">
+      <div class="page-header-row">
+        <div>
+          <h1 class="page-h1">Financial Analysis</h1>
+          <p class="page-subtitle">Compare financial performance across physical risk quintiles (sector-relative). Quintiles are calculated within each sector to remove sector allocation effects.</p>
+        </div>
+      </div>
+
+      <!-- Selection mode tabs -->
+      <div class="seg-tabs" style="margin-bottom:16px;">
+        <button class="seg-tab active" id="tab-sector-mode" onclick="setFinancialMode('sector')">Sector / Region</button>
+        <button class="seg-tab" id="tab-portfolio-mode" onclick="setFinancialMode('portfolio')">Portfolio</button>
+      </div>
+
+      <!-- Sector mode panel -->
+      <div id="fin-sector-panel" class="card" style="margin-bottom:16px;">
+        <div class="section-title">Select Universe</div>
+        <div class="filter-dropdowns">
+          <div class="filter-dd-group">
+            <label class="dd-label">Sector</label>
+            <select class="filter-select" id="fin-sector" onchange="onFinSectorChange()">
+              <option value="">All Sectors</option>
+            </select>
+          </div>
+          <div class="filter-dd-sep">›</div>
+          <div class="filter-dd-group">
+            <label class="dd-label">Sub-Sector</label>
+            <select class="filter-select" id="fin-subsector" onchange="updateFinancialCharts()">
+              <option value="">All Sub-Sectors</option>
+            </select>
+          </div>
+          <div class="filter-dd-sep" style="color:var(--border)">|</div>
+          <div class="filter-dd-group">
+            <label class="dd-label">Region</label>
+            <select class="filter-select" id="fin-region" onchange="updateFinancialCharts()">
+              <option value="">All Regions</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portfolio mode panel -->
+      <div id="fin-portfolio-panel" class="card" style="margin-bottom:16px;display:none;">
+        <div class="section-title">Select Portfolio</div>
+        <div class="filter-dropdowns">
+          <div class="filter-dd-group">
+            <label class="dd-label">Portfolio</label>
+            <select class="filter-select" id="fin-portfolio" onchange="updateFinancialCharts()">
+              <option>Global Equity Core</option>
+              <option>ESG Leaders</option>
+              <option>Climate Transition Fund</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Methodology note -->
+      <div class="info-banner" style="margin-bottom:20px;">
+        <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;color:var(--accent)"></i>
+        <span>Quintiles are <strong>sector-relative</strong>: each company is ranked within its own sector before being assigned to Q1–Q5. Q1 = lowest physical risk within sector; Q5 = highest. This removes cross-sector distortion in the performance signal.</span>
+      </div>
+
+      <!-- TSR Chart Row -->
+      <div class="section-title" style="margin-bottom:12px;">
+        Total Shareholder Return by Physical Risk Quintile
+        <span class="section-sub">Sector-relative quintiles · Annualised returns</span>
+      </div>
+      <div class="fin-chart-row" style="margin-bottom:24px;">
+        <div class="card fin-chart-card">
+          <div class="fin-chart-label">1-Year TSR</div>
+          <div class="chart-container" style="height:200px"><canvas id="tsrChart1y"></canvas></div>
+        </div>
+        <div class="card fin-chart-card">
+          <div class="fin-chart-label">3-Year TSR (Ann.)</div>
+          <div class="chart-container" style="height:200px"><canvas id="tsrChart3y"></canvas></div>
+        </div>
+        <div class="card fin-chart-card">
+          <div class="fin-chart-label">5-Year TSR (Ann.)</div>
+          <div class="chart-container" style="height:200px"><canvas id="tsrChart5y"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Financials Chart Row -->
+      <div class="section-title" style="margin-bottom:12px;">
+        Profitability &amp; Growth Metrics by Physical Risk Quintile
+        <span class="section-sub">Median values per quintile · Last reported FY</span>
+      </div>
+      <div class="fin-chart-row" style="margin-bottom:24px;">
+        <div class="card fin-chart-card">
+          <div class="fin-chart-label">Average ROE (%)</div>
+          <div class="chart-container" style="height:200px"><canvas id="roeChart"></canvas></div>
+        </div>
+        <div class="card fin-chart-card">
+          <div class="fin-chart-label">Average ROIC (%)</div>
+          <div class="chart-container" style="height:200px"><canvas id="roicChart"></canvas></div>
+        </div>
+        <div class="card fin-chart-card">
+          <div class="fin-chart-label">EPS Growth (3Y CAGR %)</div>
+          <div class="chart-container" style="height:200px"><canvas id="epsChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Summary table -->
+      <div class="card">
+        <div class="section-title">
+          Quintile Summary
+          <span class="section-sub">All metrics sector-relative</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" id="quintile-table">
+            <thead>
+              <tr>
+                <th>Quintile</th>
+                <th>Companies (n)</th>
+                <th>Avg Risk Score</th>
+                <th>TSR 1Y</th>
+                <th>TSR 3Y</th>
+                <th>TSR 5Y</th>
+                <th>Avg ROE</th>
+                <th>Avg ROIC</th>
+                <th>EPS Growth</th>
+              </tr>
+            </thead>
+            <tbody id="quintile-tbody"></tbody>
+          </table>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:12px;">* Illustrative data for design purposes. Quintile assignments are based on sector-relative physical risk scores. Past performance is not indicative of future results.</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: COMPANIES
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-companies">
+      <div class="section-title" style="margin-bottom:16px;">Browse Universe</div>
+      <div class="search-wrap" style="margin-bottom:14px;">
+        <i data-lucide="search" class="search-icon"></i>
+        <input class="search-input" type="text" id="company-search" placeholder="Search 2,487 companies…" style="max-width:400px;" oninput="filterCompanyGrid()">
+      </div>
+      <div class="filter-chips" id="filter-chips">
+        <span class="chip active" onclick="setChip(this,'all')">All</span>
+        <span class="chip" onclick="setChip(this,'high')">High Risk</span>
+        <span class="chip" onclick="setChip(this,'medium')">Medium Risk</span>
+        <span class="chip" onclick="setChip(this,'low')">Low Risk</span>
+        <span class="chip" onclick="setChip(this,'Energy')">Energy</span>
+        <span class="chip" onclick="setChip(this,'Technology')">Technology</span>
+        <span class="chip" onclick="setChip(this,'Materials')">Materials</span>
+        <span class="chip" onclick="setChip(this,'Financials')">Financials</span>
+        <span class="chip" onclick="setChip(this,'Auto')">Auto</span>
+      </div>
+      <div class="company-grid" id="company-grid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: COMPANY DETAIL
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-company-detail">
+      <div class="detail-header">
+        <button class="back-btn" onclick="goBack()" aria-label="Go back">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+        </button>
+        <div class="detail-title">
+          <h1 id="detail-company-name">Shell plc</h1>
+          <div class="detail-title-meta">
+            <span class="ticker-badge" id="detail-ticker">SHEL</span>
+            <span class="cc-sector-badge" id="detail-sector">Energy</span>
+            <span class="country-tag" id="detail-country">🇳🇱 Netherlands</span>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn-primary" onclick="showToast('Downloaded!')">
+            <i data-lucide="download" style="width:13px;height:13px;"></i>
+            Download company data (CSV)
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="sc-label">Total Assets</div>
+          <div class="sc-value" id="detail-assets">$248B</div>
+        </div>
+        <div class="summary-card">
+          <div class="sc-label">Geographic Risk PV</div>
+          <div class="sc-value" id="detail-geo-risk">$14.2B</div>
+        </div>
+        <div class="summary-card">
+          <div class="sc-label">Supply Chain Risk</div>
+          <div class="sc-value" id="detail-sc-risk">$8.7B</div>
+        </div>
+        <div class="summary-card">
+          <div class="sc-label">Management Score</div>
+          <div class="sc-value" id="detail-mgmt">42%</div>
+        </div>
+      </div>
+
+      <!-- Category cards -->
+      <div class="category-row" id="category-row">
+        <div class="cat-card risk-high active" onclick="expandCategory('physical',this)">
+          <div class="cat-name">Physical Risk</div>
+          <div class="cat-score" id="detail-physical">68%</div>
+        </div>
+        <div class="cat-card risk-high" onclick="expandCategory('supply',this)">
+          <div class="cat-name">Supply Chain</div>
+          <div class="cat-score" id="detail-supply">72%</div>
+        </div>
+        <div class="cat-card risk-med" onclick="expandCategory('transition',this)">
+          <div class="cat-name">Transition Risk</div>
+          <div class="cat-score" id="detail-transition">54%</div>
+        </div>
+        <div class="cat-card risk-med" onclick="expandCategory('mgmt',this)">
+          <div class="cat-name">Mgmt Quality</div>
+          <div class="cat-score" id="detail-mgmt-score">42%</div>
+        </div>
+        <div class="cat-card risk-med" onclick="expandCategory('disclosure',this)">
+          <div class="cat-name">Disclosure</div>
+          <div class="cat-score" id="detail-disclosure">38%</div>
+        </div>
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel" id="detail-panel-content">
+        <!-- populated by expandCategory() -->
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: METHODOLOGY
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-methodology">
+      <div class="methodology-body">
+        <h2>Overview</h2>
+        <p>Signal is a systematic, quantitative framework for assessing the physical and transition climate risks embedded in a global universe of approximately 2,500 publicly listed companies. Scores are expressed on a 0–100 scale, where higher values indicate greater risk exposure. The methodology is updated annually to incorporate new climate science, expanded geospatial data, and revised regulatory landscapes. All scores are asset-level, then aggregated to the entity level using revenue-weighted averaging across operating facilities.</p>
+
+        <h2>Physical Risk Assessment</h2>
+        <ul>
+          <li><strong>Asset-level geolocation:</strong> Over 320,000 industrial facilities, logistics hubs, and data centres are geocoded using a proprietary database cross-referenced with regulatory filings and satellite imagery. Each facility is assigned a latitude/longitude pair with ±50m precision.</li>
+          <li><strong>Hazard modelling:</strong> Seven chronic and acute hazards are modelled — river flood, coastal flood, heat stress, drought, tropical cyclone, extreme precipitation, and wildfire. Hazard intensities are drawn from CMIP6 climate projections under SSP2-4.5 and SSP5-8.5 scenarios through 2050.</li>
+          <li><strong>Damage function calibration:</strong> Expected Annual Loss (EAL) is calculated for each asset using industry-standard damage curves sourced from Munich Re, Swiss Re, and the World Bank GFDRR, adjusted for local building codes and infrastructure quality.</li>
+        </ul>
+
+        <h2>Supply Chain Analysis</h2>
+        <ul>
+          <li><strong>Tier-1 supplier mapping:</strong> Primary suppliers are identified through purchasing disclosures, trade data, and AI-assisted corporate communications analysis. Each Tier-1 supplier is scored using the same physical risk methodology applied to the reporting entity.</li>
+          <li><strong>Concentration risk:</strong> Geographic and sector concentration indices measure the degree to which a company's supply base amplifies or diversifies its direct physical exposure. High concentration in flood-prone manufacturing corridors (e.g. Mekong Delta, Yangtze Basin) attracts a risk premium.</li>
+          <li><strong>Business continuity weighting:</strong> Supplier scores are weighted by estimated revenue dependency, sourced from financial disclosures and industry analyst estimates, then rolled up to a single supply chain risk score per reporting entity.</li>
+        </ul>
+
+        <h2>Management Scoring</h2>
+        <ul>
+          <li><strong>Disclosure quality:</strong> TCFD-aligned disclosures are assessed across 42 criteria spanning governance, strategy, risk management, and metrics & targets. Scores reflect completeness, specificity, and verifiability of disclosures relative to peers in the same sector.</li>
+          <li><strong>Adaptation investment:</strong> Capital expenditure earmarked for climate adaptation (flood defences, heat-resistant infrastructure, alternative sourcing) is identified in financial filings and sustainability reports. Higher adaptation investment improves management scores.</li>
+          <li><strong>Engagement history:</strong> Board-level engagement on climate risk, science-based target commitments, and third-party audit results are tracked and updated quarterly, sourced from public records and voluntary disclosure platforms (CDP, GRI, SASB).</li>
+        </ul>
+
+        <h2>Data Sources</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> MSCI ESG Research</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> Refinitiv (LSEG)</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> CMIP6 / IPCC AR6</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> Munich Re NatCatSERVICE</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> World Bank GFDRR</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> CDP Climate Disclosure</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> Copernicus CDS</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> Proprietary facility database</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> OpenStreetMap / Overture Maps</span>
+          <span class="source-pill"><i data-lucide="database" style="width:11px;height:11px;"></i> S&P Global Market Intelligence</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE: ADMIN / UPLOAD
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-admin">
+      <div class="section-title" style="margin-bottom:20px;">Admin / Upload</div>
+
+      <div class="admin-two-col">
+        <!-- LEFT: Upload Portfolio -->
+        <div class="card">
+          <div class="card-title">Upload Portfolio</div>
+          <div class="upload-zone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <i data-lucide="upload-cloud" style="width:28px;height:28px;color:var(--text-muted);"></i>
+            <p>Drop CSV or Excel file here</p>
+            <small>or <span style="color:var(--accent);cursor:pointer;" onclick="showToast('File picker would open here')">click to browse</span></small>
+          </div>
+          <div class="format-note">
+            <strong style="color:var(--text);">Required columns:</strong> ISIN, Company, Weight (%)
+            <br>
+            <button class="dl-link" style="margin-top:6px;" onclick="showToast('Template downloaded!')">
+              <i data-lucide="download" style="width:11px;height:11px;"></i>
+              Download template (.xlsx)
+            </button>
+          </div>
+          <div class="section-title" style="font-size:12px;margin-top:16px;margin-bottom:10px;">Current Portfolios</div>
+          <div class="portfolio-list">
+            <div class="portfolio-item">
+              <div><div class="name">Global Equity Core</div><div class="meta">142 holdings · Uploaded 2 Apr 2026</div></div>
+              <span class="status-badge status-completed">Completed</span>
+            </div>
+            <div class="portfolio-item">
+              <div><div class="name">ESG Leaders</div><div class="meta">89 holdings · Uploaded 28 Mar 2026</div></div>
+              <span class="status-badge status-completed">Completed</span>
+            </div>
+            <div class="portfolio-item">
+              <div><div class="name">Climate Transition Fund</div><div class="meta">213 holdings · Uploading…</div></div>
+              <span class="status-badge status-processing">Processing</span>
+            </div>
+            <div class="portfolio-item">
+              <div><div class="name">Legacy Equity Q3 2025</div><div class="meta">Validation error — missing ISINs</div></div>
+              <span class="status-badge status-failed">Failed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Company Universe -->
+        <div class="card">
+          <div class="card-title">Company Universe</div>
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
+            <div style="font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:4px;">Current Dataset</div>
+            <div style="font-size:13px;color:var(--text-muted);">2,455 companies &nbsp;·&nbsp; Uploaded 27 Mar 2026</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Last processed: 1 Apr 2026 at 03:14 UTC</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;">
+            <button class="btn-outline" onclick="showToast('XLSX downloaded!')">
+              <i data-lucide="download" style="width:13px;height:13px;"></i>
+              ↓ XLSX
+            </button>
+            <button class="btn-outline" onclick="showToast('CSV downloaded!')">
+              <i data-lucide="download" style="width:13px;height:13px;"></i>
+              ↓ CSV
+            </button>
+          </div>
+          <button class="btn-primary" style="width:100%;justify-content:center;margin-bottom:12px;" onclick="showToast('Upload feature coming soon')">
+            <i data-lucide="upload" style="width:13px;height:13px;"></i>
+            Upload new company list
+          </button>
+          <div class="warning-banner">
+            <i data-lucide="alert-triangle" style="width:15px;height:15px;flex-shrink:0;"></i>
+            <span>47 companies have incomplete data — <strong style="cursor:pointer;text-decoration:underline;" onclick="showToast('Processing started…')">Run processing</strong></span>
+          </div>
+          <div style="margin-top:16px;">
+            <div class="section-title" style="font-size:12px;margin-bottom:10px;">Processing History</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);">
+                <span style="color:var(--text);">Full reprocess</span><span style="color:var(--risk-low);">1 Apr 2026 ✓</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);">
+                <span style="color:var(--text);">Incremental update</span><span style="color:var(--risk-low);">22 Mar 2026 ✓</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;">
+                <span style="color:var(--text);">Full reprocess</span><span style="color:var(--risk-low);">1 Mar 2026 ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ─── Data ──────────────────────────────────────────────────────────────────────
+const companies = [
+  { name: 'Shell plc',    ticker: 'SHEL', sector: 'Energy',     score: 72, tier: 'HIGH',   flood: 79, drought: 48, heat: 71, hurricane: 29, precip: 55, country: '🇳🇱 Netherlands', assets: '$248B', geoRisk: '$14.2B', scRisk: '$8.7B', mgmt: '42%', physical: '68%', supply: '72%', transition: '54%', mgmtQ: '42%', disclosure: '38%' },
+  { name: 'BP PLC',       ticker: 'BP',   sector: 'Energy',     score: 68, tier: 'HIGH',   flood: 71, drought: 44, heat: 66, hurricane: 33, precip: 49, country: '🇬🇧 United Kingdom', assets: '$191B', geoRisk: '$11.8B', scRisk: '$6.3B', mgmt: '51%', physical: '64%', supply: '68%', transition: '58%', mgmtQ: '51%', disclosure: '44%' },
+  { name: 'Volkswagen',   ticker: 'VOW3', sector: 'Auto',       score: 61, tier: 'MEDIUM', flood: 58, drought: 39, heat: 62, hurricane: 12, precip: 44, country: '🇩🇪 Germany',        assets: '$502B', geoRisk: '$9.1B',  scRisk: '$12.4B', mgmt: '47%', physical: '55%', supply: '63%', transition: '71%', mgmtQ: '47%', disclosure: '52%' },
+  { name: 'Rio Tinto',    ticker: 'RIO',  sector: 'Materials',  score: 58, tier: 'MEDIUM', flood: 54, drought: 67, heat: 74, hurricane: 18, precip: 38, country: '🇦🇺 Australia',      assets: '$84B',  geoRisk: '$7.4B',  scRisk: '$3.1B',  mgmt: '38%', physical: '61%', supply: '44%', transition: '49%', mgmtQ: '38%', disclosure: '33%' },
+  { name: 'JPMorgan',     ticker: 'JPM',  sector: 'Financials', score: 34, tier: 'LOW',    flood: 28, drought: 14, heat: 22, hurricane: 31, precip: 19, country: '🇺🇸 United States',  assets: '$3.9T', geoRisk: '$4.2B',  scRisk: '$1.8B',  mgmt: '68%', physical: '31%', supply: '22%', transition: '38%', mgmtQ: '68%', disclosure: '72%' },
+  { name: 'Apple Inc',    ticker: 'AAPL', sector: 'Technology', score: 28, tier: 'LOW',    flood: 22, drought: 31, heat: 29, hurricane: 14, precip: 17, country: '🇺🇸 United States',  assets: '$353B', geoRisk: '$2.8B',  scRisk: '$4.4B',  mgmt: '79%', physical: '26%', supply: '34%', transition: '21%', mgmtQ: '79%', disclosure: '81%' },
+  { name: 'Nestlé SA',    ticker: 'NESN', sector: 'Consumer',   score: 22, tier: 'LOW',    flood: 18, drought: 44, heat: 31, hurricane: 8,  precip: 24, country: '🇨🇭 Switzerland',    assets: '$109B', geoRisk: '$1.9B',  scRisk: '$2.2B',  mgmt: '74%', physical: '28%', supply: '29%', transition: '18%', mgmtQ: '74%', disclosure: '77%' },
+  { name: 'Microsoft',    ticker: 'MSFT', sector: 'Technology', score: 19, tier: 'LOW',    flood: 14, drought: 22, heat: 18, hurricane: 9,  precip: 12, country: '🇺🇸 United States',  assets: '$411B', geoRisk: '$1.4B',  scRisk: '$1.1B',  mgmt: '88%', physical: '17%', supply: '19%', transition: '14%', mgmtQ: '88%', disclosure: '91%' },
+];
+
+const hazards = [
+  { name: 'Flood',           pct: 68 },
+  { name: 'Heat Stress',     pct: 54 },
+  { name: 'Drought',         pct: 47 },
+  { name: 'Extreme Precip.', pct: 31 },
+  { name: 'Hurricane',       pct: 19 },
+];
+
+const hazardCompare = [
+  { name: 'Flood',       portfolio: 52, benchmark: 42 },
+  { name: 'Drought',     portfolio: 44, benchmark: 38 },
+  { name: 'Heat Stress', portfolio: 49, benchmark: 35 },
+  { name: 'Hurricane',   portfolio: 28, benchmark: 30 },
+  { name: 'Precip.',     portfolio: 33, benchmark: 25 },
+];
+
+const holdings = [
+  { name: 'Shell plc',  ticker: 'SHEL', weight: '8.4%',  score: 72, tier: 'HIGH',   delta: '+6.0', dir: '↓' },
+  { name: 'BP PLC',     ticker: 'BP',   weight: '6.1%',  score: 68, tier: 'HIGH',   delta: '+4.1', dir: '↓' },
+  { name: 'Rio Tinto',  ticker: 'RIO',  weight: '5.8%',  score: 58, tier: 'MEDIUM', delta: '+2.7', dir: '↓' },
+  { name: 'Apple Inc',  ticker: 'AAPL', weight: '12.3%', score: 28, tier: 'LOW',    delta: '-0.8', dir: '↑' },
+  { name: 'Microsoft',  ticker: 'MSFT', weight: '9.7%',  score: 19, tier: 'LOW',    delta: '-1.5', dir: '↑' },
+  { name: 'Nestlé SA',  ticker: 'NESN', weight: '4.2%',  score: 22, tier: 'LOW',    delta: '-0.9', dir: '↑' },
+  { name: 'JPMorgan',   ticker: 'JPM',  weight: '7.1%',  score: 34, tier: 'LOW',    delta: '+0.2', dir: '—' },
+  { name: 'Volkswagen', ticker: 'VOW3', weight: '3.4%',  score: 61, tier: 'MEDIUM', delta: '+1.8', dir: '↓' },
+];
+
+// ─── Company Filter Data ────────────────────────────────────────────────────────
+const companiesExtended = [
+  { name:'Shell plc', ticker:'SHEL', sector:'Energy', subSector:'Oil & Gas', industry:'Integrated Oil & Gas', subIndustry:'Majors', region:'Europe', score:72, tier:'HIGH', flood:79, drought:48, heat:71 },
+  { name:'BP PLC', ticker:'BP', sector:'Energy', subSector:'Oil & Gas', industry:'Integrated Oil & Gas', subIndustry:'Majors', region:'Europe', score:68, tier:'HIGH', flood:71, drought:44, heat:66 },
+  { name:'Volkswagen AG', ticker:'VOW3', sector:'Consumer Discretionary', subSector:'Automobiles', industry:'Auto Manufacturers', subIndustry:'OEMs', region:'Europe', score:61, tier:'MEDIUM', flood:58, drought:39, heat:62 },
+  { name:'Rio Tinto', ticker:'RIO', sector:'Materials', subSector:'Metals & Mining', industry:'Diversified Metals', subIndustry:'Base Metals', region:'Asia Pacific', score:58, tier:'MEDIUM', flood:54, drought:67, heat:74 },
+  { name:'JPMorgan', ticker:'JPM', sector:'Financials', subSector:'Banks', industry:'Investment Banks', subIndustry:'Bulge Bracket', region:'North America', score:34, tier:'LOW', flood:28, drought:14, heat:22 },
+  { name:'Apple Inc', ticker:'AAPL', sector:'Technology', subSector:'Hardware', industry:'Computing', subIndustry:'PCs', region:'North America', score:28, tier:'LOW', flood:19, drought:12, heat:24 },
+  { name:'Nestlé SA', ticker:'NESN', sector:'Consumer Staples', subSector:'Food & Beverage', industry:'Packaged Foods', subIndustry:'Ambient', region:'Europe', score:22, tier:'LOW', flood:18, drought:31, heat:29 },
+  { name:'Microsoft', ticker:'MSFT', sector:'Technology', subSector:'Software', industry:'Enterprise Software', subIndustry:'ERP', region:'North America', score:19, tier:'LOW', flood:15, drought:9, heat:17 },
+];
+
+const taxonomyData = {
+  'Energy': {
+    'Oil & Gas': {
+      'Integrated Oil & Gas': ['Majors', 'Independents'],
+      'Oil & Gas Exploration': ['Offshore', 'Onshore'],
+      'Oil & Gas Refining': ['Downstream', 'Petrochemicals'],
+    },
+    'Renewable Energy': {
+      'Solar': ['Utility Solar', 'Distributed Solar'],
+      'Wind': ['Onshore Wind', 'Offshore Wind'],
+    },
+    'Energy Services': {
+      'Oilfield Services': ['Drilling', 'Well Services'],
+      'Energy Equipment': ['Turbines', 'Compressors'],
+    },
+  },
+  'Materials': {
+    'Metals & Mining': {
+      'Diversified Metals': ['Base Metals', 'Precious Metals'],
+      'Steel': ['Integrated Steel', 'Mini Mills'],
+      'Aluminium': ['Primary', 'Secondary'],
+    },
+    'Chemicals': {
+      'Specialty Chemicals': ['Adhesives', 'Coatings'],
+      'Agricultural Chemicals': ['Fertilisers', 'Pesticides'],
+    },
+  },
+  'Industrials': {
+    'Capital Goods': {
+      'Aerospace & Defence': ['Commercial Aerospace', 'Defence Systems'],
+      'Machinery': ['Industrial Machinery', 'Construction Equipment'],
+    },
+    'Transportation': {
+      'Airlines': ['Full Service', 'Low Cost'],
+      'Freight': ['Rail', 'Road', 'Air Freight'],
+    },
+  },
+  'Consumer Discretionary': {
+    'Automobiles': {
+      'Auto Manufacturers': ['OEMs', 'EV Specialists'],
+      'Auto Parts': ['Tier 1 Suppliers', 'Tier 2 Suppliers'],
+    },
+    'Retail': {
+      'Specialty Retail': ['Apparel', 'Electronics'],
+      'General Merchandise': ['Department Stores', 'Hypermarkets'],
+    },
+  },
+  'Consumer Staples': {
+    'Food & Beverage': {
+      'Packaged Foods': ['Ambient', 'Chilled'],
+      'Beverages': ['Soft Drinks', 'Alcoholic Beverages'],
+    },
+  },
+  'Financials': {
+    'Banks': {
+      'Commercial Banks': ['Large Cap', 'Regional'],
+      'Investment Banks': ['Bulge Bracket', 'Boutique'],
+    },
+    'Insurance': {
+      'Life Insurance': ['Term', 'Whole'],
+      'P&C Insurance': ['Personal Lines', 'Commercial Lines'],
+    },
+  },
+  'Technology': {
+    'Software': {
+      'Enterprise Software': ['ERP', 'CRM', 'Security'],
+      'Consumer Software': ['Gaming', 'Productivity'],
+    },
+    'Hardware': {
+      'Semiconductors': ['Logic', 'Memory', 'Analog'],
+      'Computing': ['Servers', 'PCs', 'Storage'],
+    },
+  },
+};
+
+const regions = ['All Regions', 'North America', 'Europe', 'Asia Pacific', 'Emerging Markets', 'Latin America', 'Middle East & Africa', 'United Kingdom', 'United States', 'China', 'Japan', 'Germany'];
+
+// ─── Financial Analysis Data ───────────────────────────────────────────────────
+const quintileData = {
+  default: {
+    labels: ['Q1 (Low)', 'Q2', 'Q3', 'Q4', 'Q5 (High)'],
+    n: [497, 497, 498, 497, 498],
+    avgScore: [12, 28, 42, 58, 74],
+    tsr1y:  [18.4,  14.2,  11.8,  8.3,   3.1],
+    tsr3y:  [14.1,  11.6,   9.2,  6.8,   2.4],
+    tsr5y:  [12.8,  10.3,   8.1,  5.2,  -0.7],
+    roe:    [22.4,  18.6,  15.2, 11.8,   7.3],
+    roic:   [16.8,  13.4,  10.9,  8.1,   4.2],
+    eps:    [12.1,   9.4,   6.8,  3.2,  -1.8],
+  },
+  'Energy': {
+    labels: ['Q1 (Low)', 'Q2', 'Q3', 'Q4', 'Q5 (High)'],
+    n: [48, 47, 48, 47, 48],
+    avgScore: [18, 34, 52, 66, 81],
+    tsr1y:  [21.2,  16.4,  12.1,  6.8,  -2.4],
+    tsr3y:  [16.8,  12.9,   9.4,  4.2,  -5.1],
+    tsr5y:  [14.2,  10.8,   6.9,  1.8,  -8.4],
+    roe:    [19.8,  15.4,  11.2,  7.6,   2.1],
+    roic:   [14.2,  10.8,   7.9,  5.1,   0.8],
+    eps:    [ 9.4,   6.2,   2.8, -1.4,  -8.2],
+  },
+  'Materials': {
+    labels: ['Q1 (Low)', 'Q2', 'Q3', 'Q4', 'Q5 (High)'],
+    n: [36, 36, 36, 37, 36],
+    avgScore: [14, 29, 44, 61, 76],
+    tsr1y:  [16.8,  13.2,  10.4,  6.2,   1.8],
+    tsr3y:  [13.4,  10.1,   7.8,  4.1,  -0.4],
+    tsr5y:  [11.2,   8.6,   5.4,  2.1,  -3.2],
+    roe:    [20.1,  16.8,  12.4,  8.9,   4.6],
+    roic:   [15.4,  12.1,   9.2,  6.4,   2.8],
+    eps:    [10.8,   7.4,   4.1,  0.8,  -4.6],
+  },
+  'Technology': {
+    labels: ['Q1 (Low)', 'Q2', 'Q3', 'Q4', 'Q5 (High)'],
+    n: [72, 71, 72, 71, 72],
+    avgScore: [ 8, 18, 28, 39, 52],
+    tsr1y:  [24.8,  20.1,  16.4, 11.2,   6.8],
+    tsr3y:  [19.4,  15.8,  12.1,  7.4,   3.2],
+    tsr5y:  [16.8,  13.2,   9.8,  5.1,   1.4],
+    roe:    [31.2,  24.8,  19.4, 14.1,   8.8],
+    roic:   [22.4,  17.8,  14.1, 10.2,   6.4],
+    eps:    [18.4,  14.2,  10.8,  6.4,   2.1],
+  },
+};
+
+// ─── State ─────────────────────────────────────────────────────────────────────
+let currentPage = 'overview';
+let previousPage = 'overview';
+let currentChip = 'all';
+let currentCompanyIndex = 0;
+let charts = { distribution: null, quintile: {} };
+let isDark = true;
+let currentFinMode = 'sector';
+
+// ─── Theme Toggle ───────────────────────────────────────────────────────────────
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light-mode', !isDark);
+  const icon = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+  icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+  label.textContent = isDark ? 'Light' : 'Dark';
+  lucide.createIcons();
+  // Redraw charts with new colors
+  if (charts.distribution) { charts.distribution.destroy(); charts.distribution = null; initDistributionChart(); }
+  reinitQuintileCharts();
+  showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled');
+}
+
+// ─── Score color helpers ───────────────────────────────────────────────────────
+function scoreColor(s) {
+  if (s >= 60) return 'var(--risk-high)';
+  if (s >= 40) return 'var(--risk-med)';
+  return 'var(--risk-low)';
+}
+function tierClass(tier) { return 'tier-' + tier; }
+function riskClass(s) {
+  if (s >= 60) return 'high';
+  if (s >= 40) return 'medium';
+  return 'low';
+}
+
+// ─── Navigation ────────────────────────────────────────────────────────────────
+function showPage(page) {
+  previousPage = currentPage;
+  currentPage = page;
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.page === page);
+  });
+
+  const names = {
+    overview: 'Overview',
+    portfolio: 'Portfolio Analysis',
+    filter: 'Company Filter',
+    financial: 'Financial Analysis',
+    companies: 'Companies',
+    methodology: 'Methodology',
+    admin: 'Admin / Upload',
+    'company-detail': 'Company Detail'
+  };
+  document.getElementById('breadcrumb-current').textContent = names[page] || page;
+
+  // Re-init charts when switching pages
+  if (page === 'portfolio') initPortfolioChart();
+  if (page === 'financial') { setTimeout(updateFinancialCharts, 100); }
+}
+
+function goBack() {
+  showPage(previousPage === 'company-detail' ? 'overview' : previousPage);
+}
+
+function showCompanyDetail(idx) {
+  currentCompanyIndex = idx;
+  const c = companies[idx] || companiesExtended[idx];
+  // Try to find matching company in main companies array first
+  const mainC = companies.find(mc => mc.ticker === (c.ticker || '')) || companies[0];
+  const dc = mainC;
+
+  document.getElementById('detail-company-name').textContent = dc.name;
+  document.getElementById('detail-ticker').textContent = dc.ticker;
+  document.getElementById('detail-sector').textContent = dc.sector;
+  document.getElementById('detail-country').textContent = dc.country || '';
+  document.getElementById('detail-assets').textContent = dc.assets || 'N/A';
+  document.getElementById('detail-geo-risk').textContent = dc.geoRisk || 'N/A';
+  document.getElementById('detail-sc-risk').textContent = dc.scRisk || 'N/A';
+  document.getElementById('detail-mgmt').textContent = dc.mgmt || 'N/A';
+  document.getElementById('detail-physical').textContent = dc.physical || 'N/A';
+  document.getElementById('detail-supply').textContent = dc.supply || 'N/A';
+  document.getElementById('detail-transition').textContent = dc.transition || 'N/A';
+  document.getElementById('detail-mgmt-score').textContent = dc.mgmtQ || 'N/A';
+  document.getElementById('detail-disclosure').textContent = dc.disclosure || 'N/A';
+
+  // Reset risk classes on cat cards
+  const catCards = document.querySelectorAll('.cat-card');
+  catCards.forEach(card => {
+    card.classList.remove('risk-high','risk-med','risk-low','active');
+  });
+  const catScores = [parseInt(dc.physical), parseInt(dc.supply), parseInt(dc.transition), parseInt(dc.mgmtQ), parseInt(dc.disclosure)];
+  catCards.forEach((card, i) => {
+    const s = catScores[i];
+    if (s >= 60) card.classList.add('risk-high');
+    else if (s >= 40) card.classList.add('risk-med');
+    else card.classList.add('risk-low');
+  });
+  catCards[0].classList.add('active');
+  expandCategory('physical', catCards[0]);
+
+  showPage('company-detail');
+}
+
+// ─── Category expand ────────────────────────────────────────────────────────────
+const categoryContent = {
+  physical: (c) => `
+    <div class="panel-title">Physical Risk — Asset Exposure</div>
+    <div class="map-placeholder">
+      <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="600" height="200" fill="#21262d"/>
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#8b949e" font-size="13" font-family="Inter">
+          Asset locations — 47 facilities
+        </text>
+        <circle cx="260" cy="88" r="5" fill="#f85149" opacity="0.85"/><circle cx="262" cy="88" r="2" fill="white"/>
+        <circle cx="162" cy="112" r="5" fill="#f85149" opacity="0.85"/><circle cx="164" cy="112" r="2" fill="white"/>
+        <circle cx="440" cy="104" r="5" fill="#ffa657" opacity="0.85"/><circle cx="442" cy="104" r="2" fill="white"/>
+        <circle cx="310" cy="140" r="4" fill="#ffa657" opacity="0.7"/>
+        <circle cx="195" cy="75" r="4" fill="#ffa657" opacity="0.7"/>
+        <circle cx="375" cy="65" r="4" fill="#3fb950" opacity="0.7"/>
+        <circle cx="520" cy="135" r="4" fill="#3fb950" opacity="0.7"/>
+        <text x="16" y="186" fill="#30363d" font-size="10" font-family="Inter">Physical facilities | △ High EAL  ● Medium  ● Low</text>
+      </svg>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Facility</th><th>Location</th><th>Asset Value</th><th>EAL</th><th>Primary Hazard</th></tr></thead>
+        <tbody>
+          <tr><td>Rotterdam Refinery</td><td>NL</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">$12.0B</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--risk-high)">$340M</td><td>Coastal Flood</td></tr>
+          <tr><td>Houston Terminal</td><td>US</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">$8.0B</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--risk-med)">$180M</td><td>Hurricane</td></tr>
+          <tr><td>Singapore Hub</td><td>SG</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">$3.0B</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--risk-low)">$90M</td><td>Extreme Precip.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="hazard-scores-row">
+      <div class="hazard-score-chip"><span class="hs-label">Flood</span><span class="hs-val" style="color:var(--risk-high)">${c.flood}</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Drought</span><span class="hs-val" style="color:var(--risk-med)">${c.drought}</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Heat</span><span class="hs-val" style="color:var(--risk-high)">${c.heat}</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Hurricane</span><span class="hs-val" style="color:var(--risk-low)">${c.hurricane}</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Precip.</span><span class="hs-val" style="color:var(--risk-med)">${c.precip}</span></div>
+    </div>`,
+
+  supply: (c) => `
+    <div class="panel-title">Supply Chain Risk — Tier-1 Exposure</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Aggregated risk score from 214 identified Tier-1 suppliers across 38 countries. Concentration risk elevated in Southeast Asia manufacturing corridor.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Supplier Cluster</th><th>Region</th><th>Revenue Share</th><th>Risk Score</th><th>Dominant Hazard</th></tr></thead>
+        <tbody>
+          <tr><td>Petrochemical feedstocks</td><td>Middle East</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">22%</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--risk-high)">74</td><td>Heat Stress</td></tr>
+          <tr><td>Equipment manufacturers</td><td>Germany / NL</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">18%</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--risk-med)">42</td><td>River Flood</td></tr>
+          <tr><td>Logistics &amp; shipping</td><td>SE Asia</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums">14%</td><td style="font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--risk-high)">68</td><td>Tropical Cyclone</td></tr>
+        </tbody>
+      </table>
+    </div>`,
+
+  transition: () => `
+    <div class="panel-title">Transition Risk — Policy &amp; Technology Exposure</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Exposure to regulatory carbon pricing, stranded-asset risk, and technology substitution under a 2°C pathway scenario.</p>
+    <div class="hazard-scores-row">
+      <div class="hazard-score-chip"><span class="hs-label">Carbon Price</span><span class="hs-val" style="color:var(--risk-med)">61</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Stranded Asset</span><span class="hs-val" style="color:var(--risk-high)">74</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Tech Subst.</span><span class="hs-val" style="color:var(--risk-med)">48</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Policy Risk</span><span class="hs-val" style="color:var(--risk-med)">53</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Market Risk</span><span class="hs-val" style="color:var(--risk-high)">67</span></div>
+    </div>`,
+
+  mgmt: () => `
+    <div class="panel-title">Management Quality — TCFD Alignment</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Assessment of governance, strategy, risk management, and metrics &amp; targets disclosures against the TCFD framework across 42 criteria.</p>
+    <div class="hazard-scores-row">
+      <div class="hazard-score-chip"><span class="hs-label">Governance</span><span class="hs-val" style="color:var(--risk-med)">55</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Strategy</span><span class="hs-val" style="color:var(--risk-med)">48</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Risk Mgmt</span><span class="hs-val" style="color:var(--risk-med)">41</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Metrics</span><span class="hs-val" style="color:var(--risk-med)">38</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Targets</span><span class="hs-val" style="color:var(--risk-high)">28</span></div>
+    </div>`,
+
+  disclosure: () => `
+    <div class="panel-title">Disclosure Quality</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Voluntary disclosure completeness score. Assessed against CDP, GRI, and SASB frameworks. Peer group: Energy sector, market cap >$50B.</p>
+    <div class="hazard-scores-row">
+      <div class="hazard-score-chip"><span class="hs-label">CDP Score</span><span class="hs-val" style="color:var(--risk-med)">B-</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">GRI Coverage</span><span class="hs-val" style="color:var(--risk-med)">44%</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">SASB Align.</span><span class="hs-val" style="color:var(--risk-high)">32%</span></div>
+      <div class="hazard-score-chip"><span class="hs-label">Audit Status</span><span class="hs-val" style="color:var(--risk-low);font-size:11px">Ltd.</span></div>
+    </div>`,
+};
+
+function expandCategory(cat, el) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const c = companies[currentCompanyIndex];
+  const fn = categoryContent[cat];
+  document.getElementById('detail-panel-content').innerHTML = fn ? fn(c) : '';
+  lucide.createIcons();
+}
+
+// ─── Overview table ────────────────────────────────────────────────────────────
+function buildOverviewTable(data) {
+  const tbody = document.getElementById('overview-tbody');
+  tbody.innerHTML = data.map((c, i) => `
+    <tr onclick="showCompanyDetail(${companies.indexOf(c)})">
+      <td><div class="td-company">${c.name}<span class="ticker-badge">${c.ticker}</span></div></td>
+      <td style="color:var(--text-muted)">${c.sector}</td>
+      <td><span class="score-mono" style="color:${scoreColor(c.score)}">${c.score}</span></td>
+      <td><span class="tier-badge ${tierClass(c.tier)}">${c.tier}</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.flood}%</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.drought}%</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.heat}%</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.hurricane}%</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.precip}%</span></td>
+      <td><button class="dl-btn" onclick="event.stopPropagation();showToast('Downloaded!')" title="Download">↓</button></td>
+    </tr>`).join('');
+}
+
+function filterTable() {
+  const q = document.getElementById('overview-search').value.toLowerCase();
+  const inclFin  = document.getElementById('toggle-financials').checked;
+  const inclAuto = document.getElementById('toggle-auto').checked;
+  let base = companies;
+  if (!inclFin) base = base.filter(c => c.sector !== 'Financials');
+  if (!inclAuto) base = base.filter(c => c.sector !== 'Auto');
+  const filtered = base.filter(c =>
+    c.name.toLowerCase().includes(q) || c.ticker.toLowerCase().includes(q) || c.sector.toLowerCase().includes(q)
+  );
+  buildOverviewTable(filtered);
+  // Universe total (illustrative) — driven by toggle state
+  const universeTotal = !inclFin && !inclAuto ? 2487 : inclFin && inclAuto ? 2536 : inclFin ? 2524 : 2499;
+  const shownEl = document.getElementById('table-shown-count');
+  if (shownEl) shownEl.textContent = `${filtered.length} of ${universeTotal.toLocaleString()} shown`;
+}
+
+// ─── Hazard list ───────────────────────────────────────────────────────────────
+// Returns the filtered companies list based on current global toggle state
+function getFilteredCompanies() {
+  const inclFin  = document.getElementById('toggle-financials')?.checked;
+  const inclAuto = document.getElementById('toggle-auto')?.checked;
+  return companies.filter(c =>
+    (inclFin  || c.sector !== 'Financials') &&
+    (inclAuto || c.sector !== 'Auto')
+  );
+}
+
+// Rebuild hazard bars from the average per-hazard score of visible companies
+function buildHazardList(filteredData) {
+  const data = filteredData || getFilteredCompanies();
+  const keys = [
+    { name: 'Flood',           key: 'flood' },
+    { name: 'Heat Stress',     key: 'heat' },
+    { name: 'Drought',         key: 'drought' },
+    { name: 'Extreme Precip.', key: 'precip' },
+    { name: 'Hurricane',       key: 'hurricane' },
+  ];
+  const rows = keys.map(h => {
+    const vals = data.map(c => c[h.key] || 0);
+    const avg  = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0) / vals.length) : 0;
+    return { name: h.name, pct: avg };
+  }).sort((a, b) => b.pct - a.pct);
+
+  document.getElementById('hazard-list').innerHTML = rows.map(h => `
+    <div class="hazard-row">
+      <div class="hazard-header">
+        <span class="hazard-name">${h.name}</span>
+        <span class="hazard-pct">${h.pct}%</span>
+      </div>
+      <div class="hazard-bar-track">
+        <div class="hazard-bar-fill" style="width:${h.pct}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── Hazard compare ────────────────────────────────────────────────────────────
+function buildHazardCompare() {
+  document.getElementById('hazard-compare').innerHTML = hazardCompare.map(h => `
+    <div class="hc-row">
+      <div class="hc-label"><span>${h.name}</span></div>
+      <div class="hc-bars">
+        <div class="hc-bar-row">
+          <span class="hc-bar-label">Portfolio</span>
+          <div class="hc-bar-track"><div class="hc-bar-fill portfolio" style="width:${h.portfolio}%"></div></div>
+          <span class="hc-bar-val">${h.portfolio}</span>
+        </div>
+        <div class="hc-bar-row">
+          <span class="hc-bar-label">Benchmark</span>
+          <div class="hc-bar-track"><div class="hc-bar-fill benchmark" style="width:${h.benchmark}%"></div></div>
+          <span class="hc-bar-val">${h.benchmark}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── Holdings table ────────────────────────────────────────────────────────────
+function buildHoldingsTable() {
+  document.getElementById('holdings-tbody').innerHTML = holdings.map(h => {
+    const dClass = h.delta.startsWith('+') ? 'delta-positive' : (h.delta.startsWith('-') ? 'delta-negative' : 'delta-neutral');
+    return `<tr onclick="showCompanyDetail(${companies.findIndex(c=>c.ticker===h.ticker)})">
+      <td><div class="td-company">${h.name}<span class="ticker-badge">${h.ticker}</span></div></td>
+      <td><span class="score-mono">${h.weight}</span></td>
+      <td><span class="score-mono" style="color:${scoreColor(h.score)}">${h.score}</span></td>
+      <td><span class="tier-badge ${tierClass(h.tier)}">${h.tier}</span></td>
+      <td><span class="score-mono ${dClass}">${h.delta} ${h.dir}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Company Grid ──────────────────────────────────────────────────────────────
+function buildCompanyGrid(data) {
+  document.getElementById('company-grid').innerHTML = data.map(c => `
+    <div class="company-card" onclick="showCompanyDetail(${companies.indexOf(c)})">
+      <div class="cc-header">
+        <div>
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-ticker">${c.ticker}</div>
+        </div>
+        <div class="score-circle ${riskClass(c.score)}">${c.score}</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="cc-sector-badge">${c.sector}</span>
+        <span class="tier-badge ${tierClass(c.tier)}">${c.tier}</span>
+      </div>
+    </div>`).join('');
+}
+
+function setChip(el, filter) {
+  document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentChip = filter;
+  filterCompanyGrid();
+}
+
+function filterCompanyGrid() {
+  const q = document.getElementById('company-search').value.toLowerCase();
+  let filtered = companies;
+  if (currentChip === 'high')    filtered = filtered.filter(c => c.tier === 'HIGH');
+  else if (currentChip === 'medium') filtered = filtered.filter(c => c.tier === 'MEDIUM');
+  else if (currentChip === 'low') filtered = filtered.filter(c => c.tier === 'LOW');
+  else if (currentChip !== 'all') filtered = filtered.filter(c => c.sector === currentChip);
+  if (q) filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.ticker.toLowerCase().includes(q));
+  buildCompanyGrid(filtered);
+}
+
+// ─── Chart.js — Distribution ──────────────────────────────────────────────────
+function initDistributionChart(filteredData) {
+  const ctx = document.getElementById('distributionChart');
+  if (!ctx) return;
+  if (charts.distribution) { charts.distribution.destroy(); charts.distribution = null; }
+
+  const data = filteredData || getFilteredCompanies();
+
+  const labels = ['0–10','10–20','20–30','30–40','40–50','50–60','60–70','70–80','80–90','90–100'];
+  // Bucket visible companies by score; scale up from sample to universe proportionally
+  const scaleFactor = data.length > 0 ? (data.length === companies.length ? 1 : data.length / companies.length) : 1;
+  const baseCounts  = [41, 98, 187, 243, 298, 336, 411, 514, 283, 76]; // full-universe baseline
+  // Compute actual bucket distribution from visible sample companies
+  const sampleBuckets = Array(10).fill(0);
+  data.forEach(c => { const b = Math.min(Math.floor(c.score / 10), 9); sampleBuckets[b]++; });
+  // Blend: if we have sample data, use it; scale up universe-level bars proportionally
+  const totalSample = sampleBuckets.reduce((a,b)=>a+b,0);
+  const counts = baseCounts.map((base, i) => {
+    if (totalSample === 0) return base;
+    // Scale universe baseline by the share of sample companies in this bucket
+    const sampleShare = sampleBuckets[i] / totalSample;
+    const universeTotal = baseCounts.reduce((a,b)=>a+b,0);
+    return Math.round(universeTotal * sampleShare * scaleFactor + base * (1 - scaleFactor));
+  });
+
+  const colors  = [
+    '#3fb950','#3fb950','#5cb85c','#8cc63f',
+    '#ffa657','#ffa657','#ff7c29',
+    '#f85149','#f85149','#c0392b'
+  ];
+
+  const gridColor   = isDark ? '#30363d' : '#d0d7de';
+  const tickColor   = isDark ? '#8b949e' : '#6b7280';
+  const tooltipBg   = isDark ? '#21262d' : '#ffffff';
+  const tooltipTitle = isDark ? '#e6edf3' : '#1f2937';
+  const tooltipBody  = isDark ? '#8b949e' : '#6b7280';
+  const tooltipBorder = isDark ? '#30363d' : '#d0d7de';
+
+  charts.distribution = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: colors,
+        borderRadius: 3,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: tooltipBg,
+          borderColor: tooltipBorder,
+          borderWidth: 1,
+          titleColor: tooltipTitle,
+          bodyColor: tooltipBody,
+          callbacks: {
+            label: ctx => ` ${ctx.raw} companies`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridColor, drawBorder: false },
+          ticks: { color: tickColor, font: { family: "'Inter'", size: 11 } }
+        },
+        y: {
+          grid: { color: gridColor, drawBorder: false },
+          ticks: { color: tickColor, font: { family: "'Inter'", size: 11 } },
+          border: { dash: [3,3] }
+        }
+      }
+    }
+  });
+}
+
+// ─── Chart.js — Portfolio ─────────────────────────────────────────────────────
+function initPortfolioChart() {
+  // Using CSS bars instead of Chart.js for the portfolio hazard comparison
+}
+
+function updatePortfolio() {
+  showToast('Portfolio updated');
+}
+
+// ─── Company Filter Functions ──────────────────────────────────────────────────
+function onSectorChange() {
+  const s = document.getElementById('sel-sector').value;
+  const ssEl = document.getElementById('sel-subsector');
+  ssEl.innerHTML = '<option value="">All Sub-Sectors</option>';
+  document.getElementById('sel-industry').innerHTML = '<option value="">All Industries</option>';
+  document.getElementById('sel-subindustry').innerHTML = '<option value="">All Sub-Industries</option>';
+  if (s && taxonomyData[s]) {
+    Object.keys(taxonomyData[s]).forEach(ss => {
+      ssEl.appendChild(Object.assign(document.createElement('option'), {value:ss, textContent:ss}));
+    });
+  }
+  applyFilterPage();
+}
+
+function onSubSectorChange() {
+  const s = document.getElementById('sel-sector').value;
+  const ss = document.getElementById('sel-subsector').value;
+  const indEl = document.getElementById('sel-industry');
+  indEl.innerHTML = '<option value="">All Industries</option>';
+  document.getElementById('sel-subindustry').innerHTML = '<option value="">All Sub-Industries</option>';
+  if (s && ss && taxonomyData[s] && taxonomyData[s][ss]) {
+    Object.keys(taxonomyData[s][ss]).forEach(ind => {
+      indEl.appendChild(Object.assign(document.createElement('option'), {value:ind, textContent:ind}));
+    });
+  }
+  applyFilterPage();
+}
+
+function onIndustryChange() {
+  const s = document.getElementById('sel-sector').value;
+  const ss = document.getElementById('sel-subsector').value;
+  const ind = document.getElementById('sel-industry').value;
+  const siEl = document.getElementById('sel-subindustry');
+  siEl.innerHTML = '<option value="">All Sub-Industries</option>';
+  if (s && ss && ind && taxonomyData[s] && taxonomyData[s][ss] && taxonomyData[s][ss][ind]) {
+    taxonomyData[s][ss][ind].forEach(si => {
+      siEl.appendChild(Object.assign(document.createElement('option'), {value:si, textContent:si}));
+    });
+  }
+  applyFilterPage();
+}
+
+function applyFilterPage() {
+  const s   = document.getElementById('sel-sector').value;
+  const ss  = document.getElementById('sel-subsector').value;
+  const ind = document.getElementById('sel-industry').value;
+  const si  = document.getElementById('sel-subindustry').value;
+  const reg = document.getElementById('sel-region').value;
+
+  let filtered = companiesExtended;
+  if (s)   filtered = filtered.filter(c => c.sector === s);
+  if (ss)  filtered = filtered.filter(c => c.subSector === ss);
+  if (ind) filtered = filtered.filter(c => c.industry === ind);
+  if (si)  filtered = filtered.filter(c => c.subIndustry === si);
+  if (reg && reg !== 'All Regions') filtered = filtered.filter(c => c.region === reg);
+
+  const total = filtered.length;
+  const parts = [s||'All Sectors', ss, ind, reg && reg !== 'All Regions' ? reg : null].filter(Boolean);
+  document.getElementById('filter-result-summary').textContent =
+    `Showing ${total} companies · ${parts.join(' › ')}`;
+  document.getElementById('filter-count-badge').textContent = `${total} companies`;
+
+  buildFilterTable(filtered);
+}
+
+function buildFilterTable(data) {
+  const tbody = document.getElementById('filter-tbody');
+  tbody.innerHTML = data.length === 0
+    ? `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">No companies match the selected filters</td></tr>`
+    : data.map(c => `
+    <tr onclick="showCompanyDetail(${companies.findIndex(mc => mc.ticker === c.ticker)})">
+      <td><div class="td-company">${c.name}<span class="ticker-badge">${c.ticker}</span></div></td>
+      <td style="color:var(--text-muted)">${c.sector}</td>
+      <td style="color:var(--text-muted)">${c.subSector}</td>
+      <td style="color:var(--text-muted)">${c.region}</td>
+      <td><span class="score-mono" style="color:${scoreColor(c.score)}">${c.score}</span></td>
+      <td><span class="tier-badge ${tierClass(c.tier)}">${c.tier}</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.flood}%</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.drought}%</span></td>
+      <td><span class="score-mono" style="color:var(--text-muted)">${c.heat}%</span></td>
+      <td><button class="dl-btn" onclick="event.stopPropagation();showToast('Downloaded!')" title="Download">↓</button></td>
+    </tr>`).join('');
+}
+
+function resetFilterPage() {
+  document.getElementById('sel-sector').value = '';
+  document.getElementById('sel-subsector').innerHTML = '<option value="">All Sub-Sectors</option>';
+  document.getElementById('sel-industry').innerHTML = '<option value="">All Industries</option>';
+  document.getElementById('sel-subindustry').innerHTML = '<option value="">All Sub-Industries</option>';
+  document.getElementById('sel-region').value = '';
+  document.getElementById('filter-result-summary').textContent = `Showing ${companiesExtended.length} companies · All Sectors · All Regions`;
+  document.getElementById('filter-count-badge').textContent = `${companiesExtended.length} companies`;
+  buildFilterTable(companiesExtended);
+}
+
+// ─── Financial Analysis Functions ──────────────────────────────────────────────
+function setFinancialMode(mode) {
+  currentFinMode = mode;
+  document.getElementById('tab-sector-mode').classList.toggle('active', mode === 'sector');
+  document.getElementById('tab-portfolio-mode').classList.toggle('active', mode === 'portfolio');
+  document.getElementById('fin-sector-panel').style.display = mode === 'sector' ? '' : 'none';
+  document.getElementById('fin-portfolio-panel').style.display = mode === 'portfolio' ? '' : 'none';
+  updateFinancialCharts();
+}
+
+function onFinSectorChange() {
+  const s = document.getElementById('fin-sector').value;
+  const ssEl = document.getElementById('fin-subsector');
+  ssEl.innerHTML = '<option value="">All Sub-Sectors</option>';
+  if (s && taxonomyData[s]) {
+    Object.keys(taxonomyData[s]).forEach(ss => {
+      ssEl.appendChild(Object.assign(document.createElement('option'), {value:ss, textContent:ss}));
+    });
+  }
+  updateFinancialCharts();
+}
+
+function getQuintileData() {
+  const sector = document.getElementById('fin-sector') ? document.getElementById('fin-sector').value : '';
+  return quintileData[sector] || quintileData.default;
+}
+
+function makeQuintileBarChart(canvasId, dataValues, label, colorFn) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (charts.quintile[canvasId]) { charts.quintile[canvasId].destroy(); delete charts.quintile[canvasId]; }
+
+  const gridColor    = isDark ? '#30363d' : '#d0d7de';
+  const tickColor    = isDark ? '#8b949e' : '#6b7280';
+  const tooltipBg    = isDark ? '#21262d' : '#ffffff';
+  const tooltipTitle = isDark ? '#e6edf3' : '#1f2937';
+  const tooltipBody  = isDark ? '#8b949e' : '#6b7280';
+  const tooltipBorder = isDark ? '#30363d' : '#d0d7de';
+
+  const d = getQuintileData();
+
+  charts.quintile[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label,
+        data: dataValues,
+        backgroundColor: dataValues.map(colorFn),
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: tooltipBg,
+          borderColor: tooltipBorder,
+          borderWidth: 1,
+          titleColor: tooltipTitle,
+          bodyColor: tooltipBody,
+          callbacks: { label: ctx => ` ${ctx.raw.toFixed(1)}%` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridColor, drawBorder: false },
+          ticks: { color: tickColor, font: { family: "'Inter'", size: 11 } }
+        },
+        y: {
+          grid: { color: gridColor, drawBorder: false },
+          ticks: { color: tickColor, font: { family: "'Inter'", size: 11 }, callback: v => v + '%' },
+          border: { dash: [3,3] }
+        }
+      }
+    }
+  });
+}
+
+function tsrColor(v) {
+  if (v > 15) return '#3fb950';
+  if (v > 8)  return '#8cc63f';
+  if (v > 3)  return '#ffa657';
+  if (v > 0)  return '#ff7c29';
+  return '#f85149';
+}
+function roeColor(v) {
+  if (v > 20) return '#3fb950';
+  if (v > 12) return '#8cc63f';
+  if (v > 7)  return '#ffa657';
+  return '#f85149';
+}
+function epsColor(v) {
+  if (v > 10) return '#3fb950';
+  if (v > 4)  return '#8cc63f';
+  if (v > 0)  return '#ffa657';
+  return '#f85149';
+}
+
+function updateFinancialCharts() {
+  const d = getQuintileData();
+
+  makeQuintileBarChart('tsrChart1y', d.tsr1y, '1Y TSR (%)', tsrColor);
+  makeQuintileBarChart('tsrChart3y', d.tsr3y, '3Y TSR (%)', tsrColor);
+  makeQuintileBarChart('tsrChart5y', d.tsr5y, '5Y TSR (%)', tsrColor);
+  makeQuintileBarChart('roeChart',   d.roe,   'ROE (%)',    roeColor);
+  makeQuintileBarChart('roicChart',  d.roic,  'ROIC (%)',   roeColor);
+  makeQuintileBarChart('epsChart',   d.eps,   'EPS Growth (%)', epsColor);
+
+  // Update quintile summary table
+  const tbody = document.getElementById('quintile-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = d.labels.map((lbl, i) => {
+    const tsr1 = d.tsr1y[i], tsr3 = d.tsr3y[i], tsr5 = d.tsr5y[i];
+    const fmt  = v => `<span style="color:${tsrColor(v)};font-family:var(--font-mono)">${v>0?'+':''}${v.toFixed(1)}%</span>`;
+    const fmtR = v => `<span style="color:${roeColor(v)};font-family:var(--font-mono)">${v.toFixed(1)}%</span>`;
+    const fmtE = v => `<span style="color:${epsColor(v)};font-family:var(--font-mono)">${v>0?'+':''}${v.toFixed(1)}%</span>`;
+    return `<tr>
+      <td><strong>${lbl}</strong></td>
+      <td style="color:var(--text-muted)">${d.n[i]}</td>
+      <td><span style="font-family:var(--font-mono);color:${scoreColor(d.avgScore[i])}">${d.avgScore[i]}</span></td>
+      <td>${fmt(tsr1)}</td>
+      <td>${fmt(tsr3)}</td>
+      <td>${fmt(tsr5)}</td>
+      <td>${fmtR(d.roe[i])}</td>
+      <td>${fmtR(d.roic[i])}</td>
+      <td>${fmtE(d.eps[i])}</td>
+    </tr>`;
+  }).join('');
+}
+
+function reinitQuintileCharts() {
+  if (document.getElementById('page-financial') &&
+      document.getElementById('page-financial').classList.contains('active')) {
+    updateFinancialCharts();
+  }
+}
+
+// ─── Global Filters ────────────────────────────────────────────────────────────
+function applyFilter() {
+  const inclFin  = document.getElementById('toggle-financials').checked;
+  const inclAuto = document.getElementById('toggle-auto').checked;
+
+  // Universe counts (illustrative)
+  let base = 2487;
+  if (!inclFin && !inclAuto) base = 2487;
+  else if (inclFin && !inclAuto)  base = 2524;   // +37 financials
+  else if (!inclFin && inclAuto)  base = 2499;   // +12 auto
+  else base = 2536;                              // +37 +12
+
+  // Update header strip count
+  document.getElementById('universe-count').textContent = base.toLocaleString();
+  // Update KPI card
+  const kpiEl = document.getElementById('kpi-universe');
+  if (kpiEl) kpiEl.textContent = base.toLocaleString();
+
+  // Get the filtered companies array and rebuild all overview elements
+  const filtered = companies.filter(c =>
+    (inclFin  || c.sector !== 'Financials') &&
+    (inclAuto || c.sector !== 'Auto')
+  );
+
+  // Rebuild table (respecting any active search term)
+  const searchVal = (document.getElementById('overview-search')?.value || '').toLowerCase();
+  const tableData = searchVal
+    ? filtered.filter(c => c.name.toLowerCase().includes(searchVal) || c.ticker.toLowerCase().includes(searchVal))
+    : filtered;
+  buildOverviewTable(tableData);
+
+  // Rebuild distribution chart from filtered set
+  initDistributionChart(filtered);
+
+  // Rebuild hazard exposure bars from filtered set
+  buildHazardList(filtered);
+
+  // Update shown count
+  const shownEl = document.getElementById('table-shown-count');
+  if (shownEl) shownEl.textContent = `${tableData.length} of ${base.toLocaleString()} shown`;
+
+  let tag = '';
+  if (!inclFin && !inclAuto) tag = 'Financials &amp; Auto excluded';
+  else if (inclFin && inclAuto) tag = 'All sectors included';
+  else if (inclFin) tag = 'Auto excluded';
+  else tag = 'Financials excluded';
+
+  document.getElementById('filter-tag').innerHTML =
+    `<i data-lucide="filter" style="width:11px;height:11px;"></i> ${tag}`;
+  lucide.createIcons();
+
+  showToast(`Filter applied — ${base.toLocaleString()} companies shown`);
+}
+
+// ─── Export CSV ────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const inclFin  = document.getElementById('toggle-financials').checked;
+  const inclAuto = document.getElementById('toggle-auto').checked;
+  const searchVal = (document.getElementById('overview-search')?.value || '').toLowerCase();
+
+  // Filter companies dataset by global toggles + current search
+  let dataset = [...companies];
+  if (!inclFin) dataset = dataset.filter(c => c.sector !== 'Financials');
+  if (!inclAuto) dataset = dataset.filter(c => c.sector !== 'Auto');
+  if (searchVal) dataset = dataset.filter(c =>
+    c.name.toLowerCase().includes(searchVal) || c.ticker.toLowerCase().includes(searchVal)
+  );
+
+  // Build CSV rows — match table columns
+  const headers = ['Company','Ticker','Sector','Score','Tier','Flood (%)','Drought (%)','Heat Stress (%)','Hurricane (%)','Extreme Precip. (%)'];
+  const rows = dataset.map(c => [
+    `"${c.name}"`, c.ticker, `"${c.sector}"`,
+    c.score, c.tier,
+    c.flood ?? '', c.drought ?? '', c.heat ?? '', c.hurricane ?? '', c.precip ?? ''
+  ]);
+
+  // Prepend metadata header lines
+  const inclTag = !inclFin && !inclAuto ? 'Financials & Auto excluded'
+    : inclFin && inclAuto ? 'All sectors included'
+    : inclFin ? 'Auto excluded' : 'Financials excluded';
+  const metaLines = [
+    `# Climate Risk Dashboard — Universe Export`,
+    `# Generated: ${new Date().toLocaleString('en-GB')}`,
+    `# Filter: ${inclTag}`,
+    `# Companies: ${dataset.length}`,
+    `#`,
+  ];
+
+  const csv = [
+    ...metaLines,
+    headers.join(','),
+    ...rows.map(r => r.join(','))
+  ].join('\n');
+
+  // Trigger download
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `climate_risk_universe_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`Exported ${dataset.length} companies to CSV`);
+}
+
+// ─── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const tc = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  tc.appendChild(t);
+  setTimeout(() => t.remove(), 2800);
+}
+
+// ─── Mobile sidebar ────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ─── Drag & Drop dummy ─────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  showToast('File received — processing…');
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  buildOverviewTable(getFilteredCompanies());
+  buildHazardList();
+  buildHazardCompare();
+  buildHoldingsTable();
+  buildCompanyGrid(getFilteredCompanies());
+  // Default detail: Shell
+  expandCategory('physical', document.querySelector('.cat-card'));
+
+  // Populate Company Filter sector options
+  const sectorSel = document.getElementById('sel-sector');
+  Object.keys(taxonomyData).forEach(s => {
+    sectorSel.appendChild(Object.assign(document.createElement('option'), {value:s, textContent:s}));
+  });
+  // Populate Company Filter region options
+  const regionSel = document.getElementById('sel-region');
+  regions.forEach(r => {
+    regionSel.appendChild(Object.assign(document.createElement('option'), {value: r === 'All Regions' ? '' : r, textContent:r}));
+  });
+  buildFilterTable(companiesExtended);
+
+  // Populate Financial Analysis sector options
+  const finSectorSel = document.getElementById('fin-sector');
+  Object.keys(taxonomyData).forEach(s => {
+    finSectorSel.appendChild(Object.assign(document.createElement('option'), {value:s, textContent:s}));
+  });
+  // Populate Financial Analysis region options
+  const finRegionSel = document.getElementById('fin-region');
+  regions.forEach(r => {
+    finRegionSel.appendChild(Object.assign(document.createElement('option'), {value: r === 'All Regions' ? '' : r, textContent:r}));
+  });
+
+  // Small delay to let layout stabilize before drawing charts
+  setTimeout(() => {
+    initDistributionChart();
+  }, 100);
+
+  // Init financial charts with small delay
+  setTimeout(updateFinancialCharts, 150);
+});
+</script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+</script></body>
+</html>

@@ -414,10 +414,191 @@ async function fetchManagementIndividual(
   return data;
 }
 
+// ---------------------------------------------------------------------------
+// New configurable management source (Railway "results" API). When an admin has
+// set a source URL, it is used in preference to the legacy Heroku management API.
+// The endpoint returns the whole universe in one call (results[]), so we fetch
+// once and index by ISIN, mirroring the legacy bulk pattern.
+// ---------------------------------------------------------------------------
+
+export const MANAGEMENT_SOURCE_URL_KEY = "management_source_url";
+
+interface NewSourceMeasure {
+  measureId: string;
+  title?: string;
+  score?: number;
+  category?: string;
+  confidence?: string;
+  verdict?: string;
+  evidenceSummary?: string;
+  quotes?: Array<{ text?: string; source?: string; sourceUrl?: string }>;
+}
+
+interface NewSourceCompany {
+  isin: string;
+  companyName?: string;
+  sector?: string;
+  country?: string;
+  summary?: string;
+  companyId?: number;
+  totalScore?: number;
+  coverageLevel?: string;
+  measuresMetCount?: number;
+  measuresTotalCount?: number;
+  measureScores?: NewSourceMeasure[];
+  sourceDocuments?: Array<{ url?: string; title?: string }>;
+}
+
+let cachedNewSource: { url: string; companies: NewSourceCompany[]; ts: number } | null = null;
+
+function buildFullUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl.trim());
+    u.searchParams.set("format", "full");
+    return u.toString();
+  } catch {
+    return rawUrl.includes("?") ? `${rawUrl}&format=full` : `${rawUrl}?format=full`;
+  }
+}
+
+export async function getManagementSourceUrl(): Promise<string | null> {
+  try {
+    const { storage } = await import("../storage");
+    const setting = await storage.getSetting(MANAGEMENT_SOURCE_URL_KEY);
+    const url = (setting?.value as any)?.url;
+    return typeof url === "string" && url.trim().length > 0 ? url.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearManagementSourceCache() {
+  cachedNewSource = null;
+}
+
+/** Fetch the configured management universe (all companies). Returns null when no URL is set. */
+export async function fetchManagementUniverse(
+  forceRefresh = false
+): Promise<NewSourceCompany[] | null> {
+  const url = await getManagementSourceUrl();
+  if (!url) return null;
+
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    cachedNewSource &&
+    cachedNewSource.url === url &&
+    now - cachedNewSource.ts < CACHE_TTL_MS
+  ) {
+    return cachedNewSource.companies;
+  }
+
+  const response = await fetchWithRetry(buildFullUrl(url), undefined, 2, 60000);
+  if (!response.ok) {
+    throw new Error(`Management source error: ${response.status}`);
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error(`Management source returned unexpected content-type: ${contentType}`);
+  }
+  const data = await response.json() as { results?: NewSourceCompany[] };
+  const companies = Array.isArray(data.results) ? data.results : [];
+  cachedNewSource = { url, companies, ts: now };
+  return companies;
+}
+
+function transformNewSourceCompany(r: NewSourceCompany): ManagementPerformanceResponse {
+  const scores: ManagementPerformanceResponse["scores"] = {};
+  for (const m of r.measureScores || []) {
+    const category = m.category || "Uncategorized";
+    if (!scores[category]) scores[category] = [];
+    scores[category].push({
+      measureId: m.measureId,
+      title: m.title || "",
+      score: m.score ?? 0,
+      evidenceSummary: m.evidenceSummary || "",
+      coverage: m.verdict || null,
+      confidence: m.confidence || "",
+      quotes: (m.quotes || []).map(q => ({
+        text: q.text || "",
+        source: q.source || "",
+        page: q.sourceUrl || "",
+      })),
+    });
+  }
+  return {
+    company: {
+      id: r.companyId ?? 0,
+      name: r.companyName || "",
+      isin: r.isin,
+      sector: r.sector || "",
+      industry: "",
+      country: r.country || "",
+      analysisStatus: "completed",
+      totalScore: r.totalScore ?? 0,
+      totalPossible: r.measuresTotalCount ?? 26,
+      summary: r.summary || "",
+      updatedAt: "",
+    },
+    documents: (r.sourceDocuments || []).map((d, i) => ({
+      id: i,
+      url: d.url || "",
+      title: d.title || "",
+      type: "",
+      publicationYear: 0,
+    })),
+    scores,
+    measureCount: r.measuresTotalCount ?? 26,
+  };
+}
+
+function findInUniverse(
+  universe: NewSourceCompany[],
+  isin: string,
+  companyName?: string
+): NewSourceCompany | null {
+  const match = universe.find(c => (c.isin || "").toUpperCase() === isin.toUpperCase());
+  if (match) return match;
+
+  if (companyName && companyName.length >= 4) {
+    const normalizedName = companyName.toUpperCase().replace(/[^A-Z0-9\s]/g, "").trim();
+    const nameTokens = normalizedName.split(/\s+/).filter(t => t.length >= 2);
+    let best: NewSourceCompany | null = null;
+    let bestScore = 0;
+    for (const c of universe) {
+      const apiName = (c.companyName || "").toUpperCase().replace(/[^A-Z0-9\s]/g, "").trim();
+      if (apiName === normalizedName) return c;
+      const apiTokens = apiName.split(/\s+/).filter(t => t.length >= 2);
+      const matchingTokens = nameTokens.filter(t => apiTokens.includes(t));
+      const significantTokens = matchingTokens.filter(t => t.length >= 3);
+      if (significantTokens.length >= 2) {
+        const score = significantTokens.reduce((s, t) => s + t.length, 0);
+        if (score > bestScore) {
+          bestScore = score;
+          best = c;
+        }
+      }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+
 export async function fetchManagementPerformance(
   isin: string,
   companyName?: string
 ): Promise<ManagementPerformanceResponse | null> {
+  // Prefer the configurable new source when an admin has set a URL.
+  try {
+    const universe = await fetchManagementUniverse();
+    if (universe) {
+      const found = findInUniverse(universe, isin, companyName);
+      return found ? transformNewSourceCompany(found) : null;
+    }
+  } catch (err: any) {
+    console.log(`[mgmt] New source failed for ${isin}, falling back to legacy API: ${err.message}`);
+  }
+
   try {
     const bulkData = await fetchBulkManagementData();
     const match = bulkData.companies.find(

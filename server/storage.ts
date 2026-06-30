@@ -3,7 +3,7 @@ import { db } from "./db";
 import {
   companies, assets, geoRisks, supplyChainRisks, managementScores, operations,
   companyListUploads, companyListEntries,
-  portfolios, portfolioHoldings,
+  portfolios, portfolioHoldings, appSettings,
   type Company, type InsertCompany,
   type Asset, type InsertAsset,
   type GeoRisk, type InsertGeoRisk,
@@ -14,7 +14,33 @@ import {
   type CompanyListEntry, type InsertCompanyListEntry,
   type Portfolio, type InsertPortfolio,
   type PortfolioHolding, type InsertPortfolioHolding,
+  type AppSetting,
 } from "@shared/schema";
+import { computeWeightedScore, type WeightConfig } from "@shared/weights";
+
+// Module-level cache of the active weight config so createManagementScore can compute the
+// weighted score without a circular import back to the weights service. The weights service
+// keeps this in sync (on startup and whenever weights are saved).
+let cachedWeightConfig: WeightConfig | null = null;
+export function setCachedWeightConfig(config: WeightConfig | null) {
+  cachedWeightConfig = config;
+}
+export function getCachedWeightConfig(): WeightConfig | null {
+  return cachedWeightConfig;
+}
+
+function weightedScoreFromScores(scores: unknown): number | null {
+  if (!cachedWeightConfig || cachedWeightConfig.measures.length === 0) return null;
+  if (!scores || typeof scores !== "object") return null;
+  const measureScores: Record<string, number> = {};
+  for (const measures of Object.values(scores as Record<string, any[]>)) {
+    if (!Array.isArray(measures)) continue;
+    for (const m of measures) {
+      if (m && typeof m.measureId === "string") measureScores[m.measureId] = m.score ?? 0;
+    }
+  }
+  return computeWeightedScore(measureScores, cachedWeightConfig.measures);
+}
 
 export interface IStorage {
   getCompanies(): Promise<Company[]>;
@@ -41,6 +67,10 @@ export interface IStorage {
   getManagementScore(companyId: number): Promise<ManagementScore | undefined>;
   createManagementScore(data: InsertManagementScore): Promise<ManagementScore>;
   deleteManagementScore(companyId: number): Promise<void>;
+  recomputeWeightedScores(): Promise<number>;
+
+  getSetting(key: string): Promise<AppSetting | undefined>;
+  setSetting(key: string, value: unknown): Promise<AppSetting>;
 
   getOperations(): Promise<Operation[]>;
   getOperation(id: number): Promise<Operation | undefined>;
@@ -148,12 +178,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createManagementScore(data: InsertManagementScore): Promise<ManagementScore> {
-    const [score] = await db.insert(managementScores).values(data).returning();
+    const weighted = data.weightedScore ?? weightedScoreFromScores(data.scores);
+    const [score] = await db
+      .insert(managementScores)
+      .values({ ...data, weightedScore: weighted })
+      .returning();
     return score;
   }
 
   async deleteManagementScore(companyId: number): Promise<void> {
     await db.delete(managementScores).where(eq(managementScores.companyId, companyId));
+  }
+
+  async recomputeWeightedScores(): Promise<number> {
+    const rows = await db
+      .select({ id: managementScores.id, scores: managementScores.scores })
+      .from(managementScores);
+    let updated = 0;
+    for (const row of rows) {
+      const weighted = weightedScoreFromScores(row.scores);
+      await db
+        .update(managementScores)
+        .set({ weightedScore: weighted })
+        .where(eq(managementScores.id, row.id));
+      updated++;
+    }
+    return updated;
+  }
+
+  async getSetting(key: string): Promise<AppSetting | undefined> {
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+    return row;
+  }
+
+  async setSetting(key: string, value: unknown): Promise<AppSetting> {
+    const [row] = await db
+      .insert(appSettings)
+      .values({ key, value: value as any, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: appSettings.key,
+        set: { value: value as any, updatedAt: new Date() },
+      })
+      .returning();
+    return row;
   }
 
   async getOperations(): Promise<Operation[]> {
