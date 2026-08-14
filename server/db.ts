@@ -54,6 +54,14 @@ export async function ensureSchemaUpdates() {
         apply: `ALTER TABLE companies ADD COLUMN IF NOT EXISTS ev real`,
       },
       {
+        check: `SELECT column_name FROM information_schema.columns WHERE table_name='companies' AND column_name='ticker'`,
+        apply: `ALTER TABLE companies ADD COLUMN IF NOT EXISTS ticker text`,
+      },
+      {
+        check: `SELECT column_name FROM information_schema.columns WHERE table_name='companies' AND column_name='market_cap_usd'`,
+        apply: `ALTER TABLE companies ADD COLUMN IF NOT EXISTS market_cap_usd real`,
+      },
+      {
         check: `SELECT column_name FROM information_schema.columns WHERE table_name='supply_chain_risks' AND column_name='supply_chain_tiers'`,
         apply: `ALTER TABLE supply_chain_risks ADD COLUMN IF NOT EXISTS supply_chain_tiers jsonb`,
       },
