@@ -16,6 +16,8 @@ export const companies = pgTable("companies", {
   countryIso3: varchar("country_iso3", { length: 3 }),
   supplierCosts: real("supplier_costs"),
   ev: real("ev"),
+  ticker: text("ticker"),
+  marketCapUsd: real("market_cap_usd"),
 });
 
 export const assets = pgTable("assets", {

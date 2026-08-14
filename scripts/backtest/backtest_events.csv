@@ -1,0 +1,15 @@
+event_date,isin,issuer,event_type,event_name,disclosed_amount_usd,amount_basis,source_note
+2021-02-28,US6293775085,NRG ENERGY,winter_storm,Winter Storm Uri (Texas freeze),975000000,disclosed financial loss (FY2021 guidance impact),NRG 2021 Q1 disclosures - approx figure pending verification
+2021-02-28,US92840M1027,VISTRA,winter_storm,Winter Storm Uri (Texas freeze),1600000000,disclosed adverse financial impact,Vistra Feb/Mar 2021 8-K - approx figure pending verification
+2021-09-30,US29364G1031,ENTERGY,hurricane,Hurricane Ida,2400000000,estimated storm restoration cost,Entergy Q3 2021 disclosures - approx figure pending verification
+2021-11-30,US7185461040,PHILLIPS 66,hurricane,Hurricane Ida - Alliance refinery closure,1300000000,impairment on refinery shutdown decision,Phillips 66 Q4 2021 disclosures - approx figure pending verification
+2021-12-31,US69331C1080,PG&E,wildfire,Dixie Fire (2021),1150000000,pre-tax charge net of expected recoveries,PG&E 2021 10-K - approx figure pending verification
+2022-08-31,DE000BASF111,BASF,drought_low_water,Rhine low-water logistics disruption,265000000,incremental logistics/production costs,BASF Q3 2022 commentary - approx figure pending verification
+2022-09-30,US65339F1012,NEXTERA ENERGY,hurricane,Hurricane Ian - FPL restoration,1500000000,storm restoration costs (recoverable via surcharge),NextEra/FPL Q3-Q4 2022 disclosures - approx figure pending verification
+2022-12-31,US9078181081,UNION PACIFIC,winter_storm,Winter Storm Elliott network disruption,200000000,estimated operating income impact,UNP Q4 2022 commentary - approx figure pending verification
+2022-03-31,GB0000456144,ANTOFAGASTA,drought,Central Chile drought - water constrained output,150000000,production shortfall vs guidance (2021-22),Antofagasta FY2021/2022 production reports - approx figure pending verification
+2023-06-30,CA15135U1093,CENOVUS ENERGY,wildfire,2023 Alberta wildfires - production curtailment,110000000,curtailed production impact,Cenovus Q2 2023 commentary - approx figure pending verification
+2024-02-29,US98389B1008,XCEL ENERGY,wildfire,Smokehouse Creek fire (Texas panhandle),1900000000,accrued claim liability,Xcel 2024 10-Q accruals - approx figure pending verification
+2024-01-31,DK0010244508,A P MOLLER MAERSK B,drought_low_water,Panama Canal drought transit restrictions,150000000,rerouting and transit-slot costs (FY23-24),Maersk 2023-24 commentary - approx figure pending verification; overlaps Red Sea rerouting
+2024-09-30,US26441C2044,DUKE ENERGY,hurricane,Hurricanes Helene and Milton restoration,2900000000,estimated restoration costs (deferred/recoverable),Duke Q3-Q4 2024 disclosures - approx figure pending verification
+2024-07-31,US15189T1079,CENTERPOINT EN.,hurricane,Hurricane Beryl - Houston restoration,1300000000,storm restoration costs,CenterPoint Q2-Q3 2024 disclosures - approx figure pending verification
